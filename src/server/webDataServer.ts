@@ -59,7 +59,7 @@ function ensureWebDataDir() {
       fullName: "DEEPAK C",
       email: "deepak.vasthusilpy@gmail.com",
       phone: "9747995961",
-      password: "9747995961",
+      password: "Password123",
       planName: "Primary Admin Full Access Pass",
       amountPaid: 2400,
       validityType: "unlimited",
@@ -548,7 +548,7 @@ export function registerWebDataRoutes(app: Express) {
             subscriptionId: "SUB-ADMIN-DEEPAK",
             status: "approved",
             validUntil: "2099-12-31",
-            password: "9747995961",
+            password: "Password123",
             linkedIdentities: [
               "deepak.vasthusilpy@gmail.com",
               "9747995961",
@@ -603,7 +603,7 @@ export function registerWebDataRoutes(app: Express) {
             status: matchedSub?.status || "approved",
             validUntil: matchedSub?.validUntil || "",
             validDays: matchedSub?.validDays || 30,
-            password: matchedSub?.password || matchedSub?.phone || matchedSub?.email || "",
+            password: matchedSub?.password || "Password123",
             tabPermissions: matchedSub?.tabPermissions,
             linkedIdentities: [email, phone].filter(Boolean)
           }

@@ -2,13 +2,9 @@
 
 @variant dark (&:where(.dark, .dark *));
 
-html {
-  scroll-behavior: smooth;
-}
-
 /* Global Smooth Theme Switch Transition */
-html, body, #root, header, aside, main, nav, button, input, select, textarea {
-  transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out, border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+html, body, #root, header, aside, main, div, section, article, nav, button, input, select, textarea, table, tr, td, th {
+  transition: background-color 0.25s ease-in-out, color 0.25s ease-in-out, border-color 0.25s ease-in-out, box-shadow 0.25s ease-in-out;
 }
 
 @layer utilities {
@@ -1532,22 +1528,6 @@ input.invoice-input[type="date"] {
 
 .window-scrollbar::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(180deg, #22d3ee 0%, #14b8a6 100%);
-}
-
-/* Custom fade-in-up transition class for buttery-smooth tab-switches without React 19 bugs */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fade-in-up {
-  animation: fadeInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 

@@ -52,7 +52,6 @@ import { ClientInvoicePortal } from "./components/office/clientView/ClientInvoic
 import { PublicCadSharePortal } from "./components/home/dataStorage/PublicCadSharePortal";
 import { PublicPlanVerificationPortal } from "./components/planTemplate/PublicPlanVerificationPortal";
 import { HomePage } from "./components/home/HomePage";
-import { SmoothTransition } from "./components/common/SmoothTransition";
 import {
   INITIAL_ESTIMATES_LIST,
   EstimateProject,
@@ -74,6 +73,7 @@ import { OfficeDashboard } from "./components/office/OfficeDashboard";
 import { OnlineApplicationsTab } from "./components/office/crm/OnlineApplicationsTab";
 import { InvoicePaymentsTab } from "./components/invoices/InvoicePaymentsTab";
 import { OfficeDashboardTabType, InvoicesTabType, ConstructionTabType } from "./types";
+import { SubscriptionExpiredScreen } from "./components/subscription/SubscriptionExpiredScreen";
 
 // Construction Works Master Component
 import { ConstructionDashboard } from "./components/construction/ConstructionDashboard";
@@ -489,7 +489,28 @@ export default function App() {
   }
 
   // Expired Subscription Guard (Shows full-screen renewal & reassurance of zero data loss)
-  // SubscriptionExpiredScreen removed as subscription system is decommissioned.
+  if (isExpiredSubscription && !isPrimaryAdmin) {
+    const userEmail = emailUser?.email || user?.email || "";
+    const userPhone = emailUser?.phone;
+    const userName = emailUser?.displayName || user?.displayName;
+    const subReq = subscriptionRequests.find(
+      (s) => (s.email && s.email.toLowerCase() === userEmail.toLowerCase()) || (userPhone && s.phone === userPhone)
+    );
+    const isTrial = subReq
+      ? (subReq.amountPaid === 0 || (subReq.planName || "").toLowerCase().includes("trial"))
+      : true;
+
+    return (
+      <SubscriptionExpiredScreen
+        userEmail={userEmail}
+        userPhone={userPhone}
+        userName={userName}
+        subscriptionId={subReq?.id}
+        isTrial={isTrial}
+        onSignOut={() => signOutUser()}
+      />
+    );
+  }
 
   return (
     <div
@@ -575,9 +596,8 @@ export default function App() {
               : "max-w-7xl"
           }`}
         >
-            <div key={activeSection + "_" + activeTab} className="space-y-6 animate-fade-in-up">
-              {/* HOME SECTION */}
-              {activeSection === "home" && (
+          {/* HOME SECTION */}
+          {activeSection === "home" && (
             <HomePage
               activeTab={activeTab}
               setActiveTab={setActiveTab}
@@ -987,7 +1007,6 @@ export default function App() {
               }
             />
           )}
-            </div>
         </main>
 
         {/* Twilight Glass Technical Footer */}

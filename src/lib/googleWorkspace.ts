@@ -1,7 +1,10 @@
+import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from './firebase';
+import firebaseConfig from '../../firebase-applet-config.json';
 
-export { auth };
+// Reuse existing Firebase App if initialized
+const app = getApps().length > 0 ? getApps()[0] : initializeApp(firebaseConfig);
+export const auth = getAuth(app);
 
 const provider = new GoogleAuthProvider();
 provider.addScope('https://www.googleapis.com/auth/gmail.send');
@@ -51,18 +54,6 @@ export const googleSignIn = async (): Promise<{ user: User; accessToken: string 
     throw error;
   } finally {
     isSigningIn = false;
-  }
-};
-
-export const googleSignInBasic = async (): Promise<{ user: User } | null> => {
-  try {
-    const basicProvider = new GoogleAuthProvider();
-    // No extra scopes added for pure login authentication
-    const result = await signInWithPopup(auth, basicProvider);
-    return { user: result.user };
-  } catch (error: any) {
-    console.error('Google Basic Sign-In Error:', error);
-    throw error;
   }
 };
 

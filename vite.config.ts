@@ -15,24 +15,6 @@ export default defineConfig(() => {
       outDir: 'dist',
       emptyOutDir: false,
       chunkSizeWarningLimit: 4000,
-      rollupOptions: {
-        output: {
-          manualChunks(id) {
-            if (id.includes('node_modules')) {
-              if (id.includes('pdfjs-dist')) {
-                return 'pdfjs-dist';
-              }
-              if (id.includes('recharts') || id.includes('d3')) {
-                return 'charts';
-              }
-              if (id.includes('lucide-react')) {
-                return 'icons';
-              }
-              return 'vendor';
-            }
-          }
-        }
-      }
     },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.

@@ -140,7 +140,6 @@ export interface SubscriptionUserSession {
   status: SubscriptionStatus;
   tabPermissions: Record<string, AccessLevel>;
   loginTimestamp: number;
-  authMethod?: "authenticator" | "subscription";
 }
 
 export type VasthuTabType =
