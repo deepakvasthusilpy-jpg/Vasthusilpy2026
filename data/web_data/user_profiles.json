@@ -1,0 +1,20 @@
+[
+  {
+    "email": "deepak.vasthusilpy@gmail.com",
+    "phone": "9747995961",
+    "displayName": "DEEPAK C",
+    "profession": "Vasthu Consultant & Civil Engineer",
+    "role": "primary_admin",
+    "updatedAt": "2026-09-15T07:16:54.355Z",
+    "linkedPhones": [
+      "9747995961",
+      "9567627277",
+      "7012383137",
+      "9496354421",
+      "9447470421"
+    ],
+    "loginTimestamp": 1789448741246,
+    "subscriptionId": "SUB-ADMIN-DEEPAK",
+    "lastAdminTotpVerifiedAt": 1789387180047
+  }
+]

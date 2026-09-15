@@ -1,0 +1,134 @@
+{
+  "entities": {
+    "users": {
+      "title": "Users",
+      "description": "Registered and authorized user profiles",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "description": "Email address" },
+        "phoneNumber": { "type": "string", "description": "Phone number" },
+        "displayName": { "type": "string", "description": "Display name" },
+        "photoURL": { "type": "string", "description": "User profile avatar" },
+        "role": { "type": "string", "description": "Role (primary_admin or authorized_user)" },
+        "lastLoginAt": { "type": "string", "format": "date-time", "description": "Last sign in timestamp" }
+      }
+    },
+    "authorized_emails": {
+      "title": "Authorized Emails",
+      "description": "Email addresses whitelist authorized by primary admins",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "description": "Lowercase email address" },
+        "addedBy": { "type": "string", "description": "Admin who authorized this user" },
+        "addedAt": { "type": "string", "format": "date-time", "description": "Timestamp when added" },
+        "notes": { "type": "string", "description": "Optional notes/description" }
+      },
+      "required": ["email", "addedBy"]
+    },
+    "authorized_phones": {
+      "title": "Authorized Phones",
+      "description": "Phone numbers whitelist authorized by primary admins",
+      "type": "object",
+      "properties": {
+        "phone": { "type": "string", "description": "10-digit mobile number" },
+        "addedBy": { "type": "string", "description": "Admin who authorized this user" },
+        "addedAt": { "type": "string", "format": "date-time", "description": "Timestamp when added" },
+        "notes": { "type": "string", "description": "Optional notes/description" }
+      },
+      "required": ["phone", "addedBy"]
+    },
+    "projects": {
+      "title": "Projects Pipeline",
+      "description": "Vasthusilpy Engineering Projects pipeline for real-time CRM sync across all logins",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "clientName": { "type": "string" },
+        "status": { "type": "string" },
+        "assignee": { "type": "string" }
+      },
+      "required": ["id", "title", "clientName"]
+    },
+    "invoices": {
+      "title": "Invoices",
+      "description": "Billing invoices",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "invoiceNumber": { "type": "string" }
+      },
+      "required": ["id", "invoiceNumber"]
+    },
+    "estimates": {
+      "title": "Estimates",
+      "description": "Building Rate and Work Items Estimate Projects",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "projectName": { "type": "string" },
+        "clientName": { "type": "string" },
+        "totalEstimateAmount": { "type": "number" }
+      },
+      "required": ["id", "projectName"]
+    },
+    "client_shares": {
+      "title": "Client Shares",
+      "description": "Time-limited read-only progress and estimate share links",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "token": { "type": "string" },
+        "projectName": { "type": "string" },
+        "clientName": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "token", "projectName"]
+    },
+    "client_share_records": {
+      "title": "Client Share Records",
+      "description": "Client share history records",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "token": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "token"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": { "$ref": "#/entities/users" },
+      "description": "User profile documents"
+    },
+    "authorized_emails/{emailDoc}": {
+      "schema": { "$ref": "#/entities/authorized_emails" },
+      "description": "Whitelisted email records"
+    },
+    "authorized_phones/{phoneDoc}": {
+      "schema": { "$ref": "#/entities/authorized_phones" },
+      "description": "Whitelisted phone records"
+    },
+    "projects/{projectId}": {
+      "schema": { "$ref": "#/entities/projects" },
+      "description": "Vasthusilpy Projects collection"
+    },
+    "invoices/{invoiceId}": {
+      "schema": { "$ref": "#/entities/invoices" },
+      "description": "Billing invoices collection"
+    },
+    "estimates/{estimateId}": {
+      "schema": { "$ref": "#/entities/estimates" },
+      "description": "Building estimates collection"
+    },
+    "client_shares/{shareDoc}": {
+      "schema": { "$ref": "#/entities/client_shares" },
+      "description": "Client share links by token"
+    },
+    "client_share_records/{recordDoc}": {
+      "schema": { "$ref": "#/entities/client_share_records" },
+      "description": "Client share links by id"
+    }
+  }
+}

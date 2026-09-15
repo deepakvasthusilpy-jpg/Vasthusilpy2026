@@ -1,0 +1,1553 @@
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Global Smooth Theme Switch Transition */
+html, body, #root, header, aside, main, nav, button, input, select, textarea {
+  transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out, border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+@layer utilities {
+  /* Twilight Glass Core Aesthetics */
+  .twilight-canvas {
+    background: radial-gradient(circle at 50% -10%, #3b0a50 0%, #170329 45%, #0e021a 100%) fixed;
+  }
+  
+  .glass-card {
+    background-color: rgba(255, 255, 255, 0.07);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    box-shadow: 0 16px 40px 0 rgba(0, 0, 0, 0.45);
+  }
+
+  .glass-card-subtle {
+    background-color: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  .glass-panel {
+    background-color: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+  }
+
+  .glass-pill {
+    background-color: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    color: #ffffff;
+  }
+
+  .glass-pill:hover {
+    background-color: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.35);
+  }
+
+  .glass-input {
+    background-color: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+  }
+
+  .glass-input:focus {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.5);
+    outline: none;
+    box-shadow: 0 0 15px rgba(224, 170, 255, 0.3);
+  }
+
+  .glass-button-primary {
+    background-color: #ffffff;
+    color: #0f172a;
+    font-weight: 700;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .glass-button-primary:hover {
+    background-color: rgba(255, 255, 255, 0.92);
+    transform: translateY(-1px);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+  }
+
+  .glass-button-primary:active {
+    transform: translateY(0);
+  }
+
+  .twilight-glow-pink {
+    filter: drop-shadow(0 0 16px rgba(244, 63, 94, 0.45));
+  }
+
+  .twilight-glow-purple {
+    filter: drop-shadow(0 0 18px rgba(224, 170, 255, 0.45));
+  }
+
+  .twilight-glow-cyan {
+    filter: drop-shadow(0 0 16px rgba(56, 189, 248, 0.45));
+  }
+
+  .bg-blueprint-grid {
+    background-size: 32px 32px;
+    background-image: 
+      linear-gradient(to right, rgba(224, 170, 255, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(224, 170, 255, 0.05) 1px, transparent 1px);
+  }
+  .bg-blueprint-grid-dark {
+    background-size: 32px 32px;
+    background-image: 
+      linear-gradient(to right, rgba(224, 170, 255, 0.08) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(224, 170, 255, 0.08) 1px, transparent 1px);
+  }
+  .bg-blueprint-grid-gold {
+    background-size: 36px 36px;
+    background-image: 
+      linear-gradient(to right, rgba(201, 166, 107, 0.07) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(201, 166, 107, 0.07) 1px, transparent 1px);
+  }
+  .bg-grid-dots {
+    background-size: 20px 20px;
+    background-image: radial-gradient(circle, rgba(224, 170, 255, 0.15) 1px, transparent 1px);
+  }
+  .animate-spin-slow {
+    animation: spinSlow 30s linear infinite;
+  }
+  .animate-flag-wave {
+    animation: flagWave 8s ease-in-out infinite alternate;
+  }
+  .animate-flag-shimmer {
+    animation: flagShimmer 6s linear infinite;
+  }
+  .animate-float-particle {
+    animation: floatParticle 7s ease-in-out infinite;
+  }
+  .animate-pulse-subtle {
+    animation: pulseSubtle 3s ease-in-out infinite;
+  }
+  .animate-gold-shimmer {
+    animation: goldShimmer 4s ease-in-out infinite;
+  }
+  .animate-drafting-pen {
+    stroke-dasharray: 1200;
+    stroke-dashoffset: 1200;
+    animation: draftLine 2.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  }
+  .perspective-1200 {
+    perspective: 1200px;
+  }
+  .transform-style-3d {
+    transform-style: preserve-3d;
+  }
+  .backface-hidden {
+    backface-visibility: hidden;
+  }
+}
+
+/* =========================================================
+   TWILIGHT GLASS DEFAULT / DARK MODE CASCADE SPECIFICATIONS:
+   Frosted translucent glass, rich twilight purple/pink glows
+   ========================================================= */
+html.dark, html:not(.light):not(.neoclassical) {
+  color-scheme: dark;
+}
+
+html.dark body,
+html.dark #root,
+html:not(.light):not(.neoclassical) body,
+html:not(.light):not(.neoclassical) #root {
+  background: radial-gradient(circle at 50% -10%, #350849 0%, #160327 45%, #0e021a 100%) fixed, #0e021a;
+  color: #fdf4ff;
+}
+
+/* Transform standard slate dark classes into Twilight Glass */
+html.dark .bg-slate-950,
+html:not(.light):not(.neoclassical) .bg-slate-950 {
+  background-color: rgba(14, 2, 26, 0.85);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+html.dark .bg-slate-900,
+html.dark .bg-slate-900\/95,
+html.dark .bg-slate-900\/90,
+html.dark .bg-slate-900\/80,
+html.dark .bg-slate-900\/60,
+html.dark .bg-slate-900\/50,
+html:not(.light):not(.neoclassical) .bg-slate-900,
+html:not(.light):not(.neoclassical) .bg-slate-900\/95,
+html:not(.light):not(.neoclassical) .bg-slate-900\/90,
+html:not(.light):not(.neoclassical) .bg-slate-900\/80,
+html:not(.light):not(.neoclassical) .bg-slate-900\/60,
+html:not(.light):not(.neoclassical) .bg-slate-900\/50 {
+  background-color: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+html.dark .bg-slate-800,
+html.dark .bg-slate-800\/80,
+html.dark .bg-slate-800\/50,
+html.dark .bg-slate-800\/30,
+html:not(.light):not(.neoclassical) .bg-slate-800,
+html:not(.light):not(.neoclassical) .bg-slate-800\/80,
+html:not(.light):not(.neoclassical) .bg-slate-800\/50,
+html:not(.light):not(.neoclassical) .bg-slate-800\/30 {
+  background-color: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+html.dark .border-slate-800,
+html.dark .border-slate-800\/80,
+html.dark .border-slate-800\/90,
+html.dark .border-slate-700,
+html.dark .border-slate-900,
+html:not(.light):not(.neoclassical) .border-slate-800,
+html:not(.light):not(.neoclassical) .border-slate-800\/80,
+html:not(.light):not(.neoclassical) .border-slate-800\/90,
+html:not(.light):not(.neoclassical) .border-slate-700,
+html:not(.light):not(.neoclassical) .border-slate-900 {
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+html.dark input:not([type="checkbox"]):not([type="radio"]),
+html.dark select,
+html.dark textarea,
+html:not(.light):not(.neoclassical) input:not([type="checkbox"]):not([type="radio"]),
+html:not(.light):not(.neoclassical) select,
+html:not(.light):not(.neoclassical) textarea {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+html.dark thead,
+html.dark th,
+html:not(.light):not(.neoclassical) thead,
+html:not(.light):not(.neoclassical) th {
+  background-color: rgba(36, 6, 56, 0.85);
+  color: #fdf4ff;
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+@keyframes goldShimmer {
+  0%, 100% {
+    opacity: 0.7;
+    filter: drop-shadow(0 0 8px rgba(201, 166, 107, 0.3));
+  }
+  50% {
+    opacity: 1;
+    filter: drop-shadow(0 0 18px rgba(201, 166, 107, 0.65));
+  }
+}
+
+@keyframes draftLine {
+  0% {
+    stroke-dashoffset: 1200;
+    opacity: 0.2;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Custom Stylish Cyber Scrollbars */
+.login-scrollbar::-webkit-scrollbar,
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.login-scrollbar::-webkit-scrollbar-track,
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 9999px;
+}
+
+.login-scrollbar::-webkit-scrollbar-thumb,
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.45);
+  border-radius: 9999px;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+}
+
+.login-scrollbar::-webkit-scrollbar-thumb:hover,
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.8);
+}
+
+.login-scrollbar,
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(99, 102, 241, 0.5) rgba(15, 23, 42, 0.6);
+}
+
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes flagWave {
+  0% { transform: translateY(0px) skewX(0deg) scale(1); }
+  50% { transform: translateY(-8px) skewX(-1.5deg) scale(1.02); }
+  100% { transform: translateY(6px) skewX(1.5deg) scale(1); }
+}
+
+@keyframes flagShimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes floatParticle {
+  0% { transform: translateY(0px) rotate(0deg); opacity: 0.7; }
+  50% { transform: translateY(-25px) rotate(180deg); opacity: 1; }
+  100% { transform: translateY(0px) rotate(360deg); opacity: 0.7; }
+}
+
+@keyframes pulseSubtle {
+  0%, 100% { opacity: 0.85; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.03); }
+}
+
+/* =========================================================
+   LIGHT MODE DESIGN SPECIFICATIONS:
+   Crisp dark text on light gray canvas (#f8fafc / #f1f5f9)
+   Pure white cards (#ffffff) with subtle borders (#cbd5e1)
+   ========================================================= */
+html.light {
+  color-scheme: light;
+}
+
+html.light body,
+html.light #root {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+/* Deep Canvas -> Light Gray Canvas */
+html.light .bg-slate-950 {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+/* Card Containers & Panels -> White */
+html.light .bg-slate-900,
+html.light .bg-slate-900\/95,
+html.light .bg-slate-900\/90,
+html.light .bg-slate-900\/80,
+html.light .bg-slate-900\/60,
+html.light .bg-slate-900\/50 {
+  background-color: #ffffff;
+  color: #0f172a;
+}
+
+/* Elevated / Subcard fills -> Soft Gray */
+html.light .bg-slate-800,
+html.light .bg-slate-800\/80,
+html.light .bg-slate-800\/50,
+html.light .bg-slate-800\/30 {
+  background-color: #f1f5f9;
+  color: #1e293b;
+}
+
+/* Border Adaptations for Light Mode */
+html.light .border-slate-800,
+html.light .border-slate-800\/80,
+html.light .border-slate-800\/90,
+html.light .border-slate-700,
+html.light .border-slate-900 {
+  border-color: #cbd5e1;
+}
+
+/* Crisp Dark Text for Light Mode */
+html.light .text-white,
+html.light .text-slate-100,
+html.light .text-slate-200 {
+  color: #0f172a;
+}
+
+html.light .text-slate-300,
+html.light .text-slate-400 {
+  color: #334155;
+}
+
+html.light .text-slate-500 {
+  color: #64748b;
+}
+
+/* Form Controls in Light Mode */
+html.light input:not([type="checkbox"]):not([type="radio"]),
+html.light select,
+html.light textarea {
+  background-color: #ffffff;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+html.light input::placeholder,
+html.light textarea::placeholder {
+  color: #64748b;
+}
+
+/* Table Headings in Light Mode */
+html.light thead,
+html.light th {
+  background-color: #e2e8f0;
+  color: #0f172a;
+}
+
+/* Blueprint Grids in Light Mode */
+html.light .bg-blueprint-grid-dark {
+  background-size: 32px 32px;
+  background-image: 
+    linear-gradient(to right, rgba(15, 23, 42, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.05) 1px, transparent 1px);
+  background-color: #ffffff;
+}
+
+html.light .bg-blueprint-grid {
+  background-size: 32px 32px;
+  background-image: 
+    linear-gradient(to right, rgba(15, 23, 42, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.05) 1px, transparent 1px);
+}
+
+/* =========================================================
+   DARK MODE DESIGN SPECIFICATIONS:
+   Soft white text on deep slate gray canvas (#020617 / #0f172a)
+   ========================================================= */
+html.dark:not(.baroque):not(.ethereal):not(.anthropomorphic):not(.ai_platform) {
+  color-scheme: dark;
+}
+
+html.dark:not(.baroque):not(.ethereal):not(.anthropomorphic):not(.ai_platform) body,
+html.dark:not(.baroque):not(.ethereal):not(.anthropomorphic):not(.ai_platform) #root {
+  background-color: #020617;
+  color: #f8fafc;
+}
+
+/* =========================================================
+   1. NEOCLASSICAL THEME (Parian Marble, Roman Ivory & Bronze)
+   ========================================================= */
+html.neoclassical {
+  color-scheme: light;
+}
+
+html.neoclassical body,
+html.neoclassical #root {
+  background-color: #f6f3eb;
+  color: #2a241b;
+}
+
+/* Deep Canvas / Page Body */
+html.neoclassical .bg-slate-950,
+html.neoclassical .bg-slate-950\/95,
+html.neoclassical .bg-slate-950\/90,
+html.neoclassical .bg-slate-950\/80 {
+  background-color: #ece6d8;
+  color: #2a241b;
+}
+
+/* Card Containers & Panels -> Parian Marble White */
+html.neoclassical .bg-slate-900,
+html.neoclassical .bg-slate-900\/95,
+html.neoclassical .bg-slate-900\/90,
+html.neoclassical .bg-slate-900\/80,
+html.neoclassical .bg-slate-900\/60,
+html.neoclassical .bg-slate-900\/50 {
+  background-color: #fbfaf7;
+  color: #2a241b;
+}
+
+/* Elevated Subcards & Inner Sections */
+html.neoclassical .bg-slate-800,
+html.neoclassical .bg-slate-800\/80,
+html.neoclassical .bg-slate-800\/50,
+html.neoclassical .bg-slate-800\/30 {
+  background-color: #eee7d8;
+  color: #383024;
+}
+
+/* Antique Roman Travertine & Bronze Borders */
+html.neoclassical .border-slate-800,
+html.neoclassical .border-slate-800\/80,
+html.neoclassical .border-slate-800\/90,
+html.neoclassical .border-slate-700,
+html.neoclassical .border-slate-900 {
+  border-color: #d6ccba;
+}
+
+/* Typography Hierarchy */
+html.neoclassical .text-white,
+html.neoclassical .text-slate-100,
+html.neoclassical .text-slate-200 {
+  color: #201a12;
+}
+
+html.neoclassical .text-slate-300,
+html.neoclassical .text-slate-400 {
+  color: #4a4031;
+}
+
+html.neoclassical .text-slate-500 {
+  color: #796d5a;
+}
+
+/* Inputs & Form Controls */
+html.neoclassical input:not([type="checkbox"]):not([type="radio"]),
+html.neoclassical select,
+html.neoclassical textarea {
+  background-color: #fbfaf7;
+  color: #201a12;
+  border-color: #d6ccba;
+}
+
+html.neoclassical input::placeholder,
+html.neoclassical textarea::placeholder {
+  color: #8c7f69;
+}
+
+/* Table Headings */
+html.neoclassical thead,
+html.neoclassical th {
+  background-color: #e4dcce;
+  color: #201a12;
+}
+
+html.neoclassical .bg-blueprint-grid,
+html.neoclassical .bg-blueprint-grid-dark {
+  background-size: 32px 32px;
+  background-image: 
+    linear-gradient(to right, rgba(146, 108, 46, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(146, 108, 46, 0.08) 1px, transparent 1px);
+}
+
+/* =========================================================
+   2. BAROQUE THEME (Royal Velvet Burgundy, Obsidian & Gilded Brass)
+   ========================================================= */
+html.baroque {
+  color-scheme: dark;
+}
+
+html.baroque body,
+html.baroque #root {
+  background-color: #140a12;
+  color: #fbf4ea;
+}
+
+/* Deep Canvas / Page Background */
+html.baroque .bg-slate-950,
+html.baroque .bg-slate-950\/95,
+html.baroque .bg-slate-950\/90,
+html.baroque .bg-slate-950\/80 {
+  background-color: #0e050c;
+  color: #fbf4ea;
+}
+
+/* Main Cards & Panels -> Deep Imperial Velvet */
+html.baroque .bg-slate-900,
+html.baroque .bg-slate-900\/95,
+html.baroque .bg-slate-900\/90,
+html.baroque .bg-slate-900\/80,
+html.baroque .bg-slate-900\/60,
+html.baroque .bg-slate-900\/50 {
+  background-color: #1e0f1b;
+  color: #fbf4ea;
+}
+
+/* Elevated Subcards */
+html.baroque .bg-slate-800,
+html.baroque .bg-slate-800\/80,
+html.baroque .bg-slate-800\/50,
+html.baroque .bg-slate-800\/30 {
+  background-color: #2c1627;
+  color: #f5ebe0;
+}
+
+/* Gilded Velvet & Imperial Trim Borders */
+html.baroque .border-slate-800,
+html.baroque .border-slate-800\/80,
+html.baroque .border-slate-800\/90,
+html.baroque .border-slate-700,
+html.baroque .border-slate-900 {
+  border-color: #552747;
+}
+
+/* High Contrast Gilded & Cream Typography */
+html.baroque .text-white,
+html.baroque .text-slate-100,
+html.baroque .text-slate-200 {
+  color: #fff9f0;
+}
+
+html.baroque .text-slate-300 {
+  color: #ecdccb;
+}
+
+html.baroque .text-slate-400 {
+  color: #cbb49e;
+}
+
+html.baroque .text-slate-500 {
+  color: #9f8670;
+}
+
+/* Form Controls in Baroque Mode */
+html.baroque input:not([type="checkbox"]):not([type="radio"]),
+html.baroque select,
+html.baroque textarea {
+  background-color: #140a12;
+  color: #fff9f0;
+  border-color: #552747;
+}
+
+html.baroque input::placeholder,
+html.baroque textarea::placeholder {
+  color: #8a705b;
+}
+
+html.baroque thead,
+html.baroque th {
+  background-color: #271223;
+  color: #eed69b;
+}
+
+html.baroque .bg-blueprint-grid,
+html.baroque .bg-blueprint-grid-dark {
+  background-size: 32px 32px;
+  background-image: 
+    linear-gradient(to right, rgba(212, 175, 55, 0.1) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(212, 175, 55, 0.1) 1px, transparent 1px);
+}
+
+/* =========================================================
+   3. ETHEREAL THEME (Twilight Sapphire, Starlight & Aurora Mist)
+   ========================================================= */
+html.ethereal {
+  color-scheme: dark;
+}
+
+html.ethereal body,
+html.ethereal #root {
+  background-color: #060b1c;
+  color: #f1f5ff;
+}
+
+/* Deep Canvas / Page Background */
+html.ethereal .bg-slate-950,
+html.ethereal .bg-slate-950\/95,
+html.ethereal .bg-slate-950\/90,
+html.ethereal .bg-slate-950\/80 {
+  background-color: #030612;
+  color: #f1f5ff;
+}
+
+/* Main Cards & Panels -> Deep Celestial Sapphire */
+html.ethereal .bg-slate-900,
+html.ethereal .bg-slate-900\/95,
+html.ethereal .bg-slate-900\/90,
+html.ethereal .bg-slate-900\/80,
+html.ethereal .bg-slate-900\/60,
+html.ethereal .bg-slate-900\/50 {
+  background-color: #0c1432;
+  color: #f1f5ff;
+}
+
+/* Elevated Subcards */
+html.ethereal .bg-slate-800,
+html.ethereal .bg-slate-800\/80,
+html.ethereal .bg-slate-800\/50,
+html.ethereal .bg-slate-800\/30 {
+  background-color: #14214e;
+  color: #e2eafc;
+}
+
+/* Celestial Ice & Starlight Borders */
+html.ethereal .border-slate-800,
+html.ethereal .border-slate-800\/80,
+html.ethereal .border-slate-800\/90,
+html.ethereal .border-slate-700,
+html.ethereal .border-slate-900 {
+  border-color: #24356d;
+}
+
+/* Luminous Starlight Typography */
+html.ethereal .text-white,
+html.ethereal .text-slate-100,
+html.ethereal .text-slate-200 {
+  color: #ffffff;
+}
+
+html.ethereal .text-slate-300 {
+  color: #d1dcfa;
+}
+
+html.ethereal .text-slate-400 {
+  color: #9cb1e8;
+}
+
+html.ethereal .text-slate-500 {
+  color: #6a82c4;
+}
+
+/* Form Controls in Ethereal Mode */
+html.ethereal input:not([type="checkbox"]):not([type="radio"]),
+html.ethereal select,
+html.ethereal textarea {
+  background-color: #060b1c;
+  color: #ffffff;
+  border-color: #24356d;
+}
+
+html.ethereal input::placeholder,
+html.ethereal textarea::placeholder {
+  color: #5d75ba;
+}
+
+html.ethereal thead,
+html.ethereal th {
+  background-color: #101c44;
+  color: #a5c4ff;
+}
+
+html.ethereal .bg-blueprint-grid,
+html.ethereal .bg-blueprint-grid-dark {
+  background-size: 32px 32px;
+  background-image: 
+    linear-gradient(to right, rgba(56, 189, 248, 0.12) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(167, 139, 250, 0.12) 1px, transparent 1px);
+}
+
+/* =========================================================
+   4. ANTHROPOMORPHIC THEME (Organic Terracotta, Earth Clay & Teak)
+   ========================================================= */
+html.anthropomorphic {
+  color-scheme: dark;
+}
+
+html.anthropomorphic body,
+html.anthropomorphic #root {
+  background-color: #18110d;
+  color: #fdf5ed;
+}
+
+/* Deep Canvas / Page Background */
+html.anthropomorphic .bg-slate-950,
+html.anthropomorphic .bg-slate-950\/95,
+html.anthropomorphic .bg-slate-950\/90,
+html.anthropomorphic .bg-slate-950\/80 {
+  background-color: #100b08;
+  color: #fdf5ed;
+}
+
+/* Main Cards & Panels -> Earthen Clay & Teak Charcoal */
+html.anthropomorphic .bg-slate-900,
+html.anthropomorphic .bg-slate-900\/95,
+html.anthropomorphic .bg-slate-900\/90,
+html.anthropomorphic .bg-slate-900\/80,
+html.anthropomorphic .bg-slate-900\/60,
+html.anthropomorphic .bg-slate-900\/50 {
+  background-color: #241a14;
+  color: #fdf5ed;
+}
+
+/* Elevated Subcards */
+html.anthropomorphic .bg-slate-800,
+html.anthropomorphic .bg-slate-800\/80,
+html.anthropomorphic .bg-slate-800\/50,
+html.anthropomorphic .bg-slate-800\/30 {
+  background-color: #34261e;
+  color: #f5e7db;
+}
+
+/* Terracotta Earth & Cedar Borders */
+html.anthropomorphic .border-slate-800,
+html.anthropomorphic .border-slate-800\/80,
+html.anthropomorphic .border-slate-800\/90,
+html.anthropomorphic .border-slate-700,
+html.anthropomorphic .border-slate-900 {
+  border-color: #553e32;
+}
+
+/* Warm Linen & Bone Typography */
+html.anthropomorphic .text-white,
+html.anthropomorphic .text-slate-100,
+html.anthropomorphic .text-slate-200 {
+  color: #fffaf5;
+}
+
+html.anthropomorphic .text-slate-300 {
+  color: #ecd9c7;
+}
+
+html.anthropomorphic .text-slate-400 {
+  color: #caa990;
+}
+
+html.anthropomorphic .text-slate-500 {
+  color: #9a765d;
+}
+
+/* Form Controls in Anthropomorphic Mode */
+html.anthropomorphic input:not([type="checkbox"]):not([type="radio"]),
+html.anthropomorphic select,
+html.anthropomorphic textarea {
+  background-color: #18110d;
+  color: #fffaf5;
+  border-color: #553e32;
+}
+
+html.anthropomorphic input::placeholder,
+html.anthropomorphic textarea::placeholder {
+  color: #8c6a51;
+}
+
+html.anthropomorphic thead,
+html.anthropomorphic th {
+  background-color: #2d1f18;
+  color: #f6b297;
+}
+
+html.anthropomorphic .bg-blueprint-grid,
+html.anthropomorphic .bg-blueprint-grid-dark {
+  background-size: 32px 32px;
+  background-image: 
+    linear-gradient(to right, rgba(224, 122, 95, 0.1) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(212, 139, 85, 0.1) 1px, transparent 1px);
+}
+
+/* =========================================================
+   5. MODERN HIGH-TECH AI PLATFORM THEME
+   Deep Charcoal (#121212), Glowing Cyan (#00E5FF),
+   Electric Blue Accents & Authoritative Sans-Serif
+   ========================================================= */
+html.ai_platform {
+  color-scheme: dark;
+  --ai-charcoal-bg: #121212;
+  --ai-charcoal-card: #181818;
+  --ai-charcoal-subcard: #222222;
+  --ai-cyan-accent: #00e5ff;
+}
+
+html.ai_platform body,
+html.ai_platform #root,
+html.ai_platform #app-root-wrapper {
+  background-color: #121212 !important;
+  background-image: none !important;
+  color: #f3f4f6;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Deep Canvas / Page Background -> Pure #121212 Charcoal */
+html.ai_platform .bg-slate-950,
+html.ai_platform .bg-slate-950\/95,
+html.ai_platform .bg-slate-950\/90,
+html.ai_platform .bg-slate-950\/80 {
+  background-color: #0d0d0d;
+  color: #f3f4f6;
+}
+
+/* Main Cards & Panels -> Sleek Dark Charcoal */
+html.ai_platform .bg-slate-900,
+html.ai_platform .bg-slate-900\/95,
+html.ai_platform .bg-slate-900\/90,
+html.ai_platform .bg-slate-900\/80,
+html.ai_platform .bg-slate-900\/60,
+html.ai_platform .bg-slate-900\/50 {
+  background-color: #181818;
+  color: #f3f4f6;
+}
+
+/* Elevated Subcards & Modules */
+html.ai_platform .bg-slate-800,
+html.ai_platform .bg-slate-800\/80,
+html.ai_platform .bg-slate-800\/50,
+html.ai_platform .bg-slate-800\/30 {
+  background-color: #222222;
+  color: #e5e7eb;
+}
+
+/* High-Tech Cyan Tinted Borders */
+html.ai_platform .border-slate-800,
+html.ai_platform .border-slate-800\/80,
+html.ai_platform .border-slate-800\/90,
+html.ai_platform .border-slate-700,
+html.ai_platform .border-slate-900 {
+  border-color: rgba(0, 229, 255, 0.18);
+}
+
+/* Authoritative High-Contrast Clean Typography */
+html.ai_platform .text-white,
+html.ai_platform .text-slate-100,
+html.ai_platform .text-slate-200 {
+  color: #ffffff;
+}
+
+html.ai_platform .text-slate-300 {
+  color: #d1d5db;
+}
+
+html.ai_platform .text-slate-400 {
+  color: #9ca3af;
+}
+
+html.ai_platform .text-slate-500 {
+  color: #6b7280;
+}
+
+/* Form Controls in High-Tech AI Mode */
+html.ai_platform input:not([type="checkbox"]):not([type="radio"]),
+html.ai_platform select,
+html.ai_platform textarea {
+  background-color: #161616;
+  color: #ffffff;
+  border-color: rgba(0, 229, 255, 0.25);
+}
+
+html.ai_platform input:focus,
+html.ai_platform select:focus,
+html.ai_platform textarea:focus {
+  border-color: #00e5ff;
+  box-shadow: 0 0 16px rgba(0, 229, 255, 0.4);
+  outline: none;
+}
+
+html.ai_platform input::placeholder,
+html.ai_platform textarea::placeholder {
+  color: #6b7280;
+}
+
+html.ai_platform thead,
+html.ai_platform th {
+  background-color: #1e1e1e;
+  color: #00e5ff;
+}
+
+/* High-Tech Grid with Glowing Cyan lines */
+html.ai_platform .bg-blueprint-grid,
+html.ai_platform .bg-blueprint-grid-dark {
+  background-size: 32px 32px;
+  background-image: 
+    linear-gradient(to right, rgba(0, 229, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 229, 255, 0.08) 1px, transparent 1px);
+}
+
+/* High-Tech AI Platform Dedicated Utilities */
+.ai-glow-cyan {
+  filter: drop-shadow(0 0 16px rgba(0, 229, 255, 0.6));
+}
+
+.ai-glow-blue {
+  filter: drop-shadow(0 0 18px rgba(0, 176, 255, 0.55));
+}
+
+.ai-box-glow {
+  box-shadow: 0 0 25px rgba(0, 229, 255, 0.28);
+}
+
+.ai-btn-glow {
+  background: #00e5ff;
+  color: #0a0a0a;
+  box-shadow: 0 0 24px rgba(0, 229, 255, 0.6), inset 0 0 12px rgba(255, 255, 255, 0.3);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ai-btn-glow:hover {
+  background: #33ebff;
+  box-shadow: 0 0 35px rgba(0, 229, 255, 0.85), inset 0 0 16px rgba(255, 255, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+.ai-btn-outline {
+  border: 1px solid rgba(0, 229, 255, 0.65);
+  color: #00e5ff;
+  background: rgba(0, 229, 255, 0.04);
+  backdrop-filter: blur(8px);
+  transition: all 0.2s ease-in-out;
+}
+
+.ai-btn-outline:hover {
+  background: rgba(0, 229, 255, 0.15);
+  border-color: #00e5ff;
+  box-shadow: 0 0 20px rgba(0, 229, 255, 0.35);
+  transform: translateY(-1px);
+}
+
+
+/* =========================================================
+   COMPREHENSIVE PRINT & PDF STYLES
+   Formats estimate sheets, stage/completion certificates,
+   and blueprints for clean A4 printing/saving to PDF.
+   ========================================================= */
+@media print {
+  /* Architectural Blueprint & Plan Landscape Sheet Printing */
+  body.printing-plan-sheet {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  body.printing-plan-sheet * {
+    visibility: hidden !important;
+  }
+
+  body.printing-plan-sheet #architectural-plan-print-root,
+  body.printing-plan-sheet #architectural-plan-print-root * {
+    visibility: visible !important;
+  }
+
+  body.printing-plan-sheet #architectural-plan-print-root {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 297mm !important;
+    min-height: 210mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    z-index: 999999 !important;
+    display: block !important;
+  }
+
+  body.printing-plan-sheet .architectural-print-page {
+    width: 297mm !important;
+    height: 210mm !important;
+    max-width: 297mm !important;
+    max-height: 210mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+    display: block !important;
+  }
+
+  body.printing-plan-sheet .architectural-print-page:last-child {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
+  /* Force B&W for standard invoice/estimate documents when NOT printing plan sheets */
+  body:not(.printing-plan-sheet) *,
+  body:not(.printing-plan-sheet) *::before,
+  body:not(.printing-plan-sheet) *::after {
+    background-color: #ffffff !important;
+    background-image: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
+    border-color: #000000 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  /* Specific detailed estimate overrides for print */
+  #estimate-sheet-container,
+  #estimate-sheet-container *,
+  .estimate-table-print,
+  .estimate-table-print *,
+  #printable-invoice-document,
+  #printable-invoice-document * {
+    background-color: #ffffff !important;
+    background-image: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
+    border-color: #000000 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  #estimate-sheet-container svg,
+  .estimate-table-print svg {
+    stroke: #000000 !important;
+  }
+
+  @page {
+    size: auto;
+    margin: 0mm;
+  }
+
+  /* A4 Invoice Document Layout with standard default margin */
+  #printable-invoice-document {
+    width: 100% !important;
+    max-width: 180mm !important;
+    min-height: auto !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  
+  /* Reset document root & scroll containers */
+  html, body, #root, #root > div {
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    position: static !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  main, .flex-1, .overflow-y-auto, .overflow-hidden {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    position: static !important;
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+
+  /* Hide application navigation, headers, sidebars, modals, action bars, and buttons */
+  header,
+  aside,
+  nav,
+  footer,
+  .no-print,
+  [aria-label="Estimate Tabs"],
+  [aria-label="Office Dashboard Tabs"],
+  button,
+  .sticky {
+    display: none !important;
+  }
+
+  /* Explicit print display helpers - MUST override .hidden */
+  .hidden.print\:block,
+  [class*="hidden"][class*="print:block"] {
+    display: block !important;
+  }
+  .hidden.print\:table,
+  [class*="hidden"][class*="print:table"] {
+    display: table !important;
+  }
+  .hidden.print\:flex,
+  [class*="hidden"][class*="print:flex"] {
+    display: flex !important;
+  }
+  .hidden.print\:grid,
+  [class*="hidden"][class*="print:grid"] {
+    display: grid !important;
+  }
+  .hidden.print\:inline-block,
+  [class*="hidden"][class*="print:inline-block"] {
+    display: inline-block !important;
+  }
+  .print\:block {
+    display: block !important;
+  }
+  .print\:table {
+    display: table !important;
+  }
+  .print\:inline-block {
+    display: inline-block !important;
+  }
+  .print\:flex {
+    display: flex !important;
+  }
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Reset dark backgrounds, slate containers, and text colors */
+  .bg-slate-950,
+  .bg-slate-900,
+  .bg-slate-900\/90,
+  .bg-slate-900\/80,
+  .bg-slate-900\/60,
+  .bg-slate-900\/95,
+  .bg-slate-800,
+  .bg-slate-950\/80 {
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    border-color: #cbd5e1 !important;
+    box-shadow: none !important;
+  }
+
+  /* Text color resets for high-contrast reading */
+  .text-white,
+  .text-slate-100,
+  .text-slate-200,
+  .text-slate-300,
+  .text-slate-400,
+  .text-slate-500,
+  .text-emerald-400,
+  .text-emerald-500,
+  .text-amber-400,
+  .text-amber-500,
+  .text-cyan-400,
+  .text-indigo-400 {
+    color: #000000 !important;
+  }
+
+  /* Clean print formatting for input fields, textareas, and select elements */
+  input,
+  textarea,
+  select {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #000000 !important;
+    appearance: none !important;
+    resize: none !important;
+    outline: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Printable table formatting */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    page-break-inside: auto;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  th, td {
+    border: 1px solid #000000 !important;
+    color: #000000 !important;
+    background-color: #ffffff !important;
+    padding: 4px 6px !important;
+  }
+
+  thead th {
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+    font-weight: bold !important;
+    color: #000000 !important;
+    border: 1px solid #000000 !important;
+  }
+
+  /* Rubber Stamp Seal optimization for print - Black & White */
+  .border-indigo-700, .bg-indigo-50\/40 {
+    border: 2px solid #000000 !important;
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  /* Estimate Table Print Rules & Columns */
+  .particulars-print-text {
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+    hyphens: none !important;
+    font-size: 8.5pt !important;
+    line-height: 1.35 !important;
+    color: #000000 !important;
+    display: block !important;
+  }
+
+  .estimate-table-print,
+  .valuation-table-print {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    table-layout: fixed !important;
+    margin-top: 2px !important;
+    margin-bottom: 4px !important;
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+  }
+
+  .estimate-table-print th,
+  .estimate-table-print td,
+  .valuation-table-print th,
+  .valuation-table-print td {
+    border: 1px solid #000000 !important;
+    padding: 3px 4px !important;
+    font-size: 8pt !important;
+    color: #000000 !important;
+    vertical-align: top !important;
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+  }
+
+  .estimate-table-print th,
+  .valuation-table-print th {
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    font-weight: bold !important;
+    text-transform: uppercase !important;
+    border: 1px solid #000000 !important;
+  }
+
+  .col-slno { width: 5%; text-align: center; }
+  .col-particulars { width: 34%; text-align: left; }
+  .col-nos { width: 5%; text-align: center; }
+  .col-l { width: 7%; text-align: right; }
+  .col-b { width: 7%; text-align: right; }
+  .col-d { width: 7%; text-align: right; }
+  .col-qty { width: 9%; text-align: right; font-weight: bold; }
+  .col-unit { width: 6%; text-align: center; }
+  .col-rate { width: 9%; text-align: right; }
+  .col-amount { width: 11%; text-align: right; font-weight: bold; }
+
+  .no-break-inside {
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+
+  /* Page break rules */
+  .page-break-before {
+    page-break-before: always;
+    break-before: page;
+  }
+
+  .page-break-after {
+    page-break-after: always;
+    break-after: page;
+  }
+
+  /* Strict Complete Black & White Print Rules for Printable Invoice Document */
+  #printable-invoice-document {
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  #printable-invoice-document,
+  #printable-invoice-document * {
+    color: #000000 !important;
+    border-color: #000000 !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+  }
+
+  #printable-invoice-document table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    border: 2px solid #000000 !important;
+    margin-top: 2px !important;
+    margin-bottom: 2px !important;
+  }
+
+  #printable-invoice-document thead th {
+    background-color: #f3f4f6 !important;
+    background: #f3f4f6 !important;
+    color: #000000 !important;
+    border: 1px solid #000000 !important;
+    font-weight: 900 !important;
+    padding: 4px 6px !important;
+    font-size: 8pt !important;
+  }
+
+  #printable-invoice-document tbody td {
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    border: 1px solid #000000 !important;
+    padding: 3.5px 6px !important;
+    font-size: 8pt !important;
+    font-weight: 600 !important;
+    line-height: 1.25 !important;
+  }
+
+  #printable-invoice-document .print\:grid-cols-12 {
+    display: grid !important;
+    grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+  }
+
+  #printable-invoice-document .print\:col-span-7 {
+    grid-column: span 7 / span 7 !important;
+  }
+
+  #printable-invoice-document .print\:col-span-5 {
+    grid-column: span 5 / span 5 !important;
+  }
+
+  #printable-invoice-document * {
+    box-sizing: border-box !important;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+  }
+}
+
+/* ========================================================================= */
+/* INVOICE & MODAL INPUT VISIBILITY & CONTRAST (FIXES INVISIBLE ENTERING TEXT) */
+/* ========================================================================= */
+.bg-white input:not([type="checkbox"]):not([type="radio"]),
+.bg-white select,
+.bg-white textarea,
+.bg-slate-50 input:not([type="checkbox"]):not([type="radio"]),
+.bg-slate-50 select,
+.bg-slate-50 textarea,
+.bg-slate-100 input:not([type="checkbox"]):not([type="radio"]),
+.bg-slate-100 select,
+.bg-slate-100 textarea,
+.bg-neutral-50 input:not([type="checkbox"]):not([type="radio"]),
+.bg-neutral-50 select,
+.bg-neutral-50 textarea,
+.bg-neutral-100 input:not([type="checkbox"]):not([type="radio"]),
+.bg-neutral-100 select,
+.bg-neutral-100 textarea,
+.invoice-modal-container input:not([type="checkbox"]):not([type="radio"]),
+.invoice-modal-container select,
+.invoice-modal-container textarea,
+input.invoice-input,
+select.invoice-input,
+textarea.invoice-input,
+input.invoice-field,
+select.invoice-field,
+textarea.invoice-field {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
+  border: 1px solid #94a3b8 !important;
+  opacity: 1 !important;
+  font-weight: 600 !important;
+}
+
+.bg-white input:focus,
+.bg-white select:focus,
+.bg-white textarea:focus,
+.bg-slate-50 input:focus,
+.bg-slate-50 select:focus,
+.bg-slate-50 textarea:focus,
+.invoice-modal-container input:focus,
+.invoice-modal-container select:focus,
+.invoice-modal-container textarea:focus,
+input.invoice-input:focus,
+select.invoice-input:focus,
+textarea.invoice-input:focus,
+input.invoice-field:focus,
+select.invoice-field:focus,
+textarea.invoice-field:focus {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  border: 1.5px solid #1d4ed8 !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important;
+  outline: none !important;
+}
+
+.bg-white input::placeholder,
+.bg-white textarea::placeholder,
+.bg-slate-50 input::placeholder,
+.bg-slate-50 textarea::placeholder,
+.invoice-modal-container input::placeholder,
+.invoice-modal-container textarea::placeholder,
+input.invoice-input::placeholder,
+textarea.invoice-input::placeholder,
+input.invoice-field::placeholder,
+textarea.invoice-field::placeholder {
+  color: #64748b !important;
+  -webkit-text-fill-color: #64748b !important;
+  opacity: 1 !important;
+  font-weight: 500 !important;
+}
+
+.bg-white input[type="date"],
+.bg-slate-50 input[type="date"],
+.invoice-modal-container input[type="date"],
+input.invoice-input[type="date"] {
+  color-scheme: light !important;
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
+}
+
+/* Dedicated Top-to-Bottom Window Scrollbar for Invoice & Workstation Views */
+.window-scrollbar {
+  overflow-y: auto !important;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: #06b6d4 rgba(15, 23, 42, 0.85);
+}
+
+.window-scrollbar::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.window-scrollbar::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.85);
+  border-radius: 9999px;
+  border: 1px solid rgba(51, 65, 85, 0.4);
+}
+
+.window-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #06b6d4 0%, #0d9488 100%);
+  border-radius: 9999px;
+  border: 2px solid rgba(15, 23, 42, 0.85);
+  box-shadow: 0 0 8px rgba(6, 182, 212, 0.4);
+}
+
+.window-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #22d3ee 0%, #14b8a6 100%);
+}
+
+/* Custom fade-in-up transition class for buttery-smooth tab-switches without React 19 bugs */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+

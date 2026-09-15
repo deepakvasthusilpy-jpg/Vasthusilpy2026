@@ -1,0 +1,10 @@
+{
+  "name": "Remix VASTHUSILPY - KOLVIRAL KANAKKU",
+  "description": "Vasthusilpy Engineering Studio featuring authentic Kerala Malayalam Kollavarsham Calendar & Drik-Ganitha Panchangam with Tithi, Nakshatram, Sunrise/Sunset, Rahu/Gulika/Yamagandam timings, Kerala IST Digital Clock, Saka & Vikram Samvat, dynamic festival theme switching, Google Drive Cloud storage sync, Architectural Portfolio, Building Plan Template with A4 Landscape title block and single PDF export, Construction Works management, SurveyCAD Studio, AutoCAD 2D Drafting, Traditional Vastu Shastra calculators, KPBR rules, Office CRM, and Building Rate Estimation.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

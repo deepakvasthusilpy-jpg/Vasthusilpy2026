@@ -1,0 +1,75 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isPrimaryAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.email == 'deepak.vasthusilpy@gmail.com' ||
+        request.auth.token.email == 'dibindeepak1@gmail.com'
+      );
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Whitelisted Emails Collection
+    match /authorized_emails/{emailDoc} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Whitelisted Mobile OTP Phones Collection
+    match /authorized_phones/{phoneDoc} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Projects Collection (Engineering Pipeline)
+    match /projects/{projectId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Invoices Collection (Billing & Financials)
+    match /invoices/{invoiceId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Estimates Collection (Rate & Work Item Projects)
+    match /estimates/{estimateId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Client Shares (Public unauthenticated client view tokens and updates)
+    match /client_shares/{shareDoc} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Client Share Records (Audit/History by link id)
+    match /client_share_records/{recordDoc} {
+      allow read: if true;
+      allow write: if true;
+    }
+    // Construction Agreements Collection (Public Verification & Contract Archive)
+    match /construction_agreements/{agreementDoc} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Construction Projects Collection
+    match /construction_projects/{projectDoc} {
+      allow read: if true;
+      allow write: if true;
+    }
+  }
+}
