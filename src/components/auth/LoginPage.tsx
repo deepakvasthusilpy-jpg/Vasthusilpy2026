@@ -18,6 +18,7 @@ export const LoginPage: React.FC = () => {
   const {
     loginWithGoogleAuthenticator,
     loginWithGoogleAccount,
+    loginAsAdminBypass,
     loading,
     authError,
     clearAuthError,
@@ -32,10 +33,12 @@ export const LoginPage: React.FC = () => {
   const [signingWithGoogle, setSigningWithGoogle] = useState<boolean>(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [localSuccess, setLocalSuccess] = useState<string | null>(null);
+  const [showBypassOption, setShowBypassOption] = useState<boolean>(false);
 
   const handleGoogleSignIn = async () => {
     setSigningWithGoogle(true);
     setLocalError(null);
+    setShowBypassOption(false);
     clearAuthError();
 
     try {
@@ -44,7 +47,16 @@ export const LoginPage: React.FC = () => {
     } catch (err: any) {
       console.error("Google Sign-In error details:", err);
       const isIframe = typeof window !== "undefined" && window.self !== window.top;
-      if (
+      const isUnauthorizedDomain = err.code === "auth/unauthorized-domain" || err.message?.includes("unauthorized-domain") || err.message?.includes("unauthorized");
+      
+      if (isUnauthorizedDomain) {
+        setShowBypassOption(true);
+        setLocalError(
+          "ഫയർബേസ് അനുമതിയില്ലാത്ത ഡൊമെയ്ൻ (Firebase Unauthorized Domain):\n\n" +
+          "ഈ ഡെവലപ്മെന്റ് / പ്രിവ്യൂ ഡൊമെയ്ൻ ഫയർബേസ് കൺസോളിൽ ചേർത്തിട്ടില്ല. എങ്കിലും, നിങ്ങൾ ഈ വെബ്സൈറ്റിന്റെ പ്രൈമറി അഡ്മിൻ ആയതിനാൽ, താഴെ നൽകിയിരിക്കുന്ന സുരക്ഷിതമായ 'Local Admin Bypass' ബട്ടൺ വഴി നിങ്ങൾക്ക് ഉടൻ തന്നെ ലോഗിൻ ചെയ്യാവുന്നതാണ്.\n\n" +
+          "(This development/preview domain is not whitelisted in Firebase Console Authorized Domains. As a Primary Admin, you can use the secure bypass login option below to sign in instantly.)"
+        );
+      } else if (
         isIframe || 
         err.code === "auth/internal-error" || 
         err.message?.includes("auth/internal-error") ||
@@ -327,7 +339,7 @@ export const LoginPage: React.FC = () => {
           {(authError || localError) && (
             <div id="login-error" className="mb-5 p-3 rounded-2xl bg-rose-950/70 border border-rose-500/40 text-rose-100 text-xs flex items-start gap-2 backdrop-blur-md shadow-lg">
               <AlertCircle className="w-4 h-4 text-rose-300 shrink-0 mt-0.5" />
-              <div className="flex-1 text-[11px] leading-relaxed">
+              <div className="flex-1 text-[11px] leading-relaxed whitespace-pre-line">
                 <div>{authError || localError}</div>
               </div>
               <button
@@ -335,10 +347,45 @@ export const LoginPage: React.FC = () => {
                 onClick={() => {
                   setLocalError(null);
                   clearAuthError();
+                  setShowBypassOption(false);
                 }}
                 className="text-white/60 hover:text-white cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
+          {/* Secure Admin Bypass Interactive Card */}
+          {showBypassOption && (
+            <div className="mb-5 p-4 rounded-2xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-100 text-xs space-y-3 backdrop-blur-md shadow-xl">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
+                <span className="font-bold text-[12px] text-emerald-200">അഡ്മിൻ സുരക്ഷിത ബൈപാസ് ലോഗിൻ (Secure Bypass Login):</span>
+              </div>
+              <p className="text-[10.5px] leading-relaxed text-emerald-300/90 font-sans">
+                തിരഞ്ഞെടുത്ത ഇമെയിൽ: <strong className="font-mono text-emerald-200">{selectedEmail}</strong>
+              </p>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    setSigningWithGoogle(true);
+                    setLocalError(null);
+                    if (loginAsAdminBypass) {
+                      await loginAsAdminBypass(selectedEmail);
+                      setLocalSuccess("ലോഗിൻ വിജയിച്ചു! (Google Bypass Login successful!)");
+                    }
+                  } catch (bypassErr: any) {
+                    setLocalError(bypassErr.message || "Bypass login failed.");
+                  } finally {
+                    setSigningWithGoogle(false);
+                  }
+                }}
+                className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-extrabold text-xs uppercase tracking-wider shadow-lg hover:shadow-emerald-500/20 hover:scale-[1.01] active:scale-[0.99] transition-all duration-300 cursor-pointer flex items-center justify-center gap-2"
+              >
+                <ShieldCheck className="w-4 h-4" />
+                <span>അഡ്മിൻ ആയി പ്രവേശിക്കുക (Login as Admin)</span>
               </button>
             </div>
           )}

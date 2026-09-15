@@ -1,15 +1,15 @@
 {
-  "syncedAt": "2026-09-14T08:49:19.697Z",
+  "syncedAt": "2026-09-15T10:51:09.784Z",
   "stats": {
     "projects": 1,
-    "invoices": 0,
-    "estimates": 0,
-    "customers": 0,
-    "rateItems": 0,
-    "cadFolders": 0,
-    "cadFiles": 0,
+    "invoices": 1,
+    "estimates": 1,
+    "customers": 1,
+    "rateItems": 8,
+    "cadFolders": 3,
+    "cadFiles": 4,
     "userProfiles": 1,
-    "subscriptionRequests": 0,
+    "subscriptionRequests": 3,
     "applicationEntries": 0
   }
 }

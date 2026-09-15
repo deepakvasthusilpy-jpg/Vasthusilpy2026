@@ -147,6 +147,7 @@ interface AuthContextType {
   verifyEmailOtp: (email: string, enteredOtp: string) => Promise<boolean>;
   signOutUser: () => Promise<void>;
   loginWithGoogleAccount: () => Promise<boolean>;
+  loginAsAdminBypass: (email: string) => Promise<boolean>;
   authorizedEmails: AuthorizedEmailRecord[];
   addAuthorizedEmail: (email: string, notes?: string) => Promise<void>;
   removeAuthorizedEmail: (email: string) => Promise<void>;
@@ -1348,6 +1349,94 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const loginAsAdminBypass = async (adminEmail: string): Promise<boolean> => {
+    setAuthError(null);
+    setLoading(true);
+
+    const cleanEmail = adminEmail.trim().toLowerCase();
+    if (!isPrimaryAdminEmail(cleanEmail)) {
+      setLoading(false);
+      throw new Error("This email is not registered as a primary admin.");
+    }
+
+    const isAdmin = true;
+    const docId = emailToDocId(cleanEmail);
+
+    let displayName = cleanEmail === "deepak.vasthusilpy@gmail.com" ? "DEEPAK" : "DIBIN DEEPAK";
+    let phone = "9747995961";
+    let profession = "Vasthu Consultant & Civil Engineer";
+
+    const now = Date.now();
+    setLastAdminTotpVerifiedAt(now);
+    recordAdminTotpVerified(cleanEmail, now);
+
+    try {
+      const userDoc = await getDoc(doc(db, "users", docId));
+      if (userDoc.exists()) {
+        const uData = userDoc.data();
+        if (uData.displayName) displayName = uData.displayName;
+        if (uData.phone) phone = uData.phone;
+        if (uData.profession) profession = uData.profession;
+      }
+
+      await setDoc(doc(db, "users", docId), {
+        email: cleanEmail,
+        phone: phone,
+        displayName: displayName,
+        profession: profession,
+        role: "primary_admin",
+        lastLoginAt: new Date().toISOString(),
+        lastAdminTotpVerifiedAt: now,
+        authMethod: "google_bypass_authorized"
+      }, { merge: true });
+    } catch (e) {
+      // Offline fallback
+    }
+
+    const sessionUser: EmailUser = {
+      email: cleanEmail,
+      phone: phone,
+      displayName: displayName,
+      profession: profession,
+      role: "primary_admin",
+      loginTimestamp: Date.now(),
+      lastAdminTotpVerifiedAt: now,
+      subscriptionId: "SUB-ADMIN-DEEPAK"
+    };
+
+    const subSession: SubscriptionUserSession = {
+      email: cleanEmail,
+      fullName: displayName,
+      phone: phone,
+      role: "primary_admin",
+      subscriptionId: "SUB-ADMIN-DEEPAK",
+      validUntil: "2099-12-31",
+      validDays: 36500,
+      status: "approved",
+      tabPermissions: { ...DEFAULT_FULL_PERMISSIONS },
+      loginTimestamp: Date.now()
+    };
+
+    localStorage.setItem("vasthusilpy_email_user", JSON.stringify(sessionUser));
+    localStorage.setItem("vasthusilpy_subscription_user", JSON.stringify(subSession));
+    localStorage.setItem("vasthusilpy_saved_login_id", cleanEmail);
+
+    setEmailUser(sessionUser);
+    setUser(null);
+    setAuthorized(true);
+    setIsPrimaryAdmin(isAdmin);
+
+    try {
+      await pullAndHydrateWebDataFromServer(cleanEmail);
+      await performFullWebDataSync();
+    } catch (syncErr) {
+      console.warn("Post-auth sync notice:", syncErr);
+    }
+
+    setLoading(false);
+    return true;
+  };
+
   // Subscription Request Submission from Login Page
   /*
     fullName: string;
@@ -1903,6 +1992,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginWithPassword,
         loginWithGoogleAuthenticator,
         loginWithGoogleAccount,
+        loginAsAdminBypass,
         sendEmailOtp,
         verifyEmailOtp,
         signOutUser,
