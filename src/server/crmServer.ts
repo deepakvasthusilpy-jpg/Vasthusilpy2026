@@ -4,8 +4,12 @@ import path from "path";
 import { CrmProject, Invoice } from "../types.ts";
 
 const DATA_DIR = path.join(process.cwd(), "data");
+const WEB_DATA_DIR = path.join(DATA_DIR, "web_data");
 const PROJECTS_FILE = path.join(DATA_DIR, "crm_projects.json");
+const WEB_PROJECTS_FILE = path.join(WEB_DATA_DIR, "crm_projects.json");
 const INVOICES_FILE = path.join(DATA_DIR, "crm_invoices.json");
+const WEB_INVOICES_FILE = path.join(WEB_DATA_DIR, "crm_invoices.json");
+const CAD_FILES_FILE = path.join(WEB_DATA_DIR, "cad_files.json");
 
 // Ensure data directory exists
 function ensureDataDir() {
@@ -16,33 +20,96 @@ function ensureDataDir() {
       console.error("Failed to create data directory:", e);
     }
   }
+  if (!fs.existsSync(WEB_DATA_DIR)) {
+    try {
+      fs.mkdirSync(WEB_DATA_DIR, { recursive: true });
+    } catch (e) {
+      console.error("Failed to create web_data directory:", e);
+    }
+  }
 }
 
-// Read projects from JSON file
+// Read projects from JSON file (checks both locations and merges)
 function readProjectsFromFile(): CrmProject[] {
   ensureDataDir();
+  const map = new Map<string, CrmProject>();
+
+  // 1. Read primary data/crm_projects.json
   try {
     if (fs.existsSync(PROJECTS_FILE)) {
       const content = fs.readFileSync(PROJECTS_FILE, "utf-8");
       const parsed = JSON.parse(content);
       if (Array.isArray(parsed)) {
-        return parsed;
+        parsed.forEach((p) => {
+          if (p && p.id) map.set(p.id, p);
+        });
       }
     }
   } catch (e) {
     console.error("Error reading crm_projects.json:", e);
   }
+
+  // 2. Read web_data/crm_projects.json
+  try {
+    if (fs.existsSync(WEB_PROJECTS_FILE)) {
+      const content = fs.readFileSync(WEB_PROJECTS_FILE, "utf-8");
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed)) {
+        parsed.forEach((p) => {
+          if (p && p.id && !map.has(p.id)) {
+            map.set(p.id, p);
+          }
+        });
+      }
+    }
+  } catch (e) {
+    console.error("Error reading web_data/crm_projects.json:", e);
+  }
+
+  return Array.from(map.values());
+}
+
+// Write projects to both JSON files
+function writeProjectsToFile(projects: CrmProject[]): boolean {
+  ensureDataDir();
+  let success = true;
+  try {
+    fs.writeFileSync(PROJECTS_FILE, JSON.stringify(projects, null, 2), "utf-8");
+  } catch (e) {
+    console.error("Error writing crm_projects.json:", e);
+    success = false;
+  }
+  try {
+    fs.writeFileSync(WEB_PROJECTS_FILE, JSON.stringify(projects, null, 2), "utf-8");
+  } catch (e) {
+    console.error("Error writing web_data/crm_projects.json:", e);
+  }
+  return success;
+}
+
+// Read CAD files from JSON
+function readCadFilesFromFile(): any[] {
+  ensureDataDir();
+  try {
+    if (fs.existsSync(CAD_FILES_FILE)) {
+      const content = fs.readFileSync(CAD_FILES_FILE, "utf-8");
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (e) {
+    console.error("Error reading cad_files.json:", e);
+  }
   return [];
 }
 
-// Write projects to JSON file
-function writeProjectsToFile(projects: CrmProject[]): boolean {
+// Write CAD files to JSON
+function writeCadFilesToFile(files: any[]): boolean {
   ensureDataDir();
   try {
-    fs.writeFileSync(PROJECTS_FILE, JSON.stringify(projects, null, 2), "utf-8");
+    fs.writeFileSync(CAD_FILES_FILE, JSON.stringify(files, null, 2), "utf-8");
     return true;
   } catch (e) {
-    console.error("Error writing crm_projects.json:", e);
+    console.error("Error writing cad_files.json:", e);
     return false;
   }
 }
@@ -50,18 +117,36 @@ function writeProjectsToFile(projects: CrmProject[]): boolean {
 // Read invoices from JSON file
 function readInvoicesFromFile(): Invoice[] {
   ensureDataDir();
+  const map = new Map<string, Invoice>();
   try {
     if (fs.existsSync(INVOICES_FILE)) {
       const content = fs.readFileSync(INVOICES_FILE, "utf-8");
       const parsed = JSON.parse(content);
       if (Array.isArray(parsed)) {
-        return parsed;
+        parsed.forEach((inv) => {
+          if (inv && inv.id) map.set(inv.id, inv);
+        });
       }
     }
   } catch (e) {
     console.error("Error reading crm_invoices.json:", e);
   }
-  return [];
+  try {
+    if (fs.existsSync(WEB_INVOICES_FILE)) {
+      const content = fs.readFileSync(WEB_INVOICES_FILE, "utf-8");
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed)) {
+        parsed.forEach((inv) => {
+          if (inv && inv.id && !map.has(inv.id)) {
+            map.set(inv.id, inv);
+          }
+        });
+      }
+    }
+  } catch (e) {
+    console.error("Error reading web_data/crm_invoices.json:", e);
+  }
+  return Array.from(map.values());
 }
 
 // Write invoices to JSON file
@@ -69,6 +154,7 @@ function writeInvoicesToFile(invoices: Invoice[]): boolean {
   ensureDataDir();
   try {
     fs.writeFileSync(INVOICES_FILE, JSON.stringify(invoices, null, 2), "utf-8");
+    fs.writeFileSync(WEB_INVOICES_FILE, JSON.stringify(invoices, null, 2), "utf-8");
     return true;
   } catch (e) {
     console.error("Error writing crm_invoices.json:", e);
@@ -95,18 +181,242 @@ export function registerCrmRoutes(app: Express) {
   app.get("/api/crm/projects/:id", (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const cleanId = (id || "").trim().toLowerCase();
+      const rawId = (id || "").trim();
+      const cleanId = rawId.toLowerCase();
+      const normId = cleanId.replace(/[^a-z0-9]/g, "");
+
       const projects = readProjectsFromFile();
-      const found = projects.find(
+
+      // 1. Direct Project Matches
+      let found = projects.find(
         (p) =>
           p.id.toLowerCase() === cleanId ||
-          p.id.toLowerCase().replace(/[^a-z0-9]/g, "") === cleanId.replace(/[^a-z0-9]/g, "") ||
-          (p.clientPhone && p.clientPhone.replace(/\D/g, "") === cleanId.replace(/\D/g, ""))
+          p.id.toLowerCase().replace(/[^a-z0-9]/g, "") === normId ||
+          (p.title && p.title.toLowerCase().includes(cleanId)) ||
+          (p.clientPhone && p.clientPhone.replace(/\D/g, "") === normId)
       );
+
       if (found) {
         return res.json({ success: true, project: found });
       }
-      return res.status(404).json({ success: false, error: "Project not found", id });
+
+      // 2. Check CAD Drawings & Blueprints (Cross-portal fallback so scanning CAD QR in project portal also works)
+      const cadFiles = readCadFilesFromFile();
+      const cadMatch = cadFiles.find((c) => {
+        const cId = (c.id || "").toLowerCase();
+        const sToken = (c.shareSettings?.shareToken || "").toLowerCase();
+        const cTitle = (c.title || c.name || "").toLowerCase();
+        const cPhone = (c.mobileNo || c.clientPhone || "").replace(/\D/g, "");
+        return (
+          cId === cleanId ||
+          sToken === cleanId ||
+          cId.replace(/[^a-z0-9]/g, "") === normId ||
+          sToken.replace(/[^a-z0-9]/g, "") === normId ||
+          (cTitle && cTitle.includes(cleanId)) ||
+          (cPhone && cPhone === normId)
+        );
+      });
+
+      if (cadMatch) {
+        // Synthesize a complete CrmProject representation from CAD drawing
+        const syntheticProject: CrmProject = {
+          id: cadMatch.id,
+          title: cadMatch.title || cadMatch.name || "Architectural Drawing Record",
+          clientName: cadMatch.clientName || cadMatch.ownerName || "Valued Client",
+          clientPhone: cadMatch.mobileNo || cadMatch.clientPhone || "",
+          location: cadMatch.location || "Kerala",
+          assignee: "DEEPAK",
+          status: "COMPLETED",
+          dueDate: (cadMatch.createdAt || new Date().toISOString()).split("T")[0],
+          description:
+            cadMatch.description ||
+            `Architectural Blueprint & Sanction Documentation. Drawing: ${cadMatch.name || cadMatch.title}. Category: ${cadMatch.category || "ARCHITECTURAL"}. Complying with KPBR statutory engineering standards.`,
+          subTasks: [
+            {
+              id: "sub_1",
+              title: "Drafting Architectural CAD & Plan",
+              completed: true,
+              assignee: "DEEPAK"
+            },
+            {
+              id: "sub_2",
+              title: "Structural & Plot Boundary Compliance Verification",
+              completed: true,
+              assignee: "DEEPAK"
+            }
+          ],
+          attachments: (cadMatch.attachments || []).map((att: any, idx: number) => ({
+            id: att.id || `cad_att_${idx}`,
+            name: att.name || `Vasthusilpy_Document_${idx + 1}`,
+            type: att.type || (att.isPdf ? "application/pdf" : "application/octet-stream"),
+            size:
+              typeof att.size === "number"
+                ? `${(att.size / (1024 * 1024)).toFixed(2)} MB`
+                : att.size || "1.2 MB",
+            uploadedAt: att.uploadedAt || cadMatch.createdAt || new Date().toISOString(),
+            url: att.dataUrl || att.downloadUrl || `/api/cad/file/${encodeURIComponent(cadMatch.id)}`
+          })),
+          activities: [
+            {
+              id: "act_cad_1",
+              action: "CAD Blueprint Archived in Vault",
+              timestamp: cadMatch.createdAt || "2026-09-12 10:00 AM",
+              actor: "Deepak C"
+            }
+          ],
+          comments: [],
+          createdAt: cadMatch.createdAt || new Date().toISOString()
+        };
+
+        return res.json({ success: true, project: syntheticProject, isFromCadVault: true });
+      }
+
+      return res.status(404).json({
+        success: false,
+        error: `Project record '${id}' could not be located in the Vasthusilpy engineering database.`,
+        id
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // ---------------------------------------------------------
+  // CAD FILES & SHARING API (Zero-Login Public Access)
+  // ---------------------------------------------------------
+
+  // GET CAD drawing by share token
+  app.get("/api/cad/share/:token", (req: Request, res: Response) => {
+    try {
+      const { token } = req.params;
+      const cleanToken = decodeURIComponent(token || "").trim().toLowerCase();
+      const normToken = cleanToken.replace(/[^a-z0-9]/g, "");
+
+      const cadFiles = readCadFilesFromFile();
+      const match = cadFiles.find((c) => {
+        const sToken = (c.shareSettings?.shareToken || "").toLowerCase();
+        const cId = (c.id || "").toLowerCase();
+        return (
+          sToken === cleanToken ||
+          cId === cleanToken ||
+          sToken.replace(/[^a-z0-9]/g, "") === normToken ||
+          cId.replace(/[^a-z0-9]/g, "") === normToken
+        );
+      });
+
+      if (match) {
+        return res.json({ success: true, file: match });
+      }
+
+      // Check CRM projects fallback
+      const projects = readProjectsFromFile();
+      const projMatch = projects.find(
+        (p) =>
+          p.id.toLowerCase() === cleanToken ||
+          p.id.toLowerCase().replace(/[^a-z0-9]/g, "") === normToken
+      );
+
+      if (projMatch) {
+        return res.json({
+          success: true,
+          file: {
+            id: projMatch.id,
+            name: projMatch.title,
+            title: projMatch.title,
+            clientName: projMatch.clientName,
+            mobileNo: projMatch.clientPhone,
+            location: projMatch.location,
+            description: projMatch.description,
+            shareSettings: {
+              isShared: true,
+              isPublic: true,
+              shareToken: projMatch.id,
+              allowDownload: true
+            },
+            attachments: (projMatch.attachments || []).map((att) => ({
+              id: att.id,
+              name: att.name,
+              type: att.type,
+              size: att.size,
+              dataUrl: att.url,
+              downloadUrl: att.url,
+              isPdf: att.type?.includes("pdf") || att.name?.endsWith(".pdf")
+            })),
+            createdAt: projMatch.dueDate || new Date().toISOString()
+          },
+          isFromCrmProject: true
+        });
+      }
+
+      return res.status(404).json({
+        success: false,
+        error: `CAD drawing with share token '${token}' was not found.`,
+        token
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // GET CAD drawing by ID
+  app.get("/api/cad/file/:id", (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const cleanId = decodeURIComponent(id || "").trim().toLowerCase();
+      const normId = cleanId.replace(/[^a-z0-9]/g, "");
+
+      const cadFiles = readCadFilesFromFile();
+      const match = cadFiles.find((c) => {
+        const cId = (c.id || "").toLowerCase();
+        const sToken = (c.shareSettings?.shareToken || "").toLowerCase();
+        return (
+          cId === cleanId ||
+          cId.replace(/[^a-z0-9]/g, "") === normId ||
+          sToken === cleanId ||
+          sToken.replace(/[^a-z0-9]/g, "") === normId
+        );
+      });
+
+      if (match) {
+        return res.json({ success: true, file: match });
+      }
+
+      return res.status(404).json({ success: false, error: "CAD file not found", id });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // GET all CAD files
+  app.get("/api/cad/files", (req: Request, res: Response) => {
+    try {
+      const cadFiles = readCadFilesFromFile();
+      return res.json({ success: true, files: cadFiles, count: cadFiles.length });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // POST save or update a CAD file
+  app.post("/api/cad/save", (req: Request, res: Response) => {
+    try {
+      const file = req.body.file || req.body;
+      if (!file || !file.id) {
+        return res.status(400).json({ success: false, error: "CAD file record with id is required" });
+      }
+
+      const existing = readCadFilesFromFile();
+      const idx = existing.findIndex((c) => c.id === file.id);
+      let updated: any[];
+      if (idx >= 0) {
+        updated = [...existing];
+        updated[idx] = { ...existing[idx], ...file, updatedAt: new Date().toISOString() };
+      } else {
+        updated = [{ ...file, createdAt: file.createdAt || new Date().toISOString() }, ...existing];
+      }
+
+      writeCadFilesToFile(updated);
+      return res.json({ success: true, file, count: updated.length });
     } catch (err: any) {
       return res.status(500).json({ success: false, error: err.message });
     }

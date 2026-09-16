@@ -71,8 +71,8 @@ interface HomePageProps {
 }
 
 export const HomePage: React.FC<HomePageProps> = ({ activeTab = "home_overview", setActiveTab, onNavigate }) => {
-  const { subscriptionRequests, isPrimaryAdmin, isSubscriberLogin } = useAuth();
-  const pendingRequestsCount = subscriptionRequests.filter((r) => r.status === "pending").length;
+  const { subscriptionRequests = [], isPrimaryAdmin, isSubscriberLogin } = useAuth();
+  const pendingRequestsCount = (subscriptionRequests || []).filter((r) => r.status === "pending").length;
 
   const [copiedUpi, setCopiedUpi] = useState(false);
   const [inquiryName, setInquiryName] = useState("");

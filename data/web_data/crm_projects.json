@@ -1,6 +1,116 @@
 [
   {
+    "id": "crm_proj_1789207368393",
+    "title": "E Residence Plan",
+    "clientName": "ER",
+    "clientPhone": "9747995961",
+    "location": "Keralassery, Palakkad",
+    "assignee": "DEEPAK",
+    "status": "PROGRESS",
+    "dueDate": "2026-09-27",
+    "invoiceId": "inv_1789207699995",
+    "description": "KSMART - REGULARISATION COMPLETION OCCUPANCY + FORM 2.\n\nVasthusilpy Engineering Architectural & Building Sanction Project:\n1. Regularisation Completion & Occupancy filing under KSMART statutory portal.\n2. Form 2 Structural Stability & Vasthu Vidya Alignment Verification.\n3. Detailed Architectural Plan, Section Elevations & Site Survey Clearance.\n4. All drawings and submissions comply with Kerala Panchayat Building Rules (KPBR 2019).\n\nOffice Reference: Vasthusilpy Engineering Consultants, Keralassery, Palakkad - 678641. Engineer: Deepak C (Chartered Supervising Engineer).",
+    "subTasks": [
+      {
+        "id": "task_1",
+        "title": "KSMART Regularisation Completion Occupancy filing",
+        "completed": true,
+        "assignee": "DEEPAK"
+      },
+      {
+        "id": "task_2",
+        "title": "Form 2 Structural & Vasthu Verification",
+        "completed": true,
+        "assignee": "DEEPAK"
+      },
+      {
+        "id": "task_3",
+        "title": "Site Measurement & Boundary Clearance Map",
+        "completed": true,
+        "assignee": "DIBIN"
+      },
+      {
+        "id": "task_4",
+        "title": "Final Local Self Government Panchayat Sanction Order",
+        "completed": false,
+        "assignee": "DEEPAK"
+      }
+    ],
+    "attachments": [
+      {
+        "id": "att_proj_er_1",
+        "name": "KSMART_Regularisation_Completion_Form_2.pdf",
+        "type": "application/pdf",
+        "size": "1.42 MB",
+        "uploadedAt": "2026-09-12",
+        "url": "/api/cloud-plans/download/crm_proj_1789207368393?sheetId=sheet_1"
+      },
+      {
+        "id": "att_proj_er_2",
+        "name": "ER_Residence_Floor_Plan_DWG_2026.pdf",
+        "type": "application/pdf",
+        "size": "2.18 MB",
+        "uploadedAt": "2026-09-12",
+        "url": "/api/cloud-plans/download/crm_proj_1789207368393?sheetId=sheet_2"
+      },
+      {
+        "id": "att_proj_er_3",
+        "name": "Site_Clearance_And_Survey_Layout.png",
+        "type": "image/png",
+        "size": "780 KB",
+        "uploadedAt": "2026-09-12",
+        "url": "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600' viewBox='0 0 800 600'%3E%3Crect width='800' height='600' fill='%230f172a'/%3E%3Crect x='40' y='40' width='720' height='520' fill='none' stroke='%2338bdf8' stroke-width='2' stroke-dasharray='6,6'/%3E%3Ctext x='400' y='180' fill='%2338bdf8' font-family='sans-serif' font-size='24' font-weight='bold' text-anchor='middle'%3EVASTHUSILPY ENGINEERING CONSULTANTS%3C/text%3E%3Ctext x='400' y='230' fill='%23ffffff' font-family='sans-serif' font-size='20' text-anchor='middle'%3EE RESIDENCE PLAN - SITE CLEARANCE &amp; SURVEY%3C/text%3E%3Ctext x='400' y='280' fill='%2394a3b8' font-family='sans-serif' font-size='16' text-anchor='middle'%3EClient: ER | Location: Keralassery, Palakkad%3C/text%3E%3Ctext x='400' y='330' fill='%2310b981' font-family='sans-serif' font-size='15' text-anchor='middle'%3EStatus: KPBR 2019 Compliant | KSMART Verified%3C/text%3E%3Crect x='150' y='380' width='500' height='100' rx='10' fill='%231e293b' stroke='%23334155'/%3E%3Ctext x='400' y='430' fill='%23f8fafc' font-family='monospace' font-size='14' text-anchor='middle'%3EOfficial Vasthusilpy Zero-Login Client Document View%3C/text%3E%3Ctext x='400' y='455' fill='%2338bdf8' font-family='monospace' font-size='12' text-anchor='middle'%3ERef: crm_proj_1789207368393 | Phone: 9747995961%3C/text%3E%3C/svg%3E"
+      }
+    ],
+    "activities": [
+      {
+        "id": "act_1",
+        "action": "Project Created",
+        "timestamp": "2026-09-12 10:30 AM",
+        "user": "Deepak C"
+      },
+      {
+        "id": "act_2",
+        "action": "Generated Invoice #246 (₹5,000)",
+        "timestamp": "2026-09-12 11:15 AM",
+        "user": "Deepak C"
+      },
+      {
+        "id": "act_3",
+        "action": "Published to Client Zero-Login Portal",
+        "timestamp": "2026-09-16 02:00 PM",
+        "user": "System"
+      }
+    ]
+  },
+  {
     "id": "PROJ-TEST",
-    "title": "Test Project"
+    "title": "Vasthusilpy Engineering Architectural Portfolio",
+    "clientName": "Deepak Vasthusilpy",
+    "clientPhone": "7012383137",
+    "location": "Palakkad, Kerala",
+    "assignee": "DEEPAK",
+    "status": "COMPLETED",
+    "dueDate": "2026-09-30",
+    "description": "Standard Architectural Design, Vastu Calculations, Building Plan & KPBR Structural Verification Framework.",
+    "subTasks": [
+      {
+        "id": "task_t1",
+        "title": "Architectural Drafting & Elevation",
+        "completed": true,
+        "assignee": "DEEPAK"
+      }
+    ],
+    "attachments": [
+      {
+        "id": "att_proj_test_1",
+        "name": "Vasthusilpy_Architectural_Specification_Guide.pdf",
+        "type": "application/pdf",
+        "size": "850 KB",
+        "uploadedAt": "2026-09-16",
+        "url": "data:application/pdf;base64,JVBERi0xLjcKCjEgMCBvYmoKPDwvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFI+PgplbmRvYmoK"
+      }
+    ],
+    "activities": []
   }
 ]

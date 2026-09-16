@@ -50,7 +50,8 @@ import {
   FileText,
   Home,
   User,
-  Phone
+  Phone,
+  Trash2
 } from "lucide-react";
 
 interface CadViewerEditorModalProps {
@@ -58,6 +59,7 @@ interface CadViewerEditorModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave?: (updatedFile: CADDrawingRecord) => void;
+  onDelete?: (fileId: string) => void;
 }
 
 type ActiveCADTool =
@@ -76,7 +78,8 @@ export const CadViewerEditorModal: React.FC<CadViewerEditorModalProps> = ({
   file,
   isOpen,
   onClose,
-  onSave
+  onSave,
+  onDelete
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -235,9 +238,9 @@ export const CadViewerEditorModal: React.FC<CadViewerEditorModalProps> = ({
 
     // 4. Render All CAD Entities
     const layerMap = new Map<string, CADLayer>();
-    drawingData.layers.forEach((l) => layerMap.set(l.id, l));
+    (drawingData?.layers || []).forEach((l) => layerMap.set(l.id, l));
 
-    drawingData.entities.forEach((entity) => {
+    (drawingData?.entities || []).forEach((entity) => {
       const layer = layerMap.get(entity.layer);
       if (layer && !layer.visible) return; // Hidden layer
 
@@ -750,6 +753,21 @@ export const CadViewerEditorModal: React.FC<CadViewerEditorModalProps> = ({
               <span className="hidden md:inline">Specs</span>
             </button>
 
+            {onDelete && (
+              <button
+                onClick={() => {
+                  if (confirm(`Are you sure you want to permanently delete "${file.name}"?`)) {
+                    onDelete(file.id);
+                    onClose();
+                  }
+                }}
+                title="Delete File"
+                className="p-2 rounded-xl bg-rose-950/60 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-800/80 transition-colors cursor-pointer"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
+
             <button
               onClick={() => setIsFullscreen(!isFullscreen)}
               className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors cursor-pointer"
@@ -968,7 +986,7 @@ export const CadViewerEditorModal: React.FC<CadViewerEditorModalProps> = ({
                   {measuredDistance && (
                     <span className="text-cyan-400 font-bold">Dist: {measuredDistance}</span>
                   )}
-                  <span className="text-slate-500">Entities: {drawingData.entities.length}</span>
+                  <span className="text-slate-500">Entities: {drawingData?.entities?.length || 0}</span>
                 </div>
               </div>
 

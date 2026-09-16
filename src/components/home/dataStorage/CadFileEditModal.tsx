@@ -44,6 +44,7 @@ interface CadFileEditModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSaved: (savedFile: CADDrawingRecord) => void;
+  onDelete?: (fileId: string) => void;
   userEmail: string;
 }
 
@@ -113,6 +114,7 @@ export const CadFileEditModal: React.FC<CadFileEditModalProps> = ({
   isOpen,
   onClose,
   onSaved,
+  onDelete,
   userEmail
 }) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -766,21 +768,41 @@ export const CadFileEditModal: React.FC<CadFileEditModalProps> = ({
           </div>
 
           {/* Footer Actions */}
-          <div className="pt-4 border-t border-slate-800 flex items-center justify-end gap-3 shrink-0">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono font-bold cursor-pointer transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-mono font-bold flex items-center gap-2 shadow-lg shadow-cyan-950 cursor-pointer transition-all"
-            >
-              <Save className="w-4 h-4" />
-              <span>{file ? "Update Drawing" : "Save to Vault"}</span>
-            </button>
+          <div className="pt-4 border-t border-slate-800 flex items-center justify-between gap-3 shrink-0">
+            {file && onDelete ? (
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm(`Are you sure you want to permanently delete "${file.name}"?`)) {
+                    onDelete(file.id);
+                    onClose();
+                  }
+                }}
+                className="px-4 py-2.5 rounded-xl bg-rose-950/60 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-800/80 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer transition-all"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Delete Drawing</span>
+              </button>
+            ) : (
+              <div />
+            )}
+
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono font-bold cursor-pointer transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-mono font-bold flex items-center gap-2 shadow-lg shadow-cyan-950 cursor-pointer transition-all"
+              >
+                <Save className="w-4 h-4" />
+                <span>{file ? "Update Drawing" : "Save to Vault"}</span>
+              </button>
+            </div>
           </div>
         </form>
       </div>

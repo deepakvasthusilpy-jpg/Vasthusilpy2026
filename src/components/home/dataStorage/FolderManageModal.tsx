@@ -54,6 +54,7 @@ export const FolderManageModal: React.FC<FolderManageModalProps> = ({
   const [color, setColor] = useState(editingFolder ? editingFolder.color || "#38bdf8" : "#38bdf8");
   const [description, setDescription] = useState(editingFolder ? editingFolder.description || "" : "");
   const [error, setError] = useState<string | null>(null);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
   if (!isOpen) return null;
 
@@ -90,18 +91,8 @@ export const FolderManageModal: React.FC<FolderManageModalProps> = ({
     onClose();
   };
 
-  const handleDelete = () => {
+  const handleExecuteDelete = () => {
     if (!editingFolder) return;
-    if (editingFolder.isSystemDefault) {
-      if (!confirm(`"${editingFolder.name}" is a default root folder. Are you sure you want to delete it? Files will be relocated to another folder.`)) {
-        return;
-      }
-    } else {
-      if (!confirm(`Are you sure you want to delete folder "${editingFolder.name}" and any subfolders inside it?`)) {
-        return;
-      }
-    }
-
     deleteCADFolder(editingFolder.id);
     onFoldersUpdated();
     onClose();
@@ -228,34 +219,56 @@ export const FolderManageModal: React.FC<FolderManageModalProps> = ({
           {/* Footer Actions */}
           <div className="pt-3 border-t border-slate-800 flex items-center justify-between gap-3">
             {editingFolder ? (
-              <button
-                type="button"
-                onClick={handleDelete}
-                className="px-3.5 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-400 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-                <span>Delete Folder</span>
-              </button>
+              isConfirmingDelete ? (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleExecuteDelete}
+                    className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-mono font-bold flex items-center gap-1.5 shadow-lg shadow-rose-950 cursor-pointer transition-all animate-in fade-in"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>Confirm Delete</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsConfirmingDelete(false)}
+                    className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono cursor-pointer"
+                  >
+                    Back
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setIsConfirmingDelete(true)}
+                  className="px-3.5 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-400 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Delete Folder</span>
+                </button>
+              )
             ) : (
               <div />
             )}
 
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono font-bold cursor-pointer transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-mono font-bold flex items-center gap-2 shadow-lg shadow-cyan-950 cursor-pointer transition-all"
-              >
-                <Check className="w-4 h-4" />
-                <span>{editingFolder ? "Save Changes" : "Create Folder"}</span>
-              </button>
-            </div>
+            {!isConfirmingDelete && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono font-bold cursor-pointer transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-mono font-bold flex items-center gap-2 shadow-lg shadow-cyan-950 cursor-pointer transition-all"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>{editingFolder ? "Save Changes" : "Create Folder"}</span>
+                </button>
+              </div>
+            )}
           </div>
         </form>
       </div>

@@ -532,51 +532,165 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
           {/* TAB 1: OVERVIEW & DESCRIPTION */}
           {activeTab === "overview" && (
             <div className="space-y-6 text-xs font-sans">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-mono">
-                <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2">
-                  <div className="text-[10px] text-slate-500 uppercase font-bold flex items-center gap-1">
-                    <User className="w-3.5 h-3.5 text-cyan-400" />
-                    <span>CLIENT / CUSTOMER DETAILS</span>
-                  </div>
-                  <div className="text-sm font-bold text-white font-sans">
-                    {project.clientName}
-                  </div>
-                  <div className="text-slate-400 flex items-center gap-1">
-                    <Phone className="w-3 h-3 text-slate-500" />
-                    <span>{project.clientPhone}</span>
-                  </div>
-                </div>
-
-                <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2">
-                  <div className="text-[10px] text-slate-500 uppercase font-bold flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>SITE LOCATION / SURVEY NO</span>
-                  </div>
-                  <div className="text-sm font-bold text-white font-sans">
-                    {project.location}
-                  </div>
-                  {project.estimatedAmount && (
-                    <div className="text-emerald-400 font-bold">
-                      Contract Value: ₹{project.estimatedAmount.toLocaleString("en-IN")}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+                {/* 1ST COLUMN: SITE LOCATION & DIRECTLY UNDERNEATH: PROJECT DESCRIPTION & SPECIFICATIONS */}
+                <div className="space-y-4">
+                  {/* Site Location Card */}
+                  <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2 shadow-sm">
+                    <div className="text-[10px] text-slate-500 uppercase font-bold flex items-center justify-between font-mono">
+                      <span className="flex items-center gap-1.5 text-emerald-400">
+                        <MapPin className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>SITE LOCATION / SURVEY NO</span>
+                      </span>
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                          project.location + " Kerala"
+                        )}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[10px] text-cyan-400 hover:underline flex items-center gap-1 font-mono"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        <span>Open Maps</span>
+                      </a>
                     </div>
-                  )}
-                </div>
-              </div>
+                    <div className="text-sm font-bold text-white font-sans">
+                      {project.location}
+                    </div>
+                    {project.estimatedAmount && (
+                      <div className="text-emerald-400 font-bold font-mono text-xs pt-1 border-t border-slate-800/80">
+                        Contract Value: ₹{project.estimatedAmount.toLocaleString("en-IN")}
+                      </div>
+                    )}
+                  </div>
 
-              {/* Project Description Editor */}
-              <div className="space-y-2">
-                <label className="text-xs font-mono font-bold text-slate-300 uppercase block">
-                  Project Description & Specifications
-                </label>
-                <textarea
-                  value={project.description}
-                  onChange={(e) =>
-                    onUpdateProject({ ...project, description: e.target.value })
-                  }
-                  rows={4}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-slate-200 font-sans text-xs focus:outline-none focus:border-emerald-500 leading-relaxed"
-                  placeholder="Enter detailed project scope, Vasthu requirements, and engineer notes..."
-                />
+                  {/* PROJECT DESCRIPTION & SPECIFICATIONS (DIRECTLY UNDER LOCATION IN 1ST COLUMN) */}
+                  <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2.5 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-mono font-bold text-cyan-300 uppercase flex items-center gap-1.5">
+                        <FileText className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>Project Description & Specifications</span>
+                      </label>
+                      <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800">
+                        Live Client Sync
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 font-mono">
+                      Vasthu parameters, structural scope, client requirements & floor specifications:
+                    </p>
+                    <textarea
+                      value={project.description}
+                      onChange={(e) =>
+                        onUpdateProject({ ...project, description: e.target.value })
+                      }
+                      rows={6}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-slate-200 font-sans text-xs focus:outline-none focus:border-cyan-500 leading-relaxed"
+                      placeholder="Enter detailed project scope, Vasthu dimensions, room specifications, and structural notes..."
+                    />
+                    {/* Quick Specification Tags */}
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      <span className="text-[10px] text-slate-500 font-mono py-0.5">Quick Tags:</span>
+                      {[
+                        "Vasthu Compliant",
+                        "3 BHK Double Storey",
+                        "Traditional Kerala Architecture",
+                        "RCC Framed Structure",
+                        "Boundary Wall & Gate"
+                      ].map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => {
+                            const current = project.description && project.description.trim()
+                              ? `${project.description.trim()}\n• ${tag}`
+                              : `• ${tag}`;
+                            onUpdateProject({ ...project, description: current });
+                          }}
+                          className="text-[10px] font-mono bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 hover:border-cyan-500/50 px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
+                        >
+                          + {tag}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2ND COLUMN: CLIENT DETAILS, ZERO-LOGIN QR ACCESS, & FINANCIAL INVOICE */}
+                <div className="space-y-4">
+                  {/* Client Card */}
+                  <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2 shadow-sm">
+                    <div className="text-[10px] text-slate-500 uppercase font-bold flex items-center justify-between font-mono">
+                      <span className="flex items-center gap-1.5 text-cyan-400">
+                        <User className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>CLIENT / CUSTOMER DETAILS</span>
+                      </span>
+                      <span className="text-slate-400 text-[10px]">CRM Record</span>
+                    </div>
+                    <div className="text-sm font-bold text-white font-sans">
+                      {project.clientName}
+                    </div>
+                    <div className="flex items-center justify-between text-slate-300 font-mono pt-1">
+                      <a
+                        href={`tel:${project.clientPhone}`}
+                        className="hover:text-cyan-300 flex items-center gap-1.5 text-xs font-bold"
+                      >
+                        <Phone className="w-3 h-3 text-cyan-400" />
+                        <span>{project.clientPhone}</span>
+                      </a>
+                      {project.clientPhone && (
+                        <a
+                          href={`https://wa.me/91${project.clientPhone.replace(/\D/g, "")}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[11px] text-emerald-400 hover:underline flex items-center gap-1"
+                        >
+                          WhatsApp Chat
+                        </a>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* ZERO-LOGIN SHARE & QR CODE CLIENT ACCESS CARD */}
+                  <div className="bg-slate-950 p-4 rounded-2xl border border-cyan-500/30 space-y-3 shadow-md">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-lg bg-cyan-950 text-cyan-400 border border-cyan-800">
+                          <QrCode className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <span className="text-xs font-bold text-white font-mono block">
+                            CLIENT ZERO-LOGIN QR PORTAL
+                          </span>
+                          <span className="text-[10px] text-emerald-400 font-mono">
+                            Active • No Login Required For Client
+                          </span>
+                        </div>
+                      </div>
+                      {onShareProject && (
+                        <button
+                          type="button"
+                          onClick={() => onShareProject(project)}
+                          className="px-2.5 py-1 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-[11px] font-mono font-bold flex items-center gap-1 transition-all cursor-pointer shadow-sm"
+                        >
+                          <Share2 className="w-3 h-3" />
+                          <span>QR Modal</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <p className="text-[11px] text-slate-300 font-sans leading-relaxed">
+                      Clients can scan the QR code to view all entered details, specifications, and download attached drawings without creating an account.
+                    </p>
+
+                    <div className="flex items-center justify-between bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-[11px] font-mono">
+                      <span className="text-slate-400">Shareable Files:</span>
+                      <span className="text-emerald-400 font-bold flex items-center gap-1">
+                        <Paperclip className="w-3.5 h-3.5" />
+                        {(project.attachments || []).length} Document(s)
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* PROJECT INVOICE & PAYMENT RECORD CARD */}

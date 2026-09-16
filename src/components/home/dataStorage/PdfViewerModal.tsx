@@ -29,7 +29,8 @@ import {
   Grid,
   Ruler,
   Eye,
-  FileBox
+  FileBox,
+  Trash2
 } from "lucide-react";
 
 interface PdfViewerModalProps {
@@ -38,6 +39,7 @@ interface PdfViewerModalProps {
   isOpen: boolean;
   onClose: () => void;
   onOpenShare?: (file: CADDrawingRecord) => void;
+  onDelete?: (fileId: string) => void;
 }
 
 type PreviewFileType = "pdf" | "image" | "cad" | "text" | "dwg";
@@ -47,7 +49,8 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
   attachment,
   isOpen,
   onClose,
-  onOpenShare
+  onOpenShare,
+  onDelete
 }) => {
   // All available preview tabs (attachments + cad vector + generated blueprint)
   const [selectedAttachmentId, setSelectedAttachmentId] = useState<string>("default");
@@ -360,6 +363,22 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
               <Download className="w-4 h-4" />
               <span className="hidden sm:inline">Download</span>
             </button>
+
+            {onDelete && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm(`Are you sure you want to permanently delete "${file.name}"?`)) {
+                    onDelete(file.id);
+                    onClose();
+                  }
+                }}
+                title="Delete File"
+                className="p-2 rounded-xl bg-rose-950/60 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-800/80 transition-colors cursor-pointer"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
 
             <button
               type="button"

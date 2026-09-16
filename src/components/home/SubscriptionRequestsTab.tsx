@@ -266,13 +266,14 @@ export const SubscriptionRequestsTab: React.FC = () => {
   };
 
   // Filtered requests
-  const filteredRequests = subscriptionRequests.filter((req) => {
+  const safeSubscriptionRequests = Array.isArray(subscriptionRequests) ? subscriptionRequests : [];
+  const filteredRequests = safeSubscriptionRequests.filter((req) => {
     const matchesSearch =
-      req.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      req.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      req.phone.includes(searchQuery) ||
-      req.upiRefId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      req.id.toLowerCase().includes(searchQuery.toLowerCase());
+      (req.fullName || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (req.email || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (req.phone || "").includes(searchQuery) ||
+      (req.upiRefId || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (req.id || "").toLowerCase().includes(searchQuery.toLowerCase());
 
     const isExp = isSubscriptionExpired(req);
     const effectiveStatus = req.status === "approved" && isExp ? "expired" : req.status;
@@ -285,12 +286,12 @@ export const SubscriptionRequestsTab: React.FC = () => {
   });
 
   // Calculate statistics
-  const totalCount = subscriptionRequests.length;
-  const pendingCount = subscriptionRequests.filter((r) => r.status === "pending").length;
-  const activeCount = subscriptionRequests.filter(
+  const totalCount = safeSubscriptionRequests.length;
+  const pendingCount = safeSubscriptionRequests.filter((r) => r.status === "pending").length;
+  const activeCount = safeSubscriptionRequests.filter(
     (r) => r.status === "approved" && !isSubscriptionExpired(r)
   ).length;
-  const expiredCount = subscriptionRequests.filter(
+  const expiredCount = safeSubscriptionRequests.filter(
     (r) => r.status === "expired" || (r.status === "approved" && isSubscriptionExpired(r))
   ).length;
 

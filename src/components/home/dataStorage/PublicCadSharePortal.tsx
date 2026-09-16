@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { CADDrawingRecord, CADAttachment } from "../../../types/dataStorageTypes";
-import { getCADDrawingByShareToken, formatBytes, downloadAttachment, triggerDxfDownload } from "../../../utils/dataStorageManager";
+import { getCADDrawingByShareToken, fetchCADDrawingByTokenOrId, formatBytes, downloadAttachment, triggerDxfDownload } from "../../../utils/dataStorageManager";
 import { generateCadBlueprintPdf } from "../../../utils/cadPdfExportHelper";
 import { PdfCanvasViewer } from "./PdfCanvasViewer";
 import {
@@ -43,18 +43,26 @@ export const PublicCadSharePortal: React.FC<PublicCadSharePortalProps> = ({
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [selectedFileId, setSelectedFileId] = useState<string>("default");
 
-  // Load drawing by token or ID
+  // Load drawing by token or ID (local cache + remote server fallback for QR scans)
   useEffect(() => {
+    let isMounted = true;
     setLoading(true);
-    const found = getCADDrawingByShareToken(token);
-    if (found) {
-      setFile(found);
-      // Check PIN
-      if (!found.shareSettings?.pin) {
-        setIsUnlocked(true);
+
+    fetchCADDrawingByTokenOrId(token).then((found) => {
+      if (!isMounted) return;
+      if (found) {
+        setFile(found);
+        // Check PIN
+        if (!found.shareSettings?.pin) {
+          setIsUnlocked(true);
+        }
       }
-    }
-    setLoading(false);
+      setLoading(false);
+    });
+
+    return () => {
+      isMounted = false;
+    };
   }, [token]);
 
   const handleUnlockPin = (e: React.FormEvent) => {

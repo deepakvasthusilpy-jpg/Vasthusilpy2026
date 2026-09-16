@@ -154,7 +154,10 @@ export function updateCADFolder(folder: CADFolder): void {
   saveStoredCADFolders(updated);
 }
 
-export function deleteCADFolder(folderId: string): { success: boolean; error?: string } {
+export function deleteCADFolder(
+  folderId: string,
+  deleteContents: boolean = false
+): { success: boolean; error?: string } {
   const folders = getStoredCADFolders();
   const target = folders.find((f) => f.id === folderId);
   
@@ -177,19 +180,27 @@ export function deleteCADFolder(folderId: string): { success: boolean; error?: s
 
   // Relocate or delete files in these folders
   const files = getStoredCADFiles();
-  const defaultFallbackFolder = remainingFolders.find((f) => f.id === "folder-deepak") || remainingFolders[0];
-  
-  const updatedFiles = files.map((file) => {
-    if (toDeleteFolderIds.includes(file.folderId)) {
-      return {
-        ...file,
-        folderId: defaultFallbackFolder ? defaultFallbackFolder.id : "folder-deepak",
-        folderPath: defaultFallbackFolder ? defaultFallbackFolder.path : "/DEEPAK",
-        updatedAt: new Date().toISOString()
-      };
-    }
-    return file;
-  });
+  let updatedFiles: CADDrawingRecord[];
+
+  if (deleteContents) {
+    // Delete all files inside this folder and its subfolders
+    updatedFiles = files.filter((file) => !toDeleteFolderIds.includes(file.folderId));
+  } else {
+    // Relocate files to default fallback root folder
+    const defaultFallbackFolder = remainingFolders.find((f) => f.id === "folder-deepak") || remainingFolders[0];
+    
+    updatedFiles = files.map((file) => {
+      if (toDeleteFolderIds.includes(file.folderId)) {
+        return {
+          ...file,
+          folderId: defaultFallbackFolder ? defaultFallbackFolder.id : "folder-deepak",
+          folderPath: defaultFallbackFolder ? defaultFallbackFolder.path : "/DEEPAK",
+          updatedAt: new Date().toISOString()
+        };
+      }
+      return file;
+    });
+  }
 
   saveStoredCADFolders(remainingFolders);
   saveAllCADFiles(updatedFiles);
@@ -290,6 +301,106 @@ export function getCADDrawingByShareToken(token: string): CADDrawingRecord | nul
   // 3. Match case-insensitively
   match = files.find((f) => f.shareSettings?.shareToken?.toLowerCase() === clean.toLowerCase());
   if (match) return match;
+
+  return null;
+}
+
+/**
+ * Asynchronously fetch CAD drawing by share token or ID, checking:
+ * 1. Local storage cache
+ * 2. Backend server /api/cad/share/:token
+ * 3. Backend server /api/cad/file/:id
+ * 4. Backend CRM project cross-portal fallback /api/crm/projects/:id
+ * This ensures mobile phone QR scans without prior cookies/localStorage always succeed!
+ */
+export async function fetchCADDrawingByTokenOrId(token: string): Promise<CADDrawingRecord | null> {
+  const clean = (token || "").trim();
+  if (!clean) return null;
+
+  // 1. Check local cache
+  const local = getCADDrawingByShareToken(clean);
+  if (local) return local;
+
+  // 2. Fetch from backend /api/cad/share/:token
+  try {
+    const res = await fetch(`/api/cad/share/${encodeURIComponent(clean)}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.success && data.file) {
+        saveCADDrawingRecord(data.file, true);
+        return data.file;
+      }
+    }
+  } catch (e) {
+    console.warn("CAD share fetch error:", e);
+  }
+
+  // 3. Fetch from backend /api/cad/file/:id
+  try {
+    const res = await fetch(`/api/cad/file/${encodeURIComponent(clean)}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.success && data.file) {
+        saveCADDrawingRecord(data.file, true);
+        return data.file;
+      }
+    }
+  } catch (e) {
+    console.warn("CAD file fetch error:", e);
+  }
+
+  // 4. Check CRM project endpoint fallback
+  try {
+    const resProj = await fetch(`/api/crm/projects/${encodeURIComponent(clean)}`);
+    if (resProj.ok) {
+      const pData = await resProj.json();
+      if (pData && pData.success && pData.project) {
+        const proj = pData.project;
+        const synthCad: CADDrawingRecord = {
+          id: proj.id,
+          name: proj.title || "Project Architectural Record",
+          title: proj.title,
+          projectName: proj.title,
+          projectCode: proj.id,
+          clientName: proj.clientName,
+          ownerName: proj.clientName,
+          mobileNo: proj.clientPhone,
+          clientPhone: proj.clientPhone,
+          location: proj.location,
+          description: proj.description,
+          folderId: "folder-deepak",
+          folderPath: "/DEEPAK",
+          createdAt: proj.dueDate || new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          category: "PLAN",
+          fileType: "PDF",
+          fileSize: 1024 * 1024,
+          keywords: ["project", "crm", "blueprint", "vasthu"],
+          createdBy: "deepak.vasthusilpy@gmail.com",
+          version: 1,
+          shareSettings: {
+            isShared: true,
+            shareToken: proj.id,
+            allowDownload: true
+          },
+          attachments: (proj.attachments || []).map((att: any, idx: number) => ({
+            id: att.id || `att_${idx}`,
+            name: att.name,
+            type: att.type || "application/pdf",
+            size: typeof att.size === "number" ? att.size : 1024 * 1024,
+            dataUrl: att.url,
+            downloadUrl: att.url,
+            uploadedAt: att.uploadedAt || new Date().toISOString(),
+            isPdf: att.type?.includes("pdf") || att.name?.endsWith(".pdf")
+          }))
+        };
+        saveCADDrawingRecord(synthCad, true);
+        return synthCad;
+      }
+    }
+  } catch (e) {
+    console.warn("CRM project fallback fetch error:", e);
+  }
 
   return null;
 }

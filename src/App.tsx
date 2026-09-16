@@ -356,17 +356,10 @@ export default function App() {
   const urlParams = new URLSearchParams(window.location.search);
   const hashParams = new URLSearchParams(window.location.hash.replace(/^#\/?/, ""));
   
-  const crmProjectShareId =
-    urlParams.get("project") ||
-    urlParams.get("crm_project") ||
-    urlParams.get("project_id") ||
-    urlParams.get("project_share") ||
-    urlParams.get("share_project") ||
-    urlParams.get("proj") ||
-    hashParams.get("project") ||
-    hashParams.get("crm_project") ||
-    hashParams.get("project_id") ||
-    hashParams.get("project_share");
+  const rawIdParam = urlParams.get("id") || hashParams.get("id");
+  const isCrmId = !!rawIdParam && (rawIdParam.startsWith("crm_") || rawIdParam.startsWith("PROJ") || rawIdParam.startsWith("proj_"));
+  const isCadId = !!rawIdParam && (rawIdParam.startsWith("CAD-") || rawIdParam.startsWith("cad-") || rawIdParam.startsWith("vst-"));
+  const isEstId = !!rawIdParam && (rawIdParam.startsWith("EST-") || rawIdParam.startsWith("est_"));
 
   const clientViewToken =
     urlParams.get("client_view") ||
@@ -378,6 +371,24 @@ export default function App() {
     hashParams.get("client_view") ||
     hashParams.get("token") ||
     hashParams.get("portal");
+
+  const isCrmToken = !!clientViewToken && (clientViewToken.startsWith("crm_") || clientViewToken.startsWith("PROJ") || clientViewToken.startsWith("proj_"));
+  const isCadToken = !!clientViewToken && (clientViewToken.startsWith("CAD-") || clientViewToken.startsWith("vst-") || clientViewToken.startsWith("cad-"));
+
+  // Public Project Pipeline Share Portal (Zero Login, QR & Shareable Document Link)
+  const crmProjectShareId =
+    urlParams.get("project") ||
+    urlParams.get("crm_project") ||
+    urlParams.get("project_id") ||
+    urlParams.get("project_share") ||
+    urlParams.get("share_project") ||
+    urlParams.get("proj") ||
+    (isCrmId ? rawIdParam : null) ||
+    (isCrmToken ? clientViewToken : null) ||
+    hashParams.get("project") ||
+    hashParams.get("crm_project") ||
+    hashParams.get("project_id") ||
+    hashParams.get("project_share");
 
   const invoiceShareId =
     urlParams.get("invoice_share") ||
@@ -392,7 +403,7 @@ export default function App() {
   const verifyId =
     urlParams.get("verify") ||
     urlParams.get("estimateId") ||
-    urlParams.get("id") ||
+    (isEstId || (!isCrmId && !isCadId && rawIdParam && !urlParams.get("project")) ? rawIdParam : null) ||
     hashParams.get("verify") ||
     hashParams.get("estimateId");
   const verifyHash = urlParams.get("hash") || hashParams.get("hash") || undefined;
@@ -439,11 +450,25 @@ export default function App() {
     urlParams.get("drawing_share") ||
     urlParams.get("cad_token") ||
     urlParams.get("share_file") ||
+    (isCadId ? rawIdParam : null) ||
+    (isCadToken ? clientViewToken : null) ||
     hashParams.get("cad_share") ||
     hashParams.get("cad_id") ||
     hashParams.get("share_cad");
 
-  // 0. Public CAD Drawing & Blueprint Share Portal (Zero Login, QR & Direct Link Verification)
+  // 0. Public Project Pipeline Record & Attachments Portal (Zero Login, Shareable Client Document View)
+  if (crmProjectShareId) {
+    return (
+      <PublicProjectSharePortal
+        projectId={crmProjectShareId}
+        onGoToApp={() => {
+          window.location.href = window.location.origin;
+        }}
+      />
+    );
+  }
+
+  // 1. Public CAD Drawing & Blueprint Share Portal (Zero Login, QR & Direct Link Verification)
   if (cadShareToken) {
     return (
       <PublicCadSharePortal
@@ -495,18 +520,6 @@ export default function App() {
         verifyHash={verifyHash}
         initialTab={verifyTab}
         estimateProjects={estimateProjects}
-      />
-    );
-  }
-
-  // 5. Public Project Pipeline Record & Attachments Portal (Zero Login, Shareable Client Document View)
-  if (crmProjectShareId) {
-    return (
-      <PublicProjectSharePortal
-        projectId={crmProjectShareId}
-        onGoToApp={() => {
-          window.location.href = window.location.origin;
-        }}
       />
     );
   }

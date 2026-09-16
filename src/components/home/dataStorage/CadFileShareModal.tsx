@@ -54,18 +54,19 @@ export const CadFileShareModal: React.FC<CadFileShareModalProps> = ({
     shareToken
   )}`;
 
-  // Generate offline QR Code data URL
+  // Generate offline high-contrast QR Code data URL and sync to server
   useEffect(() => {
     if (!isOpen) return;
 
     QRCode.toDataURL(
       shareUrl,
       {
-        width: 320,
+        width: 380,
         margin: 2,
+        errorCorrectionLevel: "M",
         color: {
-          dark: "#38bdf8", // Cyan-400
-          light: "#090d16" // Slate-950
+          dark: "#000000",
+          light: "#ffffff"
         }
       },
       (err, url) => {
@@ -74,7 +75,18 @@ export const CadFileShareModal: React.FC<CadFileShareModalProps> = ({
         }
       }
     );
-  }, [isOpen, shareUrl]);
+
+    // Sync CAD record to server so external mobile phone camera scans find it immediately
+    try {
+      fetch("/api/cad/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ file })
+      }).catch((e) => console.warn("Background CAD server sync:", e));
+    } catch (e) {
+      // ignore
+    }
+  }, [isOpen, shareUrl, file]);
 
   // Ensure drawing has active share settings saved
   useEffect(() => {
@@ -314,7 +326,7 @@ export const CadFileShareModal: React.FC<CadFileShareModalProps> = ({
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4 py-2">
-                  <div className="p-3 rounded-2xl bg-[#090d16] border border-cyan-800/80 shadow-xl inline-block">
+                  <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xl inline-block">
                     {qrDataUrl ? (
                       <img
                         src={qrDataUrl}

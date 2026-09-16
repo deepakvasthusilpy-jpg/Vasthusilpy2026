@@ -12,6 +12,7 @@ import {
   getCADMetadataIndex,
   getCADDrawingRecordById,
   deleteCADDrawingRecord,
+  deleteCADFolder,
   toggleStarCADDrawing,
   resetAndWipeCadStorage,
   formatBytes,
@@ -23,11 +24,14 @@ import { CadViewerEditorModal } from "./dataStorage/CadViewerEditorModal";
 import { PdfViewerModal } from "./dataStorage/PdfViewerModal";
 import { CadFileShareModal } from "./dataStorage/CadFileShareModal";
 import { FolderManageModal } from "./dataStorage/FolderManageModal";
+import { FolderDeleteModal } from "./dataStorage/FolderDeleteModal";
+import { FileDeleteModal } from "./dataStorage/FileDeleteModal";
 import { GoogleDriveSyncModal } from "./dataStorage/GoogleDriveSyncModal";
 import {
   Folder,
   FolderPlus,
   FolderTree,
+  FolderX,
   FileCode,
   FileText,
   Image as ImageIcon,
@@ -55,6 +59,7 @@ import {
   List,
   ArrowUpDown,
   ShieldAlert,
+  AlertTriangle,
   X,
   LayoutGrid,
   Settings,
@@ -63,7 +68,9 @@ import {
   Database,
   ArrowRight,
   Info,
-  Check
+  Check,
+  CheckSquare,
+  Square
 } from "lucide-react";
 
 interface DataStorageTabProps {
@@ -263,6 +270,13 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
 
   const [isDriveSyncModalOpen, setIsDriveSyncModalOpen] = useState(false);
   const [isWipeConfirmOpen, setIsWipeConfirmOpen] = useState(false);
+
+  // Multi-select & Folder / File Delete states
+  const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
+  const [folderPendingDelete, setFolderPendingDelete] = useState<CADFolder | null>(null);
+  const [filePendingDelete, setFilePendingDelete] = useState<CADMetadataIndexItem | null>(null);
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
+  const [deleteFolderWithContents, setDeleteFolderWithContents] = useState(false);
 
   // Settings Folder Filter Search
   const [folderSearchQuery, setFolderSearchQuery] = useState("");
@@ -484,12 +498,56 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
     reloadData();
   };
 
-  const handleDeleteFile = (item: CADMetadataIndexItem, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (confirm(`Are you sure you want to delete "${item.name}" from ${item.folderPath}?`)) {
-      deleteCADDrawingRecord(item.id);
+  const handleToggleSelectFile = (fileId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setSelectedFileIds((prev) =>
+      prev.includes(fileId) ? prev.filter((id) => id !== fileId) : [...prev, fileId]
+    );
+  };
+
+  const handleSelectAllFiles = (items: CADMetadataIndexItem[]) => {
+    const itemIds = items.map((i) => i.id);
+    const allSelected = itemIds.length > 0 && itemIds.every((id) => selectedFileIds.includes(id));
+    if (allSelected) {
+      setSelectedFileIds((prev) => prev.filter((id) => !itemIds.includes(id)));
+    } else {
+      setSelectedFileIds((prev) => Array.from(new Set([...prev, ...itemIds])));
+    }
+  };
+
+  const handleBulkDeleteSelected = () => {
+    if (selectedFileIds.length === 0) return;
+    setIsBulkDeleteModalOpen(true);
+  };
+
+  const handleConfirmBulkDelete = () => {
+    selectedFileIds.forEach((id) => deleteCADDrawingRecord(id));
+    setSelectedFileIds([]);
+    setIsBulkDeleteModalOpen(false);
+    reloadData();
+  };
+
+  const handleConfirmDeleteFolder = (folder: CADFolder, withContents: boolean) => {
+    const result = deleteCADFolder(folder.id, withContents);
+    if (result.success) {
+      if (activeFolderId === folder.id) {
+        setActiveFolderId(null);
+      }
+      setFolderPendingDelete(null);
       reloadData();
     }
+  };
+
+  const handleDeleteFile = (item: CADMetadataIndexItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setFilePendingDelete(item);
+  };
+
+  const handleConfirmDeleteFile = (fileId: string) => {
+    deleteCADDrawingRecord(fileId);
+    setSelectedFileIds((prev) => prev.filter((id) => id !== fileId));
+    setFilePendingDelete(null);
+    reloadData();
   };
 
   const handleQuickDownload = (item: CADMetadataIndexItem, e: React.MouseEvent) => {
@@ -843,9 +901,34 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
                         </div>
                       </div>
                     </div>
-                    <span className="px-2 py-0.5 rounded-md bg-slate-900 text-[10px] font-mono text-slate-400 border border-slate-800 shrink-0">
-                      {count}
-                    </span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFolderToEdit(f);
+                          setIsFolderModalOpen(true);
+                        }}
+                        title={`Edit folder "${f.name}"`}
+                        className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFolderPendingDelete(f);
+                        }}
+                        title={`Delete folder "${f.name}"`}
+                        className="p-1.5 rounded-lg bg-slate-900 hover:bg-rose-600 text-slate-400 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                      <span className="px-2 py-0.5 rounded-md bg-slate-900 text-[10px] font-mono text-slate-400 border border-slate-800 shrink-0">
+                        {count}
+                      </span>
+                    </div>
                   </div>
                 );
               })}
@@ -970,6 +1053,13 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
                           >
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
+                          <button
+                            onClick={(e) => handleDeleteFile(item, e)}
+                            title="Delete Drawing"
+                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-600 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -1041,21 +1131,15 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
                       <Edit2 className="w-3 h-3" />
                       <span>Edit Folder</span>
                     </button>
-                    {!activeFolder.isSystemDefault && (
-                      <button
-                        onClick={() => {
-                          if (confirm(`Delete folder "${activeFolder.name}"? Files will be moved to root.`)) {
-                            // delete folder
-                            setFolderToEdit(activeFolder);
-                            setIsFolderModalOpen(true);
-                          }
-                        }}
-                        className="text-[11px] font-mono text-rose-400 hover:text-rose-300 flex items-center gap-1 cursor-pointer"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                        <span>Delete</span>
-                      </button>
-                    )}
+                    <button
+                      onClick={() => {
+                        setFolderPendingDelete(activeFolder);
+                      }}
+                      className="text-[11px] font-mono text-rose-400 hover:text-rose-300 flex items-center gap-1 cursor-pointer font-bold bg-rose-950/40 hover:bg-rose-950/80 px-2 py-1 rounded-lg border border-rose-900/60 transition-colors"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>Delete Folder</span>
+                    </button>
                   </>
                 )}
                 <button
@@ -1097,27 +1181,41 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
                 const isSubfolder = Boolean(folder.parentId);
 
                 return (
-                  <button
+                  <div
                     key={folder.id}
-                    onClick={() => setActiveFolderId(folder.id)}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-mono font-bold flex items-center gap-2 transition-all cursor-pointer border ${
+                    className={`inline-flex items-center rounded-xl text-xs font-mono font-bold transition-all border group/fbadge ${
                       isSelected
                         ? "bg-slate-800 text-white shadow-md border-cyan-500"
                         : "bg-slate-950 text-slate-300 hover:text-white border-slate-800 hover:border-slate-700"
                     }`}
                   >
-                    <span
-                      className="w-2.5 h-2.5 rounded-full shrink-0"
-                      style={{ backgroundColor: folder.color || "#38bdf8" }}
-                    />
-                    <Folder className="w-3.5 h-3.5" style={{ color: folder.color || "#38bdf8" }} />
-                    <span>
-                      {isSubfolder ? `↳ ${folder.name}` : folder.name}
-                    </span>
-                    <span className="px-1.5 py-0.2 rounded-full bg-slate-900 text-[10px] text-slate-400 border border-slate-800">
-                      {count}
-                    </span>
-                  </button>
+                    <button
+                      onClick={() => setActiveFolderId(folder.id)}
+                      className="px-3 py-2 flex items-center gap-2 cursor-pointer"
+                    >
+                      <span
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: folder.color || "#38bdf8" }}
+                      />
+                      <Folder className="w-3.5 h-3.5" style={{ color: folder.color || "#38bdf8" }} />
+                      <span>
+                        {isSubfolder ? `↳ ${folder.name}` : folder.name}
+                      </span>
+                      <span className="px-1.5 py-0.2 rounded-full bg-slate-900 text-[10px] text-slate-400 border border-slate-800">
+                        {count}
+                      </span>
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setFolderPendingDelete(folder);
+                      }}
+                      title={`Delete folder "${folder.name}"`}
+                      className="pr-2.5 pl-1 py-2 text-slate-500 hover:text-rose-400 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
                 );
               })}
             </div>
@@ -1349,240 +1447,295 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
             </div>
           ) : viewMode === "grid" ? (
             /* GRID VIEW */
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-              {filteredItems.map((item) => {
-                const isPdf = item.fileType === "PDF";
-                const isImage = item.fileType === "IMAGE";
+            <div className="space-y-4">
+              {filteredItems.length > 0 && (
+                <div className="flex items-center justify-between px-2 text-xs font-mono text-slate-400">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleSelectAllFiles(filteredItems)}
+                      className="flex items-center gap-1.5 hover:text-cyan-300 cursor-pointer"
+                    >
+                      {filteredItems.every((i) => selectedFileIds.includes(i.id)) ? (
+                        <CheckSquare className="w-4 h-4 text-cyan-400" />
+                      ) : (
+                        <Square className="w-4 h-4" />
+                      )}
+                      <span>Select All ({filteredItems.length})</span>
+                    </button>
+                  </div>
+                  {selectedFileIds.length > 0 && (
+                    <div className="text-cyan-300 font-bold">
+                      {selectedFileIds.length} item(s) selected
+                    </div>
+                  )}
+                </div>
+              )}
 
-                return (
-                  <div
-                    key={item.id}
-                    onClick={() => handleOpenFile(item)}
-                    className="group bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-cyan-500/50 rounded-3xl p-5 shadow-xl transition-all duration-200 flex flex-col justify-between cursor-pointer relative overflow-hidden"
-                  >
-                    <div>
-                      <div className="flex items-start justify-between gap-3 mb-3">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div
-                            className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border ${
-                              isPdf
-                                ? "bg-rose-500/20 border-rose-500/40 text-rose-400"
-                                : isImage
-                                ? "bg-amber-500/20 border-amber-500/40 text-amber-400"
-                                : "bg-cyan-500/20 border-cyan-500/40 text-cyan-400"
-                            }`}
-                          >
-                            {isPdf ? (
-                              <FileText className="w-5 h-5" />
-                            ) : isImage ? (
-                              <ImageIcon className="w-5 h-5" />
-                            ) : (
-                              <FileCode className="w-5 h-5" />
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                {filteredItems.map((item) => {
+                  const isPdf = item.fileType === "PDF";
+                  const isImage = item.fileType === "IMAGE";
+                  const isSelected = selectedFileIds.includes(item.id);
+
+                  return (
+                    <div
+                      key={item.id}
+                      onClick={() => handleOpenFile(item)}
+                      className={`group bg-slate-900 hover:bg-slate-850 border rounded-3xl p-5 shadow-xl transition-all duration-200 flex flex-col justify-between cursor-pointer relative overflow-hidden ${
+                        isSelected
+                          ? "border-cyan-500 ring-1 ring-cyan-500/50 bg-slate-900/90"
+                          : "border-slate-800 hover:border-cyan-500/50"
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <button
+                              type="button"
+                              onClick={(e) => handleToggleSelectFile(item.id, e)}
+                              className={`p-1 rounded-lg transition-colors cursor-pointer shrink-0 ${
+                                isSelected
+                                  ? "text-cyan-400 bg-cyan-950/80"
+                                  : "text-slate-600 hover:text-slate-400 bg-slate-950/60"
+                              }`}
+                              title={isSelected ? "Deselect" : "Select"}
+                            >
+                              {isSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+                            </button>
+
+                            <div
+                              className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border ${
+                                isPdf
+                                  ? "bg-rose-500/20 border-rose-500/40 text-rose-400"
+                                  : isImage
+                                  ? "bg-amber-500/20 border-amber-500/40 text-amber-400"
+                                  : "bg-cyan-500/20 border-cyan-500/40 text-cyan-400"
+                              }`}
+                            >
+                              {isPdf ? (
+                                <FileText className="w-5 h-5" />
+                              ) : isImage ? (
+                                <ImageIcon className="w-5 h-5" />
+                              ) : (
+                                <FileCode className="w-5 h-5" />
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md border ${
+                                    isPdf
+                                      ? "bg-rose-950 text-rose-300 border-rose-800"
+                                      : isImage
+                                      ? "bg-amber-950 text-amber-300 border-amber-800"
+                                      : "bg-cyan-950 text-cyan-300 border-cyan-800"
+                                  }`}
+                                >
+                                  {item.fileType}
+                                </span>
+                                <span className="text-[10px] font-mono text-slate-400 truncate">
+                                  📁 {item.folderPath}
+                                </span>
+                              </div>
+                              <h3 className="text-sm font-bold text-white font-mono truncate group-hover:text-cyan-300 transition-colors mt-0.5">
+                                {item.name}
+                              </h3>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={(e) => handleToggleStar(item.id, e)}
+                              className="p-1.5 rounded-xl bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-amber-400 transition-colors cursor-pointer"
+                            >
+                              <Star
+                                className={`w-4 h-4 ${
+                                  item.isStarred ? "fill-amber-400 text-amber-400" : ""
+                                }`}
+                              />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => handleDeleteFile(item, e)}
+                              title="Delete Drawing"
+                              className="p-1.5 rounded-xl bg-slate-950 hover:bg-rose-600 text-slate-500 hover:text-white transition-colors cursor-pointer"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Owner & Details */}
+                        <div className="p-3 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-1.5 text-xs font-mono mb-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                              <User className="w-3 h-3 text-cyan-400" />
+                              Owner / Client:
+                            </span>
+                            <span className="font-bold text-white truncate max-w-[150px]">
+                              {item.ownerName || item.clientName || "Vasthusilpy Client"}
+                            </span>
+                          </div>
+
+                          {item.mobileNo && (
+                            <div className="flex items-center justify-between text-[11px]">
+                              <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                                <Phone className="w-3 h-3 text-emerald-400" />
+                                Mobile:
+                              </span>
+                              <span className="text-slate-300">{item.mobileNo}</span>
+                            </div>
+                          )}
+
+                          {item.location && (
+                            <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-800/80">
+                              <span className="text-[10px] text-slate-500">Location:</span>
+                              <span className="text-cyan-300 truncate max-w-[160px] font-bold">
+                                {item.location}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Architectural Specs Badges (Facing, BHK, Floors) */}
+                        {(item.facing || item.bedrooms || item.floors || item.builtUpArea) && (
+                          <div className="grid grid-cols-2 gap-2 text-[11px] font-mono mb-3">
+                            {item.facing && (
+                              <div className="p-2 rounded-xl bg-slate-950 border border-slate-800/80 flex items-center gap-1.5">
+                                <Compass className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                <span className="truncate text-amber-300 font-bold">{item.facing}</span>
+                              </div>
+                            )}
+
+                            {item.bedrooms && (
+                              <div className="p-2 rounded-xl bg-slate-950 border border-slate-800/80 flex items-center gap-1.5">
+                                <Home className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                                <span className="truncate text-cyan-300 font-bold">{item.bedrooms}</span>
+                              </div>
+                            )}
+
+                            {item.floors && (
+                              <div className="p-2 rounded-xl bg-slate-950 border border-slate-800/80 flex items-center gap-1.5">
+                                <Layers className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                                <span className="truncate text-purple-300 font-bold">{item.floors}</span>
+                              </div>
+                            )}
+
+                            {item.builtUpArea && (
+                              <div className="p-2 rounded-xl bg-slate-950 border border-slate-800/80 flex items-center gap-1.5">
+                                <span className="text-[10px] text-slate-400">Plinth:</span>
+                                <span className="truncate text-emerald-300 font-bold">
+                                  {item.builtUpArea}
+                                </span>
+                              </div>
                             )}
                           </div>
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
+                        )}
+
+                        {/* Vasthu Chuttu Badge */}
+                        {item.vasthuChuttu && (
+                          <div className="p-2 rounded-xl bg-amber-950/30 border border-amber-500/30 text-amber-200 text-[11px] font-mono mb-3 flex items-center justify-between">
+                            <span className="text-[10px] font-bold text-amber-400">വാസ്തു ചുറ്റ്:</span>
+                            <span className="font-bold truncate max-w-[190px]">{item.vasthuChuttu}</span>
+                          </div>
+                        )}
+
+                        {/* Auto Keywords Badges */}
+                        {item.keywords && item.keywords.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mb-3">
+                            {item.keywords.slice(0, 3).map((kw, i) => (
                               <span
-                                className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md border ${
-                                  isPdf
-                                    ? "bg-rose-950 text-rose-300 border-rose-800"
-                                    : isImage
-                                    ? "bg-amber-950 text-amber-300 border-amber-800"
-                                    : "bg-cyan-950 text-cyan-300 border-cyan-800"
-                                }`}
+                                key={i}
+                                className="px-1.5 py-0.5 rounded bg-slate-950 text-[10px] text-slate-400 border border-slate-800 font-mono"
                               >
-                                {item.fileType}
+                                #{kw}
                               </span>
-                              <span className="text-[10px] font-mono text-slate-400 truncate">
-                                📁 {item.folderPath}
+                            ))}
+                            {item.keywords.length > 3 && (
+                              <span className="text-[10px] text-slate-500 self-center font-mono">
+                                +{item.keywords.length - 3} more
                               </span>
-                            </div>
-                            <h3 className="text-sm font-bold text-white font-mono truncate group-hover:text-cyan-300 transition-colors mt-0.5">
-                              {item.name}
-                            </h3>
-                          </div>
-                        </div>
-
-                        <button
-                          onClick={(e) => handleToggleStar(item.id, e)}
-                          className="p-1.5 rounded-xl bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-amber-400 transition-colors cursor-pointer shrink-0"
-                        >
-                          <Star
-                            className={`w-4 h-4 ${
-                              item.isStarred ? "fill-amber-400 text-amber-400" : ""
-                            }`}
-                          />
-                        </button>
-                      </div>
-
-                      {/* Owner & Details */}
-                      <div className="p-3 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-1.5 text-xs font-mono mb-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] text-slate-400 flex items-center gap-1">
-                            <User className="w-3 h-3 text-cyan-400" />
-                            Owner / Client:
-                          </span>
-                          <span className="font-bold text-white truncate max-w-[150px]">
-                            {item.ownerName || item.clientName || "Vasthusilpy Client"}
-                          </span>
-                        </div>
-
-                        {item.mobileNo && (
-                          <div className="flex items-center justify-between text-[11px]">
-                            <span className="text-[10px] text-slate-400 flex items-center gap-1">
-                              <Phone className="w-3 h-3 text-emerald-400" />
-                              Mobile:
-                            </span>
-                            <span className="text-slate-300">{item.mobileNo}</span>
-                          </div>
-                        )}
-
-                        {item.location && (
-                          <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-800/80">
-                            <span className="text-[10px] text-slate-500">Location:</span>
-                            <span className="text-cyan-300 truncate max-w-[160px] font-bold">
-                              {item.location}
-                            </span>
+                            )}
                           </div>
                         )}
                       </div>
 
-                      {/* Architectural Specs Badges (Facing, BHK, Floors) */}
-                      {(item.facing || item.bedrooms || item.floors || item.builtUpArea) && (
-                        <div className="grid grid-cols-2 gap-2 text-[11px] font-mono mb-3">
-                          {item.facing && (
-                            <div className="p-2 rounded-xl bg-slate-950 border border-slate-800/80 flex items-center gap-1.5">
-                              <Compass className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                              <span className="truncate text-amber-300 font-bold">{item.facing}</span>
-                            </div>
-                          )}
-
-                          {item.bedrooms && (
-                            <div className="p-2 rounded-xl bg-slate-950 border border-slate-800/80 flex items-center gap-1.5">
-                              <Home className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                              <span className="truncate text-cyan-300 font-bold">{item.bedrooms}</span>
-                            </div>
-                          )}
-
-                          {item.floors && (
-                            <div className="p-2 rounded-xl bg-slate-950 border border-slate-800/80 flex items-center gap-1.5">
-                              <Layers className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                              <span className="truncate text-purple-300 font-bold">{item.floors}</span>
-                            </div>
-                          )}
-
-                          {item.builtUpArea && (
-                            <div className="p-2 rounded-xl bg-slate-950 border border-slate-800/80 flex items-center gap-1.5">
-                              <span className="text-[10px] text-slate-400">Plinth:</span>
-                              <span className="truncate text-emerald-300 font-bold">
-                                {item.builtUpArea}
-                              </span>
-                            </div>
-                          )}
+                      {/* Card Actions */}
+                      <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
+                        <div className="text-[10px] font-mono text-slate-500">
+                          {formatBytes(item.fileSize)}
                         </div>
-                      )}
 
-                      {/* Vasthu Chuttu Badge */}
-                      {item.vasthuChuttu && (
-                        <div className="p-2 rounded-xl bg-amber-950/30 border border-amber-500/30 text-amber-200 text-[11px] font-mono mb-3 flex items-center justify-between">
-                          <span className="text-[10px] font-bold text-amber-400">വാസ്തു ചുറ്റ്:</span>
-                          <span className="font-bold truncate max-w-[190px]">{item.vasthuChuttu}</span>
-                        </div>
-                      )}
-
-                      {/* Auto Keywords Badges */}
-                      {item.keywords && item.keywords.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mb-3">
-                          {item.keywords.slice(0, 3).map((kw, i) => (
-                            <span
-                              key={i}
-                              className="px-1.5 py-0.5 rounded bg-slate-950 text-[10px] text-slate-400 border border-slate-800 font-mono"
-                            >
-                              #{kw}
-                            </span>
-                          ))}
-                          {item.keywords.length > 3 && (
-                            <span className="text-[10px] text-slate-500 self-center font-mono">
-                              +{item.keywords.length - 3} more
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Card Actions */}
-                    <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
-                      <div className="text-[10px] font-mono text-slate-500">
-                        {formatBytes(item.fileSize)}
-                      </div>
-
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenFile(item);
-                          }}
-                          title="Open CAD / PDF Viewer"
-                          className="p-2 rounded-xl bg-cyan-600/20 hover:bg-cyan-600 text-cyan-300 hover:text-white border border-cyan-500/30 transition-all cursor-pointer"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                        </button>
-
-                        {(item.fileType === "PDF" || item.hasPdf) && (
+                        <div className="flex items-center gap-1.5">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleOpenPdfViewer(item);
+                              handleOpenFile(item);
                             }}
-                            title="View PDF Document"
-                            className="p-2 rounded-xl bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 transition-all cursor-pointer"
+                            title="Open CAD / PDF Viewer"
+                            className="p-2 rounded-xl bg-cyan-600/20 hover:bg-cyan-600 text-cyan-300 hover:text-white border border-cyan-500/30 transition-all cursor-pointer"
                           >
-                            <FileText className="w-3.5 h-3.5" />
+                            <Eye className="w-3.5 h-3.5" />
                           </button>
-                        )}
 
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenShare(item);
-                          }}
-                          title="Share & QR Code"
-                          className="p-2 rounded-xl bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 transition-all cursor-pointer"
-                        >
-                          <Share2 className="w-3.5 h-3.5" />
-                        </button>
+                          {(item.fileType === "PDF" || item.hasPdf) && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenPdfViewer(item);
+                              }}
+                              title="View PDF Document"
+                              className="p-2 rounded-xl bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 transition-all cursor-pointer"
+                            >
+                              <FileText className="w-3.5 h-3.5" />
+                            </button>
+                          )}
 
-                        <button
-                          onClick={(e) => handleQuickDownload(item, e)}
-                          title="Download"
-                          className="p-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 transition-all cursor-pointer"
-                        >
-                          <Download className="w-3.5 h-3.5" />
-                        </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenShare(item);
+                            }}
+                            title="Share & QR Code"
+                            className="p-2 rounded-xl bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 transition-all cursor-pointer"
+                          >
+                            <Share2 className="w-3.5 h-3.5" />
+                          </button>
 
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenEdit(item);
-                          }}
-                          title="Edit"
-                          className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all cursor-pointer"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
+                          <button
+                            onClick={(e) => handleQuickDownload(item, e)}
+                            title="Download"
+                            className="p-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 transition-all cursor-pointer"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                          </button>
 
-                        <button
-                          onClick={(e) => handleDeleteFile(item, e)}
-                          title="Delete"
-                          className="p-2 rounded-xl bg-slate-800 hover:bg-rose-600 text-slate-400 hover:text-white transition-all cursor-pointer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenEdit(item);
+                            }}
+                            title="Edit"
+                            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all cursor-pointer"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+
+                          <button
+                            onClick={(e) => handleDeleteFile(item, e)}
+                            title="Delete"
+                            className="p-2 rounded-xl bg-slate-800 hover:bg-rose-600 text-slate-400 hover:text-white transition-all cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           ) : (
             /* TABLE VIEW */
@@ -1591,6 +1744,20 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
                 <table className="w-full text-left border-collapse text-xs font-mono">
                   <thead>
                     <tr className="bg-slate-950 border-b border-slate-800 text-slate-400 uppercase text-[10px]">
+                      <th className="p-3.5 w-10">
+                        <button
+                          type="button"
+                          onClick={() => handleSelectAllFiles(filteredItems)}
+                          className="text-slate-400 hover:text-cyan-300 cursor-pointer flex items-center justify-center"
+                          title="Select / Deselect All"
+                        >
+                          {filteredItems.length > 0 && filteredItems.every((i) => selectedFileIds.includes(i.id)) ? (
+                            <CheckSquare className="w-4 h-4 text-cyan-400" />
+                          ) : (
+                            <Square className="w-4 h-4" />
+                          )}
+                        </button>
+                      </th>
                       <th className="p-3.5">Drawing / Record</th>
                       <th className="p-3.5">Folder</th>
                       <th className="p-3.5">Owner & Mobile</th>
@@ -1601,123 +1768,169 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60">
-                    {filteredItems.map((item) => (
-                      <tr
-                        key={item.id}
-                        onClick={() => handleOpenFile(item)}
-                        className="hover:bg-slate-850/80 cursor-pointer transition-colors group"
-                      >
-                        <td className="p-3.5">
-                          <div className="flex items-center gap-2.5">
+                    {filteredItems.map((item) => {
+                      const isSelected = selectedFileIds.includes(item.id);
+                      return (
+                        <tr
+                          key={item.id}
+                          onClick={() => handleOpenFile(item)}
+                          className={`hover:bg-slate-850/80 cursor-pointer transition-colors group ${
+                            isSelected ? "bg-slate-800/60" : ""
+                          }`}
+                        >
+                          <td className="p-3.5 w-10" onClick={(e) => e.stopPropagation()}>
                             <button
-                              onClick={(e) => handleToggleStar(item.id, e)}
-                              className="text-slate-500 hover:text-amber-400"
+                              type="button"
+                              onClick={(e) => handleToggleSelectFile(item.id, e)}
+                              className={`cursor-pointer flex items-center justify-center ${
+                                isSelected ? "text-cyan-400" : "text-slate-600 hover:text-slate-400"
+                              }`}
                             >
-                              <Star
-                                className={`w-3.5 h-3.5 ${
-                                  item.isStarred ? "fill-amber-400 text-amber-400" : ""
-                                }`}
-                              />
+                              {isSelected ? (
+                                <CheckSquare className="w-4 h-4" />
+                              ) : (
+                                <Square className="w-4 h-4" />
+                              )}
                             </button>
-                            <div>
-                              <div className="font-bold text-white group-hover:text-cyan-300">
-                                {item.name}
+                          </td>
+                          <td className="p-3.5">
+                            <div className="flex items-center gap-2.5">
+                              <button
+                                onClick={(e) => handleToggleStar(item.id, e)}
+                                className="text-slate-500 hover:text-amber-400"
+                              >
+                                <Star
+                                  className={`w-3.5 h-3.5 ${
+                                    item.isStarred ? "fill-amber-400 text-amber-400" : ""
+                                  }`}
+                                />
+                              </button>
+                              <div>
+                                <div className="font-bold text-white group-hover:text-cyan-300">
+                                  {item.name}
+                                </div>
+                                <div className="text-[10px] text-slate-400">{item.location}</div>
                               </div>
-                              <div className="text-[10px] text-slate-400">{item.location}</div>
                             </div>
-                          </div>
-                        </td>
+                          </td>
 
-                        <td className="p-3.5">
-                          <span className="px-2 py-0.5 rounded-md bg-slate-950 text-cyan-300 border border-slate-800 text-[10px]">
-                            📁 {item.folderPath}
-                          </span>
-                        </td>
+                          <td className="p-3.5">
+                            <span className="px-2 py-0.5 rounded-md bg-slate-950 text-cyan-300 border border-slate-800 text-[10px]">
+                              📁 {item.folderPath}
+                            </span>
+                          </td>
 
-                        <td className="p-3.5">
-                          <div className="font-bold text-slate-200">
-                            {item.ownerName || item.clientName || "—"}
-                          </div>
-                          {item.mobileNo && (
-                            <div className="text-[10px] text-emerald-400">{item.mobileNo}</div>
-                          )}
-                        </td>
+                          <td className="p-3.5">
+                            <div className="font-bold text-slate-200">
+                              {item.ownerName || item.clientName || "—"}
+                            </div>
+                            {item.mobileNo && (
+                              <div className="text-[10px] text-emerald-400">{item.mobileNo}</div>
+                            )}
+                          </td>
 
-                        <td className="p-3.5">
-                          <div className="text-amber-300 font-bold">{item.facing || "—"}</div>
-                          <div className="text-[10px] text-slate-400">
-                            {item.bedrooms || "—"} • {item.floors || "—"}
-                          </div>
-                        </td>
+                          <td className="p-3.5">
+                            <div className="text-amber-300 font-bold">{item.facing || "—"}</div>
+                            <div className="text-[10px] text-slate-400">
+                              {item.bedrooms || "—"} • {item.floors || "—"}
+                            </div>
+                          </td>
 
-                        <td className="p-3.5">
-                          <span className="text-amber-200 font-bold text-[11px]">
-                            {item.vasthuChuttu || "—"}
-                          </span>
-                        </td>
+                          <td className="p-3.5">
+                            <span className="text-amber-200 font-bold text-[11px]">
+                              {item.vasthuChuttu || "—"}
+                            </span>
+                          </td>
 
-                        <td className="p-3.5">
-                          <span className="px-2 py-0.5 rounded bg-slate-950 text-slate-300 border border-slate-800 font-bold text-[10px]">
-                            {item.fileType}
-                          </span>
-                          <div className="text-[10px] text-slate-500 mt-0.5">
-                            {formatBytes(item.fileSize)}
-                          </div>
-                        </td>
+                          <td className="p-3.5">
+                            <span className="px-2 py-0.5 rounded bg-slate-950 text-slate-300 border border-slate-800 font-bold text-[10px]">
+                              {item.fileType}
+                            </span>
+                            <div className="text-[10px] text-slate-500 mt-0.5">
+                              {formatBytes(item.fileSize)}
+                            </div>
+                          </td>
 
-                        <td className="p-3.5 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleOpenFile(item);
-                              }}
-                              title="Preview CAD/PDF"
-                              className="p-1.5 rounded-lg bg-cyan-600/20 hover:bg-cyan-600 text-cyan-300 hover:text-white"
-                            >
-                              <Eye className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleOpenShare(item);
-                              }}
-                              title="Share & QR Code"
-                              className="p-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white"
-                            >
-                              <Share2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={(e) => handleQuickDownload(item, e)}
-                              title="Download"
-                              className="p-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white"
-                            >
-                              <Download className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleOpenEdit(item);
-                              }}
-                              title="Edit"
-                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={(e) => handleDeleteFile(item, e)}
-                              title="Delete"
-                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-600 text-slate-400 hover:text-white"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                          <td className="p-3.5 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenFile(item);
+                                }}
+                                title="Preview CAD/PDF"
+                                className="p-1.5 rounded-lg bg-cyan-600/20 hover:bg-cyan-600 text-cyan-300 hover:text-white"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenShare(item);
+                                }}
+                                title="Share & QR Code"
+                                className="p-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white"
+                              >
+                                <Share2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={(e) => handleQuickDownload(item, e)}
+                                title="Download"
+                                className="p-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white"
+                              >
+                                <Download className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenEdit(item);
+                                }}
+                                title="Edit"
+                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={(e) => handleDeleteFile(item, e)}
+                                title="Delete"
+                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-600 text-slate-400 hover:text-white"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
+            </div>
+          )}
+
+          {/* Floating Bulk Action Bar */}
+          {selectedFileIds.length > 0 && (
+            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900/95 backdrop-blur-md border border-cyan-500/50 rounded-2xl px-5 py-3 shadow-2xl flex items-center gap-4 text-xs font-mono animate-in slide-in-from-bottom-5">
+              <div className="flex items-center gap-2 text-cyan-300 font-bold">
+                <CheckSquare className="w-4 h-4" />
+                <span>{selectedFileIds.length} drawing(s) selected</span>
+              </div>
+              <div className="h-4 w-px bg-slate-700" />
+              <button
+                type="button"
+                onClick={handleBulkDeleteSelected}
+                className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold flex items-center gap-1.5 shadow-md shadow-rose-950 cursor-pointer transition-all"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete Selected</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedFileIds([])}
+                className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer transition-colors"
+              >
+                Deselect All
+              </button>
             </div>
           )}
         </div>
@@ -1901,8 +2114,7 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
                               {/* Delete Folder */}
                               <button
                                 onClick={() => {
-                                  setFolderToEdit(folder);
-                                  setIsFolderModalOpen(true);
+                                  setFolderPendingDelete(folder);
                                 }}
                                 title="Delete Folder"
                                 className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-600 text-slate-400 hover:text-white"
@@ -2037,6 +2249,11 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
             reloadData();
             setIsEditModalOpen(false);
           }}
+          onDelete={(fileId) => {
+            deleteCADDrawingRecord(fileId);
+            reloadData();
+            setIsEditModalOpen(false);
+          }}
           userEmail={userEmail}
         />
       )}
@@ -2050,6 +2267,11 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
           onSave={() => {
             reloadData();
           }}
+          onDelete={(fileId) => {
+            deleteCADDrawingRecord(fileId);
+            reloadData();
+            setIsViewerModalOpen(false);
+          }}
         />
       )}
 
@@ -2062,6 +2284,11 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
           onOpenShare={(fileToShare) => {
             setSharingFile(fileToShare);
             setIsShareModalOpen(true);
+          }}
+          onDelete={(fileId) => {
+            deleteCADDrawingRecord(fileId);
+            reloadData();
+            setIsPdfModalOpen(false);
           }}
         />
       )}
@@ -2088,6 +2315,47 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
           }}
           selectedParentId={selectedParentForNewFolder}
           editingFolder={folderToEdit}
+        />
+      )}
+
+      {/* Dedicated Folder Delete Modal */}
+      {folderPendingDelete && (
+        <FolderDeleteModal
+          folder={folderPendingDelete}
+          isOpen={Boolean(folderPendingDelete)}
+          onClose={() => setFolderPendingDelete(null)}
+          onConfirmDelete={(folderId, deleteContents) => {
+            deleteCADFolder(folderId, deleteContents);
+            if (activeFolderId === folderId) {
+              setActiveFolderId(null);
+            }
+            setFolderPendingDelete(null);
+            reloadData();
+          }}
+        />
+      )}
+
+      {/* Dedicated Single File Delete Modal */}
+      {filePendingDelete && (
+        <FileDeleteModal
+          file={filePendingDelete}
+          isOpen={Boolean(filePendingDelete)}
+          onClose={() => setFilePendingDelete(null)}
+          onConfirmDelete={() => {
+            handleConfirmDeleteFile(filePendingDelete.id);
+          }}
+        />
+      )}
+
+      {/* Dedicated Bulk File Delete Modal */}
+      {isBulkDeleteModalOpen && (
+        <FileDeleteModal
+          isBulk={true}
+          selectedCount={selectedFileIds.length}
+          bulkFiles={indexItems.filter((i) => selectedFileIds.includes(i.id))}
+          isOpen={isBulkDeleteModalOpen}
+          onClose={() => setIsBulkDeleteModalOpen(false)}
+          onConfirmDelete={handleConfirmBulkDelete}
         />
       )}
 
