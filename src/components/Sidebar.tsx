@@ -100,7 +100,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const { theme, currentThemeMeta, cycleNextTheme } = useTheme();
   const { viewMode, setViewMode, toggleViewMode, isMobileView } = useViewMode();
-  const { isPrimaryAdmin } = useAuth();
+  const { isPrimaryAdmin, isSubscriberLogin } = useAuth();
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [expandedSection, setExpandedSection] = useState<MainSectionType>(activeSection);
   const [hoveredDockItem, setHoveredDockItem] = useState<string | null>(null);
@@ -143,7 +143,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       subTabs: [
         { id: "home_overview" as TabType, label: "Home & Profile", sub: "BUSINESS OVERVIEW & PROFILE", icon: Sparkles },
         { id: "data_storage" as TabType, label: "Data Storage & Vault", sub: "CAD DRAWINGS & FILES", icon: HardDrive, badge: "CAD" },
-        ...(isPrimaryAdmin ? [{ id: "subscription_requests" as TabType, label: "Subscription Requests", sub: "ACCESS PERMISSIONS", icon: ShieldCheck, badge: "NEW" }] : [])
+        ...(isPrimaryAdmin && !isSubscriberLogin ? [{ id: "subscription_requests" as TabType, label: "Subscription Requests", sub: "ACCESS PERMISSIONS", icon: ShieldCheck, badge: "NEW" }] : [])
       ]
     },
     {

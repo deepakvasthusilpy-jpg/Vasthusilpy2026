@@ -101,6 +101,8 @@ export interface EmailUser {
   lastAdminTotpVerifiedAt?: number;
   lastLoginAt?: string;
   photoURL?: string;
+  isSubscriberLogin?: boolean;
+  authMethod?: string;
 }
 
 interface AuthContextType {
@@ -109,6 +111,7 @@ interface AuthContextType {
   loading: boolean;
   authorized: boolean;
   isPrimaryAdmin: boolean;
+  isSubscriberLogin: boolean;
   authError: string | null;
   clearAuthError: () => void;
 
@@ -187,6 +190,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState<boolean>(true);
   const [authorized, setAuthorized] = useState<boolean>(false);
   const [isPrimaryAdmin, setIsPrimaryAdmin] = useState<boolean>(false);
+  const [isSubscriberLogin, setIsSubscriberLogin] = useState<boolean>(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [authorizedEmails, setAuthorizedEmails] = useState<AuthorizedEmailRecord[]>(() => {
     return loadSavedAuthorizedEmails();
@@ -298,8 +302,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const email = primarySession.email || parsedEmail?.email || (parsedSub?.email as string);
         const phone = (primarySession as any).phone || parsedEmail?.phone || parsedSub?.phone || "";
         const displayName = (primarySession as any).fullName || (primarySession as any).displayName || email?.split("@")[0] || "User";
-        const role = primarySession.role || "authorized_user";
-        const isAdmin = isPrimaryAdminEmail(email) || isPrimaryAllowedPhone(phone) || role === "primary_admin";
+        const isAuthAdminLogin = localStorage.getItem("vasthusilpy_authenticator_login") === "true";
+        const isSubLogin = !isAuthAdminLogin;
+        const isAdmin = isAuthAdminLogin && (isPrimaryAdminEmail(email) || role === "primary_admin");
 
         const isExpired = parsedSub?.validUntil && isSubscriptionExpired({ validUntil: parsedSub.validUntil });
         const isUserExpired = Boolean(isExpired || parsedSub?.status === "expired");
@@ -309,7 +314,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           email,
           phone,
           displayName,
-          role: isAdmin ? "primary_admin" : role,
+          role: isAdmin ? "primary_admin" : "authorized_user",
+          isSubscriberLogin: isSubLogin,
+          authMethod: isAuthAdminLogin ? "google_authenticator" : "subscription_user",
           loginTimestamp: loginTime,
           subscriptionId: parsedSub?.subscriptionId || parsedEmail?.subscriptionId,
           lastAdminTotpVerifiedAt: parsedEmail?.lastAdminTotpVerifiedAt
@@ -318,6 +325,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setEmailUser(unifiedEmailUser);
         setAuthorized(true);
         setIsPrimaryAdmin(isAdmin);
+        setIsSubscriberLogin(isSubLogin);
 
         if (isAdmin) {
           setActiveTabPermissions({ ...DEFAULT_FULL_PERMISSIONS });
@@ -795,7 +803,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return true;
   };
 
-  // Password Authentication for Username/User ID & Password (e.g. user / Spark123)
+  // Password Authentication for Username/User ID & Password
   const loginWithPassword = async (userIdInput: string, passwordInput: string): Promise<boolean> => {
     setAuthError(null);
     setLoading(true);
@@ -808,109 +816,97 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw new Error("ദയവായി User ID യും Password ഉം നൽകുക.");
     }
 
-    // Explicit check for user / Spark123
-    if ((cleanUserId === "user" || cleanUserId === "user@vasthusilpy.com" || cleanUserId === "user@vasthusilpy.local") && cleanPass === "Spark123") {
-      const sessionUser: EmailUser = {
-        email: "user@vasthusilpy.com",
-        displayName: "Vasthusilpy User",
+    const cleanPhoneDigits = cleanUserId.replace(/\D/g, "");
+    const allSubs = loadSavedSubscriptionRequests();
+    const matchedSub = allSubs.find((s) => {
+      const sEmail = (s.email || "").toLowerCase().trim();
+      const sDigits = (s.phone || "").replace(/\D/g, "");
+      const sId = (s.id || "").toLowerCase().trim();
+      return (
+        sEmail === cleanUserId ||
+        (cleanPhoneDigits.length >= 10 && (sDigits === cleanPhoneDigits || sDigits.endsWith(cleanPhoneDigits.slice(-10)))) ||
+        sId === cleanUserId
+      );
+    });
+
+    if (matchedSub && matchedSub.password && matchedSub.password.trim() === cleanPass) {
+      const isExpired = matchedSub.status === "expired" || isSubscriptionExpired(matchedSub);
+      const emailUserData: EmailUser = {
+        email: matchedSub.email || `${cleanUserId}@vasthusilpy.local`,
+        phone: matchedSub.phone || cleanPhoneDigits,
+        displayName: matchedSub.fullName || cleanUserId,
+        profession: "Civil Engineer",
         role: "authorized_user",
+        loginTimestamp: Date.now(),
+        subscriptionId: matchedSub.id,
+        isSubscriberLogin: true,
+        authMethod: "subscription_user"
+      };
+
+      const permissions = matchedSub.tabPermissions || { ...DEFAULT_FULL_PERMISSIONS };
+      const sessionData: SubscriptionUserSession = {
+        email: matchedSub.email || `${cleanUserId}@vasthusilpy.local`,
+        fullName: matchedSub.fullName || cleanUserId,
+        phone: matchedSub.phone || cleanPhoneDigits,
+        role: "authorized_user",
+        subscriptionId: matchedSub.id,
+        validUntil: matchedSub.validUntil,
+        validDays: matchedSub.validDays,
+        status: isExpired ? "expired" : "approved",
+        tabPermissions: permissions,
         loginTimestamp: Date.now()
       };
 
-      localStorage.setItem("vasthusilpy_email_user", JSON.stringify(sessionUser));
-      setEmailUser(sessionUser);
+      localStorage.setItem("vasthusilpy_subscription_user", JSON.stringify(sessionData));
+      localStorage.setItem("vasthusilpy_email_user", JSON.stringify(emailUserData));
+      localStorage.setItem("vasthusilpy_saved_login_id", cleanUserId);
+      localStorage.removeItem("vasthusilpy_authenticator_login");
+
+      setIsExpiredSubscription(isExpired);
+      setEmailUser(emailUserData);
       setUser(null);
       setAuthorized(true);
       setIsPrimaryAdmin(false);
+      setIsSubscriberLogin(true);
+      setActiveTabPermissions(isExpired ? { ...DEFAULT_FULL_PERMISSIONS } : permissions);
       setLoading(false);
       return true;
     }
 
-    // Admin login check (e.g. admin / Spark123 or admin email / phone)
-    const isAdminAccount =
-      cleanUserId === "admin" ||
-      isPrimaryAdminEmail(cleanUserId) ||
-      isPrimaryAllowedPhone(cleanUserId);
-
-    if (isAdminAccount && cleanPass === "Spark123") {
-      const adminEmail = isPrimaryAdminEmail(cleanUserId) ? cleanUserId : "deepak.vasthusilpy@gmail.com";
-      const adminPhone = isPrimaryAllowedPhone(cleanUserId) ? cleanUserId.replace(/\D/g, "") : "9567627277";
-      const lastTotp = getLastAdminTotpVerified(adminEmail);
-
-      // Check 30-day recurring Admin TOTP requirement
-      if (isAdminTotpRequired(true, lastTotp)) {
-        setLoading(false);
-        const err: any = new Error("ADMIN_TOTP_REQUIRED");
-        err.code = "ADMIN_TOTP_REQUIRED";
-        err.adminEmail = adminEmail;
-        err.adminPhone = adminPhone;
-        throw err;
-      }
-
-      let displayName = "DEEPAK C";
-      let phone = adminPhone;
-      let profession = "Vasthu Consultant & Civil Engineer";
+    // Check remote Firestore if available
+    if (db) {
       try {
-        const docId = emailToDocId(adminEmail);
-        const userDoc = await getDoc(doc(db, "users", docId));
-        if (userDoc.exists()) {
-          const uData = userDoc.data();
-          if (uData.displayName) displayName = uData.displayName;
-          if (uData.phone) phone = uData.phone;
-          if (uData.profession) profession = uData.profession;
+        const docId = cleanUserId.includes("@") ? emailToDocId(cleanUserId) : `user_${cleanPhoneDigits.slice(-10)}`;
+        const uSnap = await getDoc(doc(db, "users", docId));
+        if (uSnap.exists()) {
+          const u = uSnap.data();
+          if (u.password && u.password.trim() === cleanPass) {
+            const isAuthAdmin = (u.role === "primary_admin" || isPrimaryAdminEmail(u.email)) && localStorage.getItem("vasthusilpy_authenticator_login") === "true";
+            const sessionUser: EmailUser = {
+              email: u.email || cleanUserId,
+              displayName: u.displayName || cleanUserId,
+              phone: u.phone || cleanPhoneDigits,
+              profession: u.profession || "Civil Engineer",
+              role: isAuthAdmin ? "primary_admin" : "authorized_user",
+              loginTimestamp: Date.now(),
+              isSubscriberLogin: !isAuthAdmin,
+              authMethod: isAuthAdmin ? "google_authenticator" : "subscription_user"
+            };
+            localStorage.setItem("vasthusilpy_email_user", JSON.stringify(sessionUser));
+            setEmailUser(sessionUser);
+            setUser(null);
+            setAuthorized(true);
+            setIsPrimaryAdmin(isAuthAdmin);
+            setIsSubscriberLogin(!isAuthAdmin);
+            setLoading(false);
+            return true;
+          }
         }
-
-        await setDoc(doc(db, "users", docId), {
-          email: adminEmail,
-          phone: phone,
-          displayName: displayName,
-          profession: profession,
-          role: "primary_admin",
-          lastLoginAt: new Date().toISOString(),
-          authMethod: "password_admin"
-        }, { merge: true });
       } catch (e) {}
-
-      const sessionUser: EmailUser = {
-        email: adminEmail,
-        phone: phone,
-        displayName: displayName,
-        profession: profession,
-        role: "primary_admin",
-        loginTimestamp: Date.now(),
-        lastAdminTotpVerifiedAt: lastTotp || undefined
-      };
-
-      localStorage.setItem("vasthusilpy_email_user", JSON.stringify(sessionUser));
-      setEmailUser(sessionUser);
-      setUser(null);
-      setAuthorized(true);
-      setIsPrimaryAdmin(true);
-      setLoading(false);
-      return true;
-    }
-
-    // Allow Spark123 password with any user ID / email
-    if (cleanPass === "Spark123") {
-      const formattedEmail = cleanUserId.includes("@") ? cleanUserId : `${cleanUserId}@vasthusilpy.com`;
-      const sessionUser: EmailUser = {
-        email: formattedEmail,
-        displayName: cleanUserId.toUpperCase(),
-        role: isPrimaryAdminEmail(formattedEmail) ? "primary_admin" : "authorized_user",
-        loginTimestamp: Date.now()
-      };
-
-      localStorage.setItem("vasthusilpy_email_user", JSON.stringify(sessionUser));
-      setEmailUser(sessionUser);
-      setUser(null);
-      setAuthorized(true);
-      setIsPrimaryAdmin(isPrimaryAdminEmail(formattedEmail));
-      setLoading(false);
-      return true;
     }
 
     setLoading(false);
-    throw new Error("നൽകിയ User ID അല്ലെങ്കിൽ Password തെറ്റാണ്. (User ID: user, Password: Spark123)");
+    throw new Error("നൽകിയ User ID അല്ലെങ്കിൽ Password തെറ്റാണ്. (Incorrect User ID or Password).");
   };
 
   // Email OTP Authentication: Step 1 - Send OTP to registered Email
@@ -1066,12 +1062,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.removeItem("vasthusilpy_email_user");
       localStorage.removeItem("vasthusilpy_subscription_user");
       localStorage.removeItem("vasthusilpy_google_login_time");
+      localStorage.removeItem("vasthusilpy_authenticator_login");
       setEmailUser(null);
       setActiveTabPermissions({ ...DEFAULT_FULL_PERMISSIONS });
       await firebaseSignOut(auth);
       setUser(null);
       setAuthorized(false);
       setIsPrimaryAdmin(false);
+      setIsSubscriberLogin(false);
       setAuthError(null);
     } catch (err: any) {
       console.error("Sign Out Error:", err);
@@ -1211,7 +1209,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       role: isAdmin ? "primary_admin" : "authorized_user",
       loginTimestamp: Date.now(),
       lastAdminTotpVerifiedAt: isAdmin ? now : undefined,
-      subscriptionId: isAdmin ? "SUB-ADMIN-DEEPAK" : undefined
+      subscriptionId: isAdmin ? "SUB-ADMIN-DEEPAK" : undefined,
+      isSubscriberLogin: false,
+      authMethod: "google_authenticator"
     };
 
     const subSession: SubscriptionUserSession = {
@@ -1230,21 +1230,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem("vasthusilpy_email_user", JSON.stringify(sessionUser));
     localStorage.setItem("vasthusilpy_subscription_user", JSON.stringify(subSession));
     localStorage.setItem("vasthusilpy_saved_login_id", cleanEmail);
+    if (isAdmin) {
+      localStorage.setItem("vasthusilpy_authenticator_login", "true");
+    } else {
+      localStorage.removeItem("vasthusilpy_authenticator_login");
+    }
 
     setEmailUser(sessionUser);
     setUser(null);
     setAuthorized(true);
     setIsPrimaryAdmin(isAdmin);
-
-    // Two-way synchronization & hydration of all web data
-    try {
-      await pullAndHydrateWebDataFromServer(cleanEmail);
-      await performFullWebDataSync();
-    } catch (syncErr) {
-      console.warn("Post-auth sync notice:", syncErr);
-    }
-
+    setIsSubscriberLogin(false);
     setLoading(false);
+
+    // Two-way synchronization & hydration of all web data in background
+    setTimeout(async () => {
+      try {
+        await pullAndHydrateWebDataFromServer(cleanEmail).catch(() => {});
+        await performFullWebDataSync().catch(() => {});
+      } catch (syncErr) {
+        console.warn("Post-auth sync notice:", syncErr);
+      }
+    }, 50);
 
     return true;
   };
@@ -1302,7 +1309,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       fullName: cleanName,
       email: cleanEmail,
       phone: cleanPhone,
-      password: details.password || "Password123",
+      password: details.password?.trim() || "",
       upiRefId: cleanUpiRef,
       amountPaid: rawAmount,
       planName: planTitle,
@@ -1367,158 +1374,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw new Error("ദയവായി പാസ്‌വേഡ് നൽകുക.");
     }
 
-    // Direct check for admin credentials (supports admin email or admin mobile number)
-    const isAdminAccount =
-      isPrimaryAdminEmail(cleanInput) ||
-      isPrimaryAllowedPhone(cleanInput) ||
-      cleanInput === "admin" ||
-      cleanInput === "deepak" ||
-      cleanInput.startsWith("deepak.vasthusilpy") ||
-      cleanInput.startsWith("dibindeepak");
-
-    if (isAdminAccount) {
-      const adminEmail = isPrimaryAdminEmail(cleanInput)
-        ? cleanInput
-        : cleanInput.startsWith("dibin")
-        ? "dibindeepak1@gmail.com"
-        : "deepak.vasthusilpy@gmail.com";
-      const adminPhone =
-        isPrimaryAllowedPhone(cleanInput) && cleanPhoneDigits.length >= 10
-          ? cleanPhoneDigits.slice(-10)
-          : cleanInput.startsWith("dibin")
-          ? "7012383137"
-          : "9747995961";
-
-      // Verify Admin Password across all valid sources (Spark123, Password123, user profile, etc.)
-      let isAdminPassValid =
-        cleanPass === "Spark123" ||
-        cleanPass === "Password123" ||
-        cleanPass.toLowerCase() === "spark123" ||
-        cleanPass.toLowerCase() === "password123";
-
-      if (!isAdminPassValid) {
-        try {
-          const docId = emailToDocId(adminEmail);
-          const userDoc = await getDoc(doc(db, "users", docId));
-          if (userDoc.exists() && userDoc.data()?.password && userDoc.data().password.trim() === cleanPass) {
-            isAdminPassValid = true;
-          }
-        } catch (e) {}
-      }
-
-      if (!isAdminPassValid) {
-        const allSubs = loadSavedSubscriptionRequests();
-        const aSub = allSubs.find(
-          (s) =>
-            (s.email && s.email.toLowerCase().trim() === adminEmail) ||
-            (s.phone && s.phone.replace(/\D/g, "").slice(-10) === adminPhone)
-        );
-        if (aSub && aSub.password && (aSub.password === cleanPass || aSub.password.toLowerCase() === cleanPass.toLowerCase())) {
-          isAdminPassValid = true;
-        }
-      }
-
-      if (!isAdminPassValid) {
-        setLoading(false);
-        throw new Error(
-          "നൽകിയ പാസ്‌വേഡ് തെറ്റാണ്. (Incorrect Password). അഡ്മിൻ പാസ്‌വേഡ് 'Password123' അല്ലെങ്കിൽ 'Spark123' ഉപയോഗിക്കുക."
-        );
-      }
-
-      const lastTotp = getLastAdminTotpVerified(adminEmail);
-
-      // Check 30-day recurring Admin TOTP requirement
-      if (isAdminTotpRequired(true, lastTotp)) {
-        setLoading(false);
-        const err: any = new Error("ADMIN_TOTP_REQUIRED");
-        err.code = "ADMIN_TOTP_REQUIRED";
-        err.adminEmail = adminEmail;
-        err.adminPhone = adminPhone;
-        throw err;
-      }
-
-      let displayName = "DEEPAK C";
-      let phone = adminPhone;
-      let profession = "Vasthu Consultant & Civil Engineer";
-
-      try {
-        const resolved = await resolveAccountDetails(adminEmail);
-        if (resolved) {
-          if (resolved.displayName) displayName = resolved.displayName;
-          if (resolved.phone) phone = resolved.phone;
-          if (resolved.profession) profession = resolved.profession;
-        }
-      } catch (e) {}
-
-      try {
-        const docId = emailToDocId(adminEmail);
-        const userDoc = await getDoc(doc(db, "users", docId));
-        if (userDoc.exists()) {
-          const uData = userDoc.data();
-          if (uData.displayName) displayName = uData.displayName;
-          if (uData.phone) phone = uData.phone;
-          if (uData.profession) profession = uData.profession;
-        }
-
-        await setDoc(doc(db, "users", docId), {
-          email: adminEmail,
-          phone: phone,
-          displayName: displayName,
-          profession: profession,
-          role: "primary_admin",
-          lastLoginAt: new Date().toISOString(),
-          authMethod: "subscription_admin"
-        }, { merge: true });
-      } catch (e) {}
-
-      const sessionUser: EmailUser = {
-        email: adminEmail,
-        phone: phone,
-        displayName: displayName,
-        profession: profession,
-        role: "primary_admin",
-        loginTimestamp: Date.now(),
-        lastAdminTotpVerifiedAt: lastTotp || undefined,
-        subscriptionId: "SUB-ADMIN-DEEPAK"
-      };
-
-      const subSession: SubscriptionUserSession = {
-        email: adminEmail,
-        fullName: displayName,
-        phone: phone,
-        role: "primary_admin",
-        subscriptionId: "SUB-ADMIN-DEEPAK",
-        validUntil: "2099-12-31",
-        validDays: 36500,
-        status: "approved",
-        tabPermissions: { ...DEFAULT_FULL_PERMISSIONS },
-        loginTimestamp: Date.now()
-      };
-
-      // Set BOTH unified session keys
-      localStorage.setItem("vasthusilpy_email_user", JSON.stringify(sessionUser));
-      localStorage.setItem("vasthusilpy_subscription_user", JSON.stringify(subSession));
-      localStorage.setItem("vasthusilpy_saved_login_id", cleanInput);
-
-      setEmailUser(sessionUser);
-      setUser(null);
-      setAuthorized(true);
-      setIsPrimaryAdmin(true);
-      setIsExpiredSubscription(false);
-      setActiveTabPermissions({ ...DEFAULT_FULL_PERMISSIONS });
-
-      // Immediate two-way data sync & hydration
-      try {
-        await pullAndHydrateWebDataFromServer(adminEmail);
-        await performFullWebDataSync();
-      } catch (syncErr) {
-        console.warn("Post-login sync notice:", syncErr);
-      }
-
-      setLoading(false);
-      return true;
-    }
-
     // Predicate to match subscription by Email, Phone (10 digits match), or Subscription ID
     const matchSubPredicate = (s: SubscriptionRequest | null | undefined): boolean => {
       if (!s) return false;
@@ -1537,8 +1392,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return matchEmail || matchPhone || matchId;
     };
 
-    // 1. Lookup in subscriptionRequests (localStorage)
+    // 1. Fast Local Lookup across memory and localStorage
     let allSubs = loadSavedSubscriptionRequests();
+    try {
+      const v2Raw = localStorage.getItem("vasthusilpy_subscription_requests_v2");
+      if (v2Raw) {
+        const v2List = JSON.parse(v2Raw);
+        if (Array.isArray(v2List)) {
+          const knownIds = new Set(allSubs.map((s) => s.id));
+          v2List.forEach((s) => {
+            if (s && s.id && !knownIds.has(s.id)) {
+              allSubs.push(s);
+            }
+          });
+        }
+      }
+    } catch {}
+
     let foundSub = allSubs.find(matchSubPredicate);
 
     // 2. Query Server unified account resolution endpoint (/api/web-data/resolve-account)
@@ -1551,9 +1421,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             fullName: resolved.displayName || cleanInput,
             email: resolved.email || (cleanInput.includes("@") ? cleanInput : `${cleanPhoneDigits}@vasthusilpy.local`),
             phone: resolved.phone || cleanPhoneDigits,
-            password: resolved.password || "Password123",
+            password: resolved.password || "",
             upiRefId: resolved.subscriptionId || "UPI-RESOLVED",
-            planName: resolved.planName || (resolved.isAdmin ? "Primary Admin Pass" : "Vasthusilpy Active Pass"),
+            planName: resolved.planName || "Vasthusilpy Active Pass",
             amountPaid: resolved.amountPaid || 0,
             validityType: "days",
             validUntil: resolved.validUntil || "2099-12-31",
@@ -1568,115 +1438,60 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (e) {}
     }
 
-    // 3. Attempt to fetch latest from server via pullAndHydrateWebDataFromServer
-    if (!foundSub) {
-      try {
-        await pullAndHydrateWebDataFromServer(cleanInput);
-        allSubs = loadSavedSubscriptionRequests();
-        foundSub = allSubs.find(matchSubPredicate);
-      } catch (e) {}
-    }
-
-    // 4. Check Firestore subscription_requests collection
+    // 3. Fast direct Firestore lookup (with 1.5s max timeout to prevent hangs)
     if (!foundSub && db) {
       try {
-        if (cleanInput.startsWith("sub-")) {
-          const directDoc = await getDoc(doc(db, "subscription_requests", cleanInput.toUpperCase()));
-          if (directDoc.exists()) {
-            foundSub = directDoc.data() as SubscriptionRequest;
+        const firestorePromise = (async () => {
+          if (cleanInput.startsWith("sub-")) {
+            const directDoc = await getDoc(doc(db, "subscription_requests", cleanInput.toUpperCase()));
+            if (directDoc.exists()) {
+              return directDoc.data() as SubscriptionRequest;
+            }
           }
-        }
-        if (!foundSub) {
-          const snap = await getDocs(collection(db, "subscription_requests"));
-          const remoteList: SubscriptionRequest[] = [];
-          snap.forEach((d) => remoteList.push(d.data() as SubscriptionRequest));
-          foundSub = remoteList.find(matchSubPredicate);
-          if (foundSub) {
-            saveSubscriptionRequests([foundSub, ...allSubs]);
+          const docId = cleanInput.includes("@") ? emailToDocId(cleanInput) : `user_${cleanPhoneDigits.slice(-10)}`;
+          const uSnap = await getDoc(doc(db, "users", docId));
+          if (uSnap.exists()) {
+            const u = uSnap.data();
+            return {
+              id: u.subscriptionId || `SUB-USER-${cleanPhoneDigits.slice(-10) || Date.now()}`,
+              fullName: u.displayName || cleanInput,
+              email: u.email || cleanInput,
+              phone: u.phone || cleanPhoneDigits,
+              password: u.password || "",
+              upiRefId: u.subscriptionId || "UPI-USER-DOC",
+              planName: "Vasthusilpy Active Pass",
+              amountPaid: 0,
+              validityType: "days",
+              validUntil: u.subscriptionExpiry || "2099-12-31",
+              validDays: 365,
+              status: (u.subscriptionStatus as SubscriptionStatus) || "approved",
+              requestedAt: new Date().toISOString(),
+              approvedAt: new Date().toISOString(),
+              tabPermissions: { ...DEFAULT_FULL_PERMISSIONS }
+            } as SubscriptionRequest;
           }
-        }
-      } catch (e) {}
-    }
+          return null;
+        })();
 
-    // 5. Check Firestore users collection
-    if (!foundSub && db) {
-      try {
-        const docId = cleanInput.includes("@") ? emailToDocId(cleanInput) : `user_${cleanPhoneDigits.slice(-10)}`;
-        const uSnap = await getDoc(doc(db, "users", docId));
-        if (uSnap.exists()) {
-          const u = uSnap.data();
-          foundSub = {
-            id: u.subscriptionId || `SUB-USER-${cleanPhoneDigits.slice(-10) || Date.now()}`,
-            fullName: u.displayName || cleanInput,
-            email: u.email || cleanInput,
-            phone: u.phone || cleanPhoneDigits,
-            password: u.password || "Password123",
-            upiRefId: u.subscriptionId || "UPI-USER-DOC",
-            planName: "Vasthusilpy Active Pass",
-            amountPaid: 0,
-            validityType: "days",
-            validUntil: u.subscriptionExpiry || "2099-12-31",
-            validDays: 365,
-            status: (u.subscriptionStatus as SubscriptionStatus) || "approved",
-            requestedAt: new Date().toISOString(),
-            approvedAt: new Date().toISOString(),
-            tabPermissions: { ...DEFAULT_FULL_PERMISSIONS }
-          };
+        const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500));
+        const res = await Promise.race([firestorePromise, timeoutPromise]);
+        if (res) {
+          foundSub = res;
           saveSubscriptionRequests([foundSub, ...allSubs]);
         }
-      } catch (e) {}
-    }
-
-    // 6. Auto-provision Instant 7-Day Free Trial if logging in with standard password
-    if (!foundSub && (cleanPass.toLowerCase() === "password123" || cleanPass.toLowerCase() === "spark123")) {
-      const trialSubId = generateUniqueSubId();
-      const userFullName = cleanInput.includes("@") ? cleanInput.split("@")[0] : `User ${cleanPhoneDigits.slice(-4) || "Mobile"}`;
-      const userEmail = cleanInput.includes("@") ? cleanInput : `${cleanPhoneDigits || "user"}@vasthusilpy.local`;
-      const userPhone = cleanPhoneDigits || "9747995961";
-
-      foundSub = {
-        id: trialSubId,
-        fullName: userFullName,
-        email: userEmail,
-        phone: userPhone,
-        password: cleanPass,
-        upiRefId: "FREE-TRIAL",
-        amountPaid: 0,
-        planName: "Vasthusilpy 7-Day Free Trial",
-        notes: "Instant Auto-Provisioned Free Trial Access",
-        status: "approved",
-        validityType: "days",
-        validDays: 7,
-        validUntil: calculateExpiryDate("days", 7),
-        tabPermissions: { ...DEFAULT_FULL_PERMISSIONS },
-        requestedAt: new Date().toISOString(),
-        approvedAt: new Date().toISOString()
-      };
-
-      try {
-        saveSubscriptionRequests([foundSub, ...allSubs]);
-        await recordFreeTrialClaim(userEmail, userPhone, trialSubId);
       } catch (e) {}
     }
 
     if (!foundSub) {
       setLoading(false);
       throw new Error(
-        "ഈ ഇമെയിൽ അല്ലെങ്കിൽ മൊബൈൽ നമ്പറിൽ സബ്‌സ്ക്രിപ്ഷൻ വിവരങ്ങൾ കണ്ടെത്തിയില്ല. ദയവായി സബ്‌സ്ക്രിപ്ഷൻ അഭ്യർത്ഥന സമർപ്പിക്കുക അല്ലെങ്കിൽ 'Password123' ഉപയോഗിച്ച് സൗജന്യ ട്രയൽ ആരംഭിക്കുക."
+        "ഈ ഇമെയിൽ അല്ലെങ്കിൽ മൊബൈൽ നമ്പറിൽ സബ്‌സ്ക്രിപ്ഷൻ വിവരങ്ങൾ കണ്ടെത്തിയില്ല. ദയവായി രജിസ്റ്റർ ചെയ്യുക. (Subscription details not found. Please register)."
       );
     }
 
-    // Check Password across case-insensitive match and defaults
-    const expectedPass = foundSub.password || "Password123";
-    const isPassValid =
-      cleanPass === expectedPass ||
-      cleanPass.toLowerCase() === expectedPass.toLowerCase() ||
-      cleanPass === "Password123" ||
-      cleanPass === "Spark123" ||
-      cleanPass.toLowerCase() === "password123" ||
-      cleanPass.toLowerCase() === "spark123";
-
-    if (!isPassValid) {
+    // Check Password against user's actual registered password
+    const expectedPass = foundSub.password;
+    if (!expectedPass || (cleanPass !== expectedPass && cleanPass.toLowerCase() !== expectedPass.toLowerCase())) {
       setLoading(false);
       throw new Error("നൽകിയ പാസ്‌വേഡ് തെറ്റാണ്. (Incorrect Password). പാസ്‌വേഡ് മാറ്റാൻ 'Forgot / Change Password' ഉപയോഗിക്കുക.");
     }
@@ -1713,35 +1528,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const hasExpired = foundSub.status === "expired" || isSubscriptionExpired(foundSub);
 
-    // Synchronize latest details with Firestore users collection
-    let displayName = foundSub.fullName || foundSub.email.split("@")[0];
-    let phone = foundSub.phone || "";
-    let profession = "Civil Engineer";
-
-    try {
-      const docId = emailToDocId(foundSub.email);
-      const userDoc = await getDoc(doc(db, "users", docId));
-      if (userDoc.exists()) {
-        const uData = userDoc.data();
-        if (uData.displayName) displayName = uData.displayName;
-        if (uData.phone) phone = uData.phone;
-        if (uData.profession) profession = uData.profession;
-      }
-
-      await setDoc(doc(db, "users", docId), {
-        email: foundSub.email,
-        phone: phone,
-        displayName: displayName,
-        profession: profession,
-        role: "authorized_user",
-        subscriptionId: foundSub.id,
-        subscriptionStatus: foundSub.status,
-        lastLoginAt: new Date().toISOString(),
-        authMethod: "subscription_user"
-      }, { merge: true });
-    } catch (e) {}
-
+    // Instant session construction
+    const displayName = foundSub.fullName || (foundSub.email.includes("@") ? foundSub.email.split("@")[0] : "Subscriber");
+    const phone = foundSub.phone || (cleanPhoneDigits.length >= 10 ? cleanPhoneDigits.slice(-10) : "");
+    const profession = "Civil Engineer";
     const permissions = foundSub.tabPermissions || { ...DEFAULT_FULL_PERMISSIONS };
+
     const sessionData: SubscriptionUserSession = {
       email: foundSub.email,
       fullName: displayName,
@@ -1762,30 +1554,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       profession: profession,
       role: "authorized_user",
       loginTimestamp: Date.now(),
-      subscriptionId: foundSub.id
+      subscriptionId: foundSub.id,
+      isSubscriberLogin: true,
+      authMethod: "subscription_user"
     };
 
     // Store in both keys for unified multi-login session
     localStorage.setItem("vasthusilpy_subscription_user", JSON.stringify(sessionData));
     localStorage.setItem("vasthusilpy_email_user", JSON.stringify(emailUserData));
     localStorage.setItem("vasthusilpy_saved_login_id", cleanInput);
+    localStorage.removeItem("vasthusilpy_authenticator_login");
 
+    // Instantly activate session without waiting for network I/O
     setIsExpiredSubscription(hasExpired);
     setEmailUser(emailUserData);
     setUser(null);
     setAuthorized(true);
     setIsPrimaryAdmin(false);
+    setIsSubscriberLogin(true);
     setActiveTabPermissions(hasExpired ? { ...DEFAULT_FULL_PERMISSIONS } : permissions);
-
-    // Pull and hydrate authoritative server data for this user
-    try {
-      await pullAndHydrateWebDataFromServer(foundSub.email);
-      await performFullWebDataSync();
-    } catch (syncErr) {
-      console.warn("Post-login sync notice:", syncErr);
-    }
-
     setLoading(false);
+
+    // Asynchronous background synchronization (does NOT hold up user login)
+    const activeSub = foundSub;
+    setTimeout(async () => {
+      try {
+        if (db && activeSub.email) {
+          const docId = emailToDocId(activeSub.email);
+          await setDoc(
+            doc(db, "users", docId),
+            {
+              email: activeSub.email,
+              phone: phone,
+              displayName: displayName,
+              profession: profession,
+              role: "authorized_user",
+              subscriptionId: activeSub.id,
+              subscriptionStatus: activeSub.status,
+              lastLoginAt: new Date().toISOString(),
+              authMethod: "subscription_user"
+            },
+            { merge: true }
+          ).catch(() => {});
+        }
+
+        // Pull and hydrate authoritative server data for this user in background
+        await pullAndHydrateWebDataFromServer(activeSub.email).catch(() => {});
+        await performFullWebDataSync().catch(() => {});
+      } catch (syncErr) {
+        console.warn("Background post-login sync notice:", syncErr);
+      }
+    }, 50);
+
     return true;
   };
 
@@ -1863,8 +1683,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       sId === cleanVerification ||
       (cleanVerification.length >= 4 && sPhone.endsWith(cleanVerification.slice(-4))) ||
       cleanVerification === "admin" ||
-      cleanVerification === "spark123" ||
-      cleanVerification === "password123" ||
       cleanVerification === "free-trial";
 
     if (!isMatch) {
@@ -1918,7 +1736,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           fullName: sub.fullName,
           subId: sub.id,
           phone: sub.phone,
-          password: sub.password || "Password123",
+          password: sub.password || "",
           planName: sub.planName || "Vasthusilpy Pro Access",
           validDays: sub.validDays || 30,
           validUntil: sub.validUntil || calculateExpiryDate("days", sub.validDays || 30),
@@ -2116,6 +1934,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loading,
         authorized,
         isPrimaryAdmin,
+        isSubscriberLogin,
         authError,
         clearAuthError,
 

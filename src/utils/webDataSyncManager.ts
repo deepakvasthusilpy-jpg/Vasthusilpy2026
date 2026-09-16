@@ -533,11 +533,15 @@ export async function pullAndHydrateWebDataFromServer(accountIdentifier?: string
 export async function resolveAccountDetails(identifier?: string | null): Promise<any | null> {
   if (!identifier || typeof identifier !== "string" || !identifier.trim()) return null;
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000);
     const res = await fetch("/api/web-data/resolve-account", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ identifier: identifier.trim() })
+      body: JSON.stringify({ identifier: identifier.trim() }),
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
     if (res.ok) {
       const data = await res.json();
       if (data.success && data.account) {

@@ -71,7 +71,7 @@ interface HomePageProps {
 }
 
 export const HomePage: React.FC<HomePageProps> = ({ activeTab = "home_overview", setActiveTab, onNavigate }) => {
-  const { subscriptionRequests, isPrimaryAdmin } = useAuth();
+  const { subscriptionRequests, isPrimaryAdmin, isSubscriberLogin } = useAuth();
   const pendingRequestsCount = subscriptionRequests.filter((r) => r.status === "pending").length;
 
   const [copiedUpi, setCopiedUpi] = useState(false);
@@ -202,7 +202,7 @@ export const HomePage: React.FC<HomePageProps> = ({ activeTab = "home_overview",
             </span>
           </button>
 
-          {isPrimaryAdmin && (
+          {isPrimaryAdmin && !isSubscriberLogin && (
             <button
               onClick={() => setActiveTab && setActiveTab("subscription_requests")}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-mono text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
@@ -221,18 +221,20 @@ export const HomePage: React.FC<HomePageProps> = ({ activeTab = "home_overview",
             </button>
           )}
 
-          <button
-            onClick={() => setShowAuthSetupModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-mono text-xs font-bold text-amber-300 hover:text-white hover:bg-slate-800 transition-all cursor-pointer whitespace-nowrap ml-auto"
-          >
-            <KeyRound className="w-4 h-4 text-amber-400" />
-            <span>2FA Authenticator Setup</span>
-          </button>
+          {isPrimaryAdmin && !isSubscriberLogin && (
+            <button
+              onClick={() => setShowAuthSetupModal(true)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-mono text-xs font-bold text-amber-300 hover:text-white hover:bg-slate-800 transition-all cursor-pointer whitespace-nowrap ml-auto"
+            >
+              <KeyRound className="w-4 h-4 text-amber-400" />
+              <span>2FA Authenticator Setup</span>
+            </button>
+          )}
         </div>
 
         {activeTab === "data_storage" ? (
           <DataStorageTab />
-        ) : activeTab === "subscription_requests" && isPrimaryAdmin ? (
+        ) : activeTab === "subscription_requests" && isPrimaryAdmin && !isSubscriberLogin ? (
           <SubscriptionRequestsTab />
         ) : (
           <>
