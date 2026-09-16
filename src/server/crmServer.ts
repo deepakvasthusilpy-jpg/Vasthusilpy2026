@@ -91,6 +91,27 @@ export function registerCrmRoutes(app: Express) {
     }
   });
 
+  // GET single project by ID (public access for QR code & shareable link)
+  app.get("/api/crm/projects/:id", (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const cleanId = (id || "").trim().toLowerCase();
+      const projects = readProjectsFromFile();
+      const found = projects.find(
+        (p) =>
+          p.id.toLowerCase() === cleanId ||
+          p.id.toLowerCase().replace(/[^a-z0-9]/g, "") === cleanId.replace(/[^a-z0-9]/g, "") ||
+          (p.clientPhone && p.clientPhone.replace(/\D/g, "") === cleanId.replace(/\D/g, ""))
+      );
+      if (found) {
+        return res.json({ success: true, project: found });
+      }
+      return res.status(404).json({ success: false, error: "Project not found", id });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   // POST create or save a project
   app.post("/api/crm/projects", (req: Request, res: Response) => {
     try {

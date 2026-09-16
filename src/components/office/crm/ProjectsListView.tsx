@@ -36,7 +36,8 @@ import {
   FileText,
   Copy,
   X,
-  ListTodo
+  ListTodo,
+  Paperclip
 } from "lucide-react";
 import { OnlineApplicationsTab } from "./OnlineApplicationsTab";
 
@@ -717,6 +718,23 @@ export const ProjectsListView: React.FC<ProjectsListViewProps> = ({
                       <span className="font-bold text-slate-300 line-clamp-1">{proj.location}</span>
                     </div>
 
+                    {/* Project Description & Specifications */}
+                    <div className="pt-2 border-t border-slate-800/80 space-y-1 font-sans">
+                      <div className="flex items-center gap-1 text-[10px] font-mono font-bold uppercase text-cyan-400">
+                        <FileText className="w-3 h-3 text-cyan-400 shrink-0" />
+                        <span>Project Description & Specifications:</span>
+                      </div>
+                      <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 leading-relaxed break-words whitespace-pre-line line-clamp-3">
+                        {proj.description && proj.description.trim() ? (
+                          proj.description
+                        ) : (
+                          <span className="text-slate-500 italic text-[11px]">
+                            No description or specifications recorded.
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
                     <div className="flex items-center justify-between pt-1 border-t border-slate-800/80">
                       <span className="text-slate-500 flex items-center gap-1">
                         <Calendar className="w-3 h-3 text-amber-400" />
@@ -1040,11 +1058,14 @@ export const ProjectsListView: React.FC<ProjectsListViewProps> = ({
           <table className="w-full text-left text-xs font-mono">
             <thead className="bg-slate-950 text-slate-300 uppercase text-[10px] border-b border-slate-800 tracking-wider">
               <tr>
-                {/* 1ST COLUMN: CLIENT NAME, CONTACT NO, LOCATION */}
-                <th className="py-4 px-5 min-w-[240px]">
+                {/* 1ST COLUMN: CLIENT NAME, CONTACT NO, LOCATION & SPECIFICATIONS */}
+                <th className="py-4 px-5 min-w-[280px] max-w-[340px]">
                   <div className="flex items-center gap-1.5 text-cyan-400 font-bold">
                     <User className="w-3.5 h-3.5" />
                     <span>1. Client, Contact & Location</span>
+                  </div>
+                  <div className="text-[9px] font-normal text-slate-400 normal-case mt-0.5 pl-5">
+                    Description & Specifications
                   </div>
                 </th>
 
@@ -1128,6 +1149,47 @@ export const ProjectsListView: React.FC<ProjectsListViewProps> = ({
                         <div className="flex items-center gap-1.5 text-xs text-slate-300 font-sans">
                           <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                           <span className="line-clamp-1 font-medium">{proj.location}</span>
+                        </div>
+
+                        {/* Project Description & Specifications */}
+                        <div className="pt-2 border-t border-slate-800/80 mt-2 space-y-1 font-sans">
+                          <div className="flex items-center justify-between text-[10px] font-mono font-bold uppercase text-slate-400 tracking-wider">
+                            <span className="flex items-center gap-1 text-cyan-400">
+                              <FileText className="w-3 h-3 text-cyan-400 shrink-0" />
+                              <span>Project Description & Specifications:</span>
+                            </span>
+                          </div>
+                          <div className="bg-slate-950/90 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 font-sans leading-relaxed break-words whitespace-pre-line shadow-inner max-h-36 overflow-y-auto">
+                            {proj.description && proj.description.trim() ? (
+                              proj.description
+                            ) : (
+                              <span className="text-slate-500 italic text-[11px]">
+                                No description or specifications recorded. Click project to add details.
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Quick Attachments & Zero-Login QR link */}
+                          <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 pt-1">
+                            <span className="flex items-center gap-1 text-emerald-400">
+                              <Paperclip className="w-3 h-3" />
+                              <span>{(proj.attachments || []).length} Documents</span>
+                            </span>
+                            {onShareProject && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onShareProject(proj);
+                                }}
+                                className="text-cyan-300 hover:text-cyan-100 flex items-center gap-1 font-bold transition-colors cursor-pointer"
+                                title="Client QR Code: View Specifications & Attachments Without Login"
+                              >
+                                <QrCode className="w-3 h-3 text-cyan-400" />
+                                <span>QR Code & Link</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </td>
@@ -1499,8 +1561,8 @@ export const ProjectsListView: React.FC<ProjectsListViewProps> = ({
                           <button
                             type="button"
                             onClick={() => onShareProject(proj)}
-                            className="w-full py-1.5 px-3 bg-slate-950 hover:bg-cyan-950 text-cyan-300 border border-slate-800 hover:border-cyan-600/70 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                            title="Share Project via QR Code & Link"
+                            className="w-full py-1.5 px-3 bg-cyan-950/70 hover:bg-cyan-900 text-cyan-300 border border-cyan-800/80 hover:border-cyan-500 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                            title="Generate Sharable QR Code & Document Link (Zero Login Required for Client)"
                           >
                             <QrCode className="w-3.5 h-3.5 text-cyan-400" />
                             <span>QR CODE</span>

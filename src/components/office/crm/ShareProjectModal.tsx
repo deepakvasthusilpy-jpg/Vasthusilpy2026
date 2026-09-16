@@ -1,6 +1,22 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { CrmProject } from "../../../types";
-import { X, QrCode, Copy, Check, Share2, Send, Mail, ExternalLink, Download, Sparkles } from "lucide-react";
+import { saveCrmProjectToServer } from "../../../utils/storageManager";
+import {
+  X,
+  QrCode,
+  Copy,
+  Check,
+  Share2,
+  Send,
+  Mail,
+  ExternalLink,
+  Download,
+  Sparkles,
+  ShieldCheck,
+  Paperclip,
+  FileText,
+  Eye
+} from "lucide-react";
 
 interface ShareProjectModalProps {
   isOpen: boolean;
@@ -15,13 +31,23 @@ export const ShareProjectModal: React.FC<ShareProjectModalProps> = ({
 }) => {
   const [copied, setCopied] = useState(false);
 
+  // When modal opens, sync this project to backend server so external QR scans immediately find it
+  useEffect(() => {
+    if (isOpen && project) {
+      saveCrmProjectToServer(project).catch(() => {});
+    }
+  }, [isOpen, project]);
+
   if (!isOpen || !project) return null;
 
   // Generate shareable link
-  const shareableUrl = `${window.location.origin}?project=${project.id}`;
+  const shareableUrl = `${window.location.origin}?project=${encodeURIComponent(project.id)}`;
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(shareableUrl)}&color=06b6d4&bcolor=090d16`;
 
-  const shareText = `Vasthusilpy Engineering - Project #${project.id}\nTitle: ${project.title}\nClient: ${project.clientName}\nStatus: ${project.status}\nLink: ${shareableUrl}`;
+  const attCount = project.attachments?.length || 0;
+  const hasDesc = !!(project.description && project.description.trim());
+
+  const shareText = `Vasthusilpy Engineering - Project Documents & Specifications\nProject: ${project.title} (#${project.id})\nClient: ${project.clientName}\nLocation: ${project.location}\nStatus: ${project.status}\n\nView Project Specifications & Attachments Without Login:\n${shareableUrl}`;
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(shareableUrl);
@@ -37,6 +63,10 @@ export const ShareProjectModal: React.FC<ShareProjectModalProps> = ({
   const handleEmailShare = () => {
     const mailtoUrl = `mailto:?subject=${encodeURIComponent(`Vasthusilpy Project: ${project.title}`)}&body=${encodeURIComponent(shareText)}`;
     window.location.href = mailtoUrl;
+  };
+
+  const handleOpenClientView = () => {
+    window.open(shareableUrl, "_blank");
   };
 
   return (
@@ -86,8 +116,31 @@ export const ShareProjectModal: React.FC<ShareProjectModalProps> = ({
                 <span>SCAN WITH MOBILE CAMERA</span>
               </p>
               <p className="text-[11px] text-slate-400 max-w-xs">
-                Scan QR Code to immediately view project status & attachments on phone.
+                Scan QR Code with any phone camera to immediately view project specifications & download attachments.
               </p>
+            </div>
+
+            {/* Zero-Login Guarantee & Data Scope Badge */}
+            <div className="w-full bg-slate-900/80 border border-emerald-500/30 rounded-xl p-3 flex items-start gap-2.5 text-left">
+              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+              <div className="space-y-1 text-[11px]">
+                <p className="font-bold text-emerald-300 font-mono">
+                  100% Zero Login Required for Client
+                </p>
+                <p className="text-slate-300 leading-snug">
+                  Client can instantly view all entered specifications, project details, location, and download all shareable drawings & documents.
+                </p>
+                <div className="flex flex-wrap items-center gap-1.5 pt-1 font-mono text-[10px]">
+                  <span className="bg-slate-950 px-2 py-0.5 rounded text-cyan-300 border border-slate-800">
+                    <FileText className="w-3 h-3 inline mr-1" />
+                    {hasDesc ? "Specifications Included" : "Standard Project Specs"}
+                  </span>
+                  <span className="bg-slate-950 px-2 py-0.5 rounded text-emerald-300 border border-slate-800">
+                    <Paperclip className="w-3 h-3 inline mr-1" />
+                    {attCount} Shareable {attCount === 1 ? "Attachment" : "Attachments"}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -118,25 +171,37 @@ export const ShareProjectModal: React.FC<ShareProjectModalProps> = ({
             </div>
           </div>
 
-          {/* Social Share Buttons */}
-          <div className="grid grid-cols-2 gap-3 pt-2 font-mono text-xs">
+          {/* Action Buttons: Preview & Social */}
+          <div className="space-y-2.5">
             <button
               type="button"
-              onClick={handleWhatsAppShare}
-              className="flex items-center justify-center gap-2 bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/40 p-3 rounded-xl font-bold transition-all cursor-pointer"
+              onClick={handleOpenClientView}
+              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-emerald-400 hover:from-cyan-400 hover:to-emerald-300 text-slate-950 p-3 rounded-xl font-mono font-extrabold text-xs transition-all cursor-pointer shadow-lg shadow-cyan-500/20"
             >
-              <Send className="w-4 h-4 text-emerald-400" />
-              <span>WhatsApp Share</span>
+              <Eye className="w-4 h-4" />
+              <span>PREVIEW CLIENT VIEW (NO LOGIN REQUIRED)</span>
+              <ExternalLink className="w-3.5 h-3.5" />
             </button>
 
-            <button
-              type="button"
-              onClick={handleEmailShare}
-              className="flex items-center justify-center gap-2 bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 border border-indigo-500/40 p-3 rounded-xl font-bold transition-all cursor-pointer"
-            >
-              <Mail className="w-4 h-4 text-indigo-400" />
-              <span>Email Link</span>
-            </button>
+            <div className="grid grid-cols-2 gap-3 pt-1 font-mono text-xs">
+              <button
+                type="button"
+                onClick={handleWhatsAppShare}
+                className="flex items-center justify-center gap-2 bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/40 p-3 rounded-xl font-bold transition-all cursor-pointer"
+              >
+                <Send className="w-4 h-4 text-emerald-400" />
+                <span>WhatsApp Share</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleEmailShare}
+                className="flex items-center justify-center gap-2 bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 border border-indigo-500/40 p-3 rounded-xl font-bold transition-all cursor-pointer"
+              >
+                <Mail className="w-4 h-4 text-indigo-400" />
+                <span>Email Link</span>
+              </button>
+            </div>
           </div>
 
         </div>

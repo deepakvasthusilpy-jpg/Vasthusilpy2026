@@ -49,6 +49,7 @@ import { ReadOnlyEstimateVerificationPortal } from "./components/estimate/ReadOn
 import { PublicAgreementVerificationPortal } from "./components/construction/PublicAgreementVerificationPortal";
 import { ClientProgressPortal } from "./components/office/clientView/ClientProgressPortal";
 import { ClientInvoicePortal } from "./components/office/clientView/ClientInvoicePortal";
+import { PublicProjectSharePortal } from "./components/office/crm/PublicProjectSharePortal";
 import { PublicCadSharePortal } from "./components/home/dataStorage/PublicCadSharePortal";
 import { PublicPlanVerificationPortal } from "./components/planTemplate/PublicPlanVerificationPortal";
 import { HomePage } from "./components/home/HomePage";
@@ -355,6 +356,18 @@ export default function App() {
   const urlParams = new URLSearchParams(window.location.search);
   const hashParams = new URLSearchParams(window.location.hash.replace(/^#\/?/, ""));
   
+  const crmProjectShareId =
+    urlParams.get("project") ||
+    urlParams.get("crm_project") ||
+    urlParams.get("project_id") ||
+    urlParams.get("project_share") ||
+    urlParams.get("share_project") ||
+    urlParams.get("proj") ||
+    hashParams.get("project") ||
+    hashParams.get("crm_project") ||
+    hashParams.get("project_id") ||
+    hashParams.get("project_share");
+
   const clientViewToken =
     urlParams.get("client_view") ||
     urlParams.get("client_share") ||
@@ -482,6 +495,18 @@ export default function App() {
         verifyHash={verifyHash}
         initialTab={verifyTab}
         estimateProjects={estimateProjects}
+      />
+    );
+  }
+
+  // 5. Public Project Pipeline Record & Attachments Portal (Zero Login, Shareable Client Document View)
+  if (crmProjectShareId) {
+    return (
+      <PublicProjectSharePortal
+        projectId={crmProjectShareId}
+        onGoToApp={() => {
+          window.location.href = window.location.origin;
+        }}
       />
     );
   }
