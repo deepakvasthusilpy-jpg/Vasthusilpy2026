@@ -36,6 +36,7 @@ export interface AttachmentPage {
 
 export type MainSectionType =
   | "home"
+  | "data_storage_vault"
   | "panchangam"
   | "ai_agent"
   | "construction_works"
@@ -668,6 +669,15 @@ export type OnlineApplicationsTabType =
   | "online_applications_directory"
   | "online_applications_types";
 
+export type DataStorageVaultTabType =
+  | "vault_dashboard"
+  | "vault_plan"
+  | "vault_3d"
+  | "vault_estimate"
+  | "vault_survey"
+  | "vault_documents"
+  | "vault_settings";
+
 export type ApplicationFormsTabType =
   | "application_forms_dashboard"
   | "application_forms_fill"
@@ -675,6 +685,7 @@ export type ApplicationFormsTabType =
 
 export type TabType =
   | HomeTabType
+  | DataStorageVaultTabType
   | PanchangamTabType
   | AIAgentTabType
   | ConstructionTabType

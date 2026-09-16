@@ -2,11 +2,11 @@ import React, { useState, useEffect, useMemo } from "react";
 import {
   CADDrawingRecord,
   CADMetadataIndexItem,
-  CADStorageFilter,
   CADCategory,
   CADFileType,
   CADFolder
 } from "../../types/dataStorageTypes";
+import { TabType, DataStorageVaultTabType } from "../../types";
 import {
   getStoredCADFolders,
   getCADMetadataIndex,
@@ -33,7 +33,6 @@ import {
   Image as ImageIcon,
   Plus,
   Search,
-  Filter,
   Share2,
   Download,
   Eye,
@@ -50,23 +49,29 @@ import {
   Home,
   Layers,
   Sparkles,
-  ExternalLink,
   QrCode,
-  CheckCircle2,
-  AlertTriangle,
-  FileUp,
   HardDrive,
   Grid,
   List,
   ArrowUpDown,
-  Tag,
   ShieldAlert,
-  X
+  X,
+  LayoutGrid,
+  Settings,
+  FileSpreadsheet,
+  MapPin,
+  Database,
+  ArrowRight,
+  Info,
+  Check
 } from "lucide-react";
 
 interface DataStorageTabProps {
   userRole?: string;
   userEmail?: string;
+  activeSubTab?: TabType;
+  onSubTabChange?: (tab: TabType) => void;
+  onNavigateVaultTab?: (tab: TabType) => void;
 }
 
 const FACING_FILTERS = [
@@ -98,15 +103,132 @@ const FLOOR_FILTERS = [
   { label: "Multi-Storey", value: "Multi-Storey" }
 ];
 
+// 5 Required Categories Specification
+const VAULT_CATEGORIES: {
+  id: CADCategory;
+  tabId: DataStorageVaultTabType;
+  number: string;
+  title: string;
+  titleMl: string;
+  description: string;
+  icon: React.ElementType;
+  color: string;
+  borderColor: string;
+  bgBadge: string;
+}[] = [
+  {
+    id: "PLAN",
+    tabId: "vault_plan",
+    number: "1",
+    title: "PLAN",
+    titleMl: "പ്ലാൻ (Architectural, Vastu & 2D CAD)",
+    description: "Architectural floor plans, Vasthu diagrams, structural drawings, AutoCAD DWG/DXF files.",
+    icon: Compass,
+    color: "text-cyan-400",
+    borderColor: "border-cyan-500/40",
+    bgBadge: "bg-cyan-950/70 text-cyan-300 border-cyan-800"
+  },
+  {
+    id: "3D",
+    tabId: "vault_3d",
+    number: "2",
+    title: "3D",
+    titleMl: "3D എലിവേഷൻ & വിഷ്വലൈസേഷൻ",
+    description: "3D architectural elevations, realistic renderings, interior walkthroughs and exterior views.",
+    icon: Layers,
+    color: "text-purple-400",
+    borderColor: "border-purple-500/40",
+    bgBadge: "bg-purple-950/70 text-purple-300 border-purple-800"
+  },
+  {
+    id: "ESTIMATE",
+    tabId: "vault_estimate",
+    number: "3",
+    title: "ESTIMATE",
+    titleMl: "എസ്റ്റിമേറ്റ് & BOQ",
+    description: "Detailed bill of quantities (BOQ), bank stage estimates, rate analysis, and Excel/PDF sheets.",
+    icon: FileSpreadsheet,
+    color: "text-emerald-400",
+    borderColor: "border-emerald-500/40",
+    bgBadge: "bg-emerald-950/70 text-emerald-300 border-emerald-800"
+  },
+  {
+    id: "SURVEY",
+    tabId: "vault_survey",
+    number: "4",
+    title: "SURVEY",
+    titleMl: "ലാൻഡ് സർവ്വേ & FMB",
+    description: "Field Measurement Books (FMB), site boundaries, coordinate surveys, plot sketches and contour maps.",
+    icon: MapPin,
+    color: "text-amber-400",
+    borderColor: "border-amber-500/40",
+    bgBadge: "bg-amber-950/70 text-amber-300 border-amber-800"
+  },
+  {
+    id: "DOCUMENTS",
+    tabId: "vault_documents",
+    number: "5",
+    title: "DOCUMENTS",
+    titleMl: "ഓഫീസ് രേഖകൾ & പെർമിറ്റുകൾ",
+    description: "LSGD K-Smart permits, occupancy certificates, ownership deeds, agreements, and client papers.",
+    icon: FileText,
+    color: "text-blue-400",
+    borderColor: "border-blue-500/40",
+    bgBadge: "bg-blue-950/70 text-blue-300 border-blue-800"
+  }
+];
+
 export const DataStorageTab: React.FC<DataStorageTabProps> = ({
   userRole = "ADMIN",
-  userEmail = "deepak@vasthusilpy.com"
+  userEmail = "deepak@vasthusilpy.com",
+  activeSubTab,
+  onSubTabChange,
+  onNavigateVaultTab
 }) => {
-  // Navigation & Folder Selection State
+  // Navigation & Sub-Tabs State
+  const [currentSubTab, setCurrentSubTab] = useState<DataStorageVaultTabType>(() => {
+    if (activeSubTab && [
+      "vault_dashboard",
+      "vault_plan",
+      "vault_3d",
+      "vault_estimate",
+      "vault_survey",
+      "vault_documents",
+      "vault_settings"
+    ].includes(activeSubTab)) {
+      return activeSubTab as DataStorageVaultTabType;
+    }
+    return "vault_dashboard";
+  });
+
+  // Sync with prop when changed externally
+  useEffect(() => {
+    if (activeSubTab && [
+      "vault_dashboard",
+      "vault_plan",
+      "vault_3d",
+      "vault_estimate",
+      "vault_survey",
+      "vault_documents",
+      "vault_settings"
+    ].includes(activeSubTab)) {
+      setCurrentSubTab(activeSubTab as DataStorageVaultTabType);
+    }
+  }, [activeSubTab]);
+
+  const handleSwitchTab = (tab: DataStorageVaultTabType) => {
+    setCurrentSubTab(tab);
+    if (onSubTabChange) {
+      onSubTabChange(tab);
+    }
+    if (onNavigateVaultTab) {
+      onNavigateVaultTab(tab);
+    }
+  };
+
+  // Folders & Data State
   const [folders, setFolders] = useState<CADFolder[]>([]);
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null); // null = All Folders
-
-  // Metadata Index State
   const [indexItems, setIndexItems] = useState<CADMetadataIndexItem[]>([]);
 
   // Search & Filter State
@@ -114,7 +236,6 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
   const [facingFilter, setFacingFilter] = useState("");
   const [bedroomFilter, setBedroomFilter] = useState("");
   const [floorFilter, setFloorFilter] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<CADCategory | "">("");
   const [formatFilter, setFormatFilter] = useState<CADFileType | "ALL">("ALL");
   const [starredOnly, setStarredOnly] = useState(false);
   const [sortBy, setSortBy] = useState<"date" | "name" | "size" | "owner">("date");
@@ -125,6 +246,7 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
   // Modal States
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingFile, setEditingFile] = useState<CADDrawingRecord | null>(null);
+  const [uploadDefaultCategory, setUploadDefaultCategory] = useState<CADCategory>("PLAN");
 
   const [isViewerModalOpen, setIsViewerModalOpen] = useState(false);
   const [viewingFile, setViewingFile] = useState<CADDrawingRecord | null>(null);
@@ -141,6 +263,9 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
 
   const [isDriveSyncModalOpen, setIsDriveSyncModalOpen] = useState(false);
   const [isWipeConfirmOpen, setIsWipeConfirmOpen] = useState(false);
+
+  // Settings Folder Filter Search
+  const [folderSearchQuery, setFolderSearchQuery] = useState("");
 
   // Load Folders & Index on Mount & Refresh
   const reloadData = () => {
@@ -169,6 +294,43 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
     return folders.find((f) => f.id === activeFolderId) || null;
   }, [folders, activeFolderId]);
 
+  // Category file counts & storage size
+  const categoryStats = useMemo(() => {
+    const stats: Record<string, { count: number; bytes: number }> = {
+      PLAN: { count: 0, bytes: 0 },
+      "3D": { count: 0, bytes: 0 },
+      ESTIMATE: { count: 0, bytes: 0 },
+      SURVEY: { count: 0, bytes: 0 },
+      DOCUMENTS: { count: 0, bytes: 0 }
+    };
+    indexItems.forEach((item) => {
+      const cat = (item.category as CADCategory) || "PLAN";
+      if (stats[cat]) {
+        stats[cat].count += 1;
+        stats[cat].bytes += item.fileSize || 0;
+      }
+    });
+    return stats;
+  }, [indexItems]);
+
+  const totalVaultSize = useMemo(() => {
+    return indexItems.reduce((sum, item) => sum + (item.fileSize || 0), 0);
+  }, [indexItems]);
+
+  const starredCount = useMemo(() => {
+    return indexItems.filter((i) => i.isStarred).length;
+  }, [indexItems]);
+
+  // Map subTab to Category if it's one of the 5 categories
+  const activeCategoryForTab: CADCategory | null = useMemo(() => {
+    if (currentSubTab === "vault_plan") return "PLAN";
+    if (currentSubTab === "vault_3d") return "3D";
+    if (currentSubTab === "vault_estimate") return "ESTIMATE";
+    if (currentSubTab === "vault_survey") return "SURVEY";
+    if (currentSubTab === "vault_documents") return "DOCUMENTS";
+    return null;
+  }, [currentSubTab]);
+
   // Recursive check if a folder is descendant of target folder
   const isFolderDescendantOf = (folderId: string, targetParentId: string): boolean => {
     if (!folderId || !targetParentId) return false;
@@ -182,25 +344,25 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
   // Filter & Search Logic
   const filteredItems = useMemo(() => {
     return indexItems.filter((item) => {
-      // 1. Folder filter (matches current folder OR any subfolder/descendant)
+      // 1. Tab-level Category Filter
+      if (activeCategoryForTab && item.category !== activeCategoryForTab) {
+        return false;
+      }
+
+      // 2. Folder filter
       if (activeFolderId && item.folderId !== activeFolderId) {
         if (!isFolderDescendantOf(item.folderId, activeFolderId)) {
           return false;
         }
       }
 
-      // 2. Starred filter
+      // 3. Starred filter
       if (starredOnly && !item.isStarred) {
         return false;
       }
 
-      // 3. Format filter
+      // 4. Format filter
       if (formatFilter !== "ALL" && item.fileType !== formatFilter) {
-        return false;
-      }
-
-      // 4. Category filter
-      if (categoryFilter && item.category !== categoryFilter) {
         return false;
       }
 
@@ -219,7 +381,7 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
         return false;
       }
 
-      // 8. Multi-Parameter Text Search (Name, Owner, Mobile, Facing, Vasthu Chuttu, Keywords, Project)
+      // 8. Multi-Parameter Text Search
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
         const searchPool = [
@@ -243,7 +405,6 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
           .join(" ")
           .toLowerCase();
 
-        // Support multiple search terms (e.g. "Deepak 3bhk east")
         const tokens = q.split(/\s+/).filter(Boolean);
         const matchesAllTokens = tokens.every((token) => searchPool.includes(token));
         if (!matchesAllTokens) return false;
@@ -266,10 +427,10 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
   }, [
     indexItems,
     folders,
+    activeCategoryForTab,
     activeFolderId,
     starredOnly,
     formatFilter,
-    categoryFilter,
     facingFilter,
     bedroomFilter,
     floorFilter,
@@ -304,6 +465,7 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
     const fullRecord = getCADDrawingRecordById(item.id);
     if (fullRecord) {
       setEditingFile(fullRecord);
+      setUploadDefaultCategory(fullRecord.category || activeCategoryForTab || "PLAN");
       setIsEditModalOpen(true);
     }
   };
@@ -324,7 +486,7 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
 
   const handleDeleteFile = (item: CADMetadataIndexItem, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm(`Are you sure you want to delete drawing "${item.name}" from ${item.folderPath}?`)) {
+    if (confirm(`Are you sure you want to delete "${item.name}" from ${item.folderPath}?`)) {
       deleteCADDrawingRecord(item.id);
       reloadData();
     }
@@ -350,6 +512,13 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
     }
   };
 
+  // Open upload modal pre-selected to specific category
+  const handleOpenUpload = (cat?: CADCategory) => {
+    setEditingFile(null);
+    setUploadDefaultCategory(cat || activeCategoryForTab || "PLAN");
+    setIsEditModalOpen(true);
+  };
+
   // Wipe All Storage Confirmation
   const handleWipeAll = () => {
     resetAndWipeCadStorage();
@@ -358,9 +527,11 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
     setIsWipeConfirmOpen(false);
   };
 
-  const totalVaultSize = useMemo(() => {
-    return indexItems.reduce((sum, item) => sum + (item.fileSize || 0), 0);
-  }, [indexItems]);
+  // Active Category Meta
+  const activeCategoryMeta = useMemo(() => {
+    if (!activeCategoryForTab) return null;
+    return VAULT_CATEGORIES.find((c) => c.id === activeCategoryForTab) || null;
+  }, [activeCategoryForTab]);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
@@ -372,7 +543,7 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
             <div className="flex items-center gap-2 mb-1.5">
               <span className="px-3 py-1 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800/80 text-[11px] font-mono font-bold flex items-center gap-1.5">
                 <HardDrive className="w-3.5 h-3.5" />
-                OFFICE CAD & DRAWING VAULT
+                DATA STORAGE VAULT
               </span>
               <span className="px-2.5 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800/80 text-[10px] font-mono font-bold flex items-center gap-1">
                 <Cloud className="w-3 h-3" />
@@ -380,24 +551,21 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
               </span>
             </div>
             <h1 className="text-xl sm:text-2xl font-black text-white font-mono tracking-tight">
-              Office CAD Data Storage & Drawing Vault
+              Data Storage Vault & Drawing Center
             </h1>
             <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-2xl font-mono">
-              Hierarchical folder vaults (VISHNU, DEEPAK, DIBIN), AutoCAD DWG/DXF, Architectural PDFs, 3D elevations, live QR code links, and Vasthu Chuttu index.
+              Centralized vault with 5 dedicated categories: 1. PLAN, 2. 3D, 3. ESTIMATE, 4. SURVEY, 5. DOCUMENTS, plus comprehensive folder management & Drive sync.
             </p>
           </div>
 
           {/* Quick Header Actions */}
           <div className="flex flex-wrap items-center gap-2.5">
             <button
-              onClick={() => {
-                setEditingFile(null);
-                setIsEditModalOpen(true);
-              }}
+              onClick={() => handleOpenUpload()}
               className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-mono font-bold flex items-center gap-2 shadow-lg shadow-cyan-950 cursor-pointer transition-all active:scale-95"
             >
               <Plus className="w-4 h-4" />
-              <span>+ Add / Upload Drawing</span>
+              <span>+ Upload File</span>
             </button>
 
             <button
@@ -414,20 +582,11 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
 
             <button
               onClick={() => setIsDriveSyncModalOpen(true)}
-              title="Synchronize Web Data, CAD Vault & Google Drive"
+              title="Synchronize Vault with Google Drive"
               className="px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-slate-800 to-cyan-950 hover:from-slate-700 hover:to-cyan-900 text-cyan-300 text-xs font-mono font-bold flex items-center gap-2 border border-cyan-800/60 cursor-pointer transition-colors shadow-sm"
             >
               <Cloud className="w-4 h-4 text-cyan-400 animate-pulse" />
-              <span className="hidden sm:inline">Web & Drive Sync</span>
-            </button>
-
-            <button
-              onClick={() => setIsWipeConfirmOpen(true)}
-              title="Delete All Settings & Reset Folders"
-              className="px-3 py-2.5 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
-            >
-              <Trash2 className="w-4 h-4" />
-              <span className="hidden xl:inline">Delete All Settings</span>
+              <span className="hidden sm:inline">Drive Sync</span>
             </button>
           </div>
         </div>
@@ -439,7 +598,7 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
               <FolderTree className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <div className="text-[10px] font-mono text-slate-400 uppercase">Folders</div>
+              <div className="text-[10px] font-mono text-slate-400 uppercase">Total Folders</div>
               <div className="text-base font-black text-white font-mono">{folders.length} Folders</div>
             </div>
           </div>
@@ -449,8 +608,8 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
               <FileCode className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <div className="text-[10px] font-mono text-slate-400 uppercase">Total Files</div>
-              <div className="text-base font-black text-white font-mono">{indexItems.length} Drawings</div>
+              <div className="text-[10px] font-mono text-slate-400 uppercase">Total Records</div>
+              <div className="text-base font-black text-white font-mono">{indexItems.length} Files</div>
             </div>
           </div>
 
@@ -468,718 +627,1410 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
 
           <div className="p-3 rounded-2xl bg-slate-950/60 border border-slate-800 flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-emerald-950 text-emerald-400 border border-emerald-800/60 flex items-center justify-center shrink-0">
-              <QrCode className="w-4 h-4" />
+              <Star className="w-4 h-4 fill-emerald-400" />
             </div>
             <div className="min-w-0">
-              <div className="text-[10px] font-mono text-slate-400 uppercase">QR Sharing</div>
-              <div className="text-base font-black text-emerald-300 font-mono">Live Enabled</div>
+              <div className="text-[10px] font-mono text-slate-400 uppercase">Starred Priority</div>
+              <div className="text-base font-black text-emerald-300 font-mono">{starredCount} Files</div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 2. Folder Navigation Ribbon (Root Folders: VISHNU, DEEPAK, DIBIN & Subfolders) */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <FolderTree className="w-4 h-4 text-cyan-400" />
-            <span className="text-xs font-mono font-bold text-white uppercase tracking-wider">
-              Vault Directory Navigation
-            </span>
-          </div>
+      {/* 2. SUB-TABS NAVIGATION BAR */}
+      <div className="bg-slate-900 border border-slate-800 p-2 rounded-2xl flex items-center gap-2 overflow-x-auto shadow-lg backdrop-blur-md sticky top-16 z-30">
+        {/* Dashboard Sub-Tab */}
+        <button
+          onClick={() => handleSwitchTab("vault_dashboard")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+            currentSubTab === "vault_dashboard"
+              ? "bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-950/60 border border-cyan-400/40"
+              : "text-slate-400 hover:text-white hover:bg-slate-800/70"
+          }`}
+        >
+          <LayoutGrid className="w-4 h-4 text-cyan-300" />
+          <span>Dashboard</span>
+          <span className="px-1.5 py-0.5 rounded-full bg-slate-950/80 text-[10px] text-cyan-300 font-mono border border-cyan-800/50">
+            {indexItems.length}
+          </span>
+        </button>
 
-          <div className="flex items-center gap-2">
-            {activeFolder && (
-              <button
-                onClick={() => {
-                  setFolderToEdit(activeFolder);
-                  setIsFolderModalOpen(true);
-                }}
-                className="text-[11px] font-mono text-slate-400 hover:text-cyan-300 flex items-center gap-1 cursor-pointer"
-              >
-                <Edit2 className="w-3 h-3" />
-                <span>Edit Folder</span>
-              </button>
-            )}
+        {/* 5 Categories Sub-Tabs */}
+        {VAULT_CATEGORIES.map((cat) => {
+          const Icon = cat.icon;
+          const count = categoryStats[cat.id]?.count || 0;
+          const isActive = currentSubTab === cat.tabId;
+
+          return (
             <button
-              onClick={() => {
-                setFolderToEdit(null);
-                setSelectedParentForNewFolder(activeFolderId);
-                setIsFolderModalOpen(true);
-              }}
-              className="text-[11px] font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-1 cursor-pointer font-bold"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add Nested Subfolder</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Folder Badges / Buttons */}
-        <div className="flex flex-wrap gap-2 pt-1">
-          {/* All Folders Button */}
-          <button
-            onClick={() => setActiveFolderId(null)}
-            className={`px-3.5 py-2 rounded-xl text-xs font-mono font-bold flex items-center gap-2 transition-all cursor-pointer ${
-              activeFolderId === null
-                ? "bg-cyan-600 text-white shadow-md shadow-cyan-950 border border-cyan-400"
-                : "bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800 hover:border-slate-700"
-            }`}
-          >
-            <Folder className="w-3.5 h-3.5" />
-            <span>All Folders</span>
-            <span className="px-1.5 py-0.2 rounded-full bg-slate-900 text-[10px] text-slate-300 border border-slate-800">
-              {indexItems.length}
-            </span>
-          </button>
-
-          {/* Root Folders: VISHNU, DEEPAK, DIBIN & Subfolders */}
-          {folders.map((folder) => {
-            const count = folderStats[folder.id] || 0;
-            const isSelected = activeFolderId === folder.id;
-            const isSubfolder = Boolean(folder.parentId);
-
-            return (
-              <button
-                key={folder.id}
-                onClick={() => setActiveFolderId(folder.id)}
-                className={`px-3.5 py-2 rounded-xl text-xs font-mono font-bold flex items-center gap-2 transition-all cursor-pointer border ${
-                  isSelected
-                    ? "bg-slate-800 text-white shadow-md border-cyan-500"
-                    : "bg-slate-950 text-slate-300 hover:text-white border-slate-800 hover:border-slate-700"
-                }`}
-              >
-                <span
-                  className="w-2.5 h-2.5 rounded-full shrink-0"
-                  style={{ backgroundColor: folder.color || "#38bdf8" }}
-                />
-                <Folder className="w-3.5 h-3.5" style={{ color: folder.color || "#38bdf8" }} />
-                <span>
-                  {isSubfolder ? `↳ ${folder.name}` : folder.name}
-                </span>
-                <span className="px-1.5 py-0.2 rounded-full bg-slate-900 text-[10px] text-slate-400 border border-slate-800">
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Breadcrumb Path */}
-        {activeFolder && (
-          <div className="text-[11px] font-mono text-slate-400 flex items-center gap-1.5 pt-1">
-            <span className="text-slate-500">Active Path:</span>
-            <span className="text-cyan-300 font-bold bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
-              📁 {activeFolder.path}
-            </span>
-            {activeFolder.description && (
-              <span className="text-slate-500 truncate hidden md:inline">
-                • {activeFolder.description}
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* 3. Comprehensive Search & Filter Controls */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-3">
-        <div className="flex flex-col md:flex-row gap-3">
-          {/* Main Search Input */}
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by Drawing Name, Owner Name, Mobile No, Facing, Bedrooms, Floors, Vasthu Chuttu, Keywords..."
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-10 pr-9 py-2.5 text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-
-          {/* Quick Category & Format Filters */}
-          <div className="flex items-center gap-2">
-            <select
-              value={formatFilter}
-              onChange={(e) => setFormatFilter(e.target.value as CADFileType | "ALL")}
-              className="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-300 focus:outline-none focus:border-cyan-500"
-            >
-              <option value="ALL">All File Formats</option>
-              <option value="DWG">AutoCAD DWG</option>
-              <option value="PDF">Architectural PDF</option>
-              <option value="DXF">AutoCAD DXF</option>
-              <option value="IMAGE">3D / Images</option>
-              <option value="CAD_VECTOR">2D CAD Canvas</option>
-            </select>
-
-            <button
-              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-              className={`px-3 py-2 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
-                showAdvancedFilters || facingFilter || bedroomFilter || floorFilter || categoryFilter
-                  ? "bg-cyan-500/20 border-cyan-500/50 text-cyan-300"
-                  : "bg-slate-950 border-slate-700 text-slate-300 hover:text-white"
+              key={cat.id}
+              onClick={() => handleSwitchTab(cat.tabId)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                isActive
+                  ? "bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-950/60 border border-cyan-400/40"
+                  : "text-slate-400 hover:text-white hover:bg-slate-800/70"
               }`}
             >
-              <SlidersHorizontal className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Advanced Filters</span>
+              <Icon className={`w-4 h-4 ${isActive ? "text-white" : cat.color}`} />
+              <span>{cat.number}. {cat.title}</span>
+              <span
+                className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${
+                  isActive
+                    ? "bg-white/20 text-white"
+                    : "bg-slate-950 text-slate-400 border border-slate-800"
+                }`}
+              >
+                {count}
+              </span>
             </button>
+          );
+        })}
 
-            {/* View Mode Toggle */}
-            <div className="flex items-center bg-slate-950 border border-slate-700 rounded-xl p-0.5">
-              <button
-                onClick={() => setViewMode("grid")}
-                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                  viewMode === "grid" ? "bg-cyan-600 text-white" : "text-slate-400 hover:text-white"
-                }`}
-              >
-                <Grid className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={() => setViewMode("table")}
-                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                  viewMode === "table" ? "bg-cyan-600 text-white" : "text-slate-400 hover:text-white"
-                }`}
-              >
-                <List className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Expandable Advanced Multi-Parameter Filter Bar (Facing, Bedrooms, Floors, Category, Starred) */}
-        {showAdvancedFilters && (
-          <div className="pt-3 border-t border-slate-800 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-            {/* Facing Filter */}
-            <div>
-              <label className="block text-[10px] font-mono text-slate-400 uppercase font-bold mb-1">
-                Facing (ദിശ)
-              </label>
-              <select
-                value={facingFilter}
-                onChange={(e) => setFacingFilter(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-mono text-amber-300 focus:outline-none focus:border-cyan-500"
-              >
-                {FACING_FILTERS.map((f) => (
-                  <option key={f.value} value={f.value}>
-                    {f.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Bedroom Filter */}
-            <div>
-              <label className="block text-[10px] font-mono text-slate-400 uppercase font-bold mb-1">
-                Bedrooms (BHK)
-              </label>
-              <select
-                value={bedroomFilter}
-                onChange={(e) => setBedroomFilter(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-mono text-cyan-300 focus:outline-none focus:border-cyan-500"
-              >
-                {BEDROOM_FILTERS.map((b) => (
-                  <option key={b.value} value={b.value}>
-                    {b.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Floor Filter */}
-            <div>
-              <label className="block text-[10px] font-mono text-slate-400 uppercase font-bold mb-1">
-                Number of Floors
-              </label>
-              <select
-                value={floorFilter}
-                onChange={(e) => setFloorFilter(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-mono text-purple-300 focus:outline-none focus:border-cyan-500"
-              >
-                {FLOOR_FILTERS.map((fl) => (
-                  <option key={fl.value} value={fl.value}>
-                    {fl.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Starred & Reset */}
-            <div className="flex items-end gap-2">
-              <button
-                onClick={() => setStarredOnly(!starredOnly)}
-                className={`flex-1 px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-colors ${
-                  starredOnly
-                    ? "bg-amber-500/20 border-amber-500/50 text-amber-300"
-                    : "bg-slate-950 border-slate-700 text-slate-400 hover:text-white"
-                }`}
-              >
-                <Star className={`w-3.5 h-3.5 ${starredOnly ? "fill-amber-400" : ""}`} />
-                <span>Starred Only</span>
-              </button>
-
-              {(facingFilter || bedroomFilter || floorFilter || categoryFilter || starredOnly || searchQuery) && (
-                <button
-                  onClick={() => {
-                    setFacingFilter("");
-                    setBedroomFilter("");
-                    setFloorFilter("");
-                    setCategoryFilter("");
-                    setStarredOnly(false);
-                    setSearchQuery("");
-                  }}
-                  className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs font-mono cursor-pointer"
-                >
-                  Reset
-                </button>
-              )}
-            </div>
-          </div>
-        )}
+        {/* Settings & Folders Sub-Tab */}
+        <button
+          onClick={() => handleSwitchTab("vault_settings")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer whitespace-nowrap ml-auto ${
+            currentSubTab === "vault_settings"
+              ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-950/60 border border-purple-400/40"
+              : "text-purple-300/80 hover:text-white hover:bg-slate-800/70"
+          }`}
+        >
+          <Settings className="w-4 h-4 text-purple-300" />
+          <span>Settings & Folders</span>
+          <span className="px-1.5 py-0.5 rounded-full bg-purple-950/80 text-[10px] text-purple-300 font-mono border border-purple-800/50">
+            CONFIG
+          </span>
+        </button>
       </div>
 
-      {/* 4. Filter Results Summary & Sorting */}
-      <div className="flex items-center justify-between text-xs font-mono text-slate-400 px-1">
-        <div>
-          Showing <strong className="text-white">{filteredItems.length}</strong> of{" "}
-          <strong className="text-white">{indexItems.length}</strong> drawings
-          {activeFolder && (
-            <span>
-              {" "}
-              in <span className="text-cyan-400 font-bold">{activeFolder.path}</span>
-            </span>
-          )}
-        </div>
+      {/* =========================================================================
+          VIEW A: VAULT DASHBOARD (vault_dashboard)
+         ========================================================================= */}
+      {currentSubTab === "vault_dashboard" && (
+        <div className="space-y-6 animate-in fade-in duration-150">
+          {/* 5 Category Interactive Cards */}
+          <div>
+            <div className="flex items-center justify-between mb-3 px-1">
+              <div className="flex items-center gap-2">
+                <LayoutGrid className="w-4 h-4 text-cyan-400" />
+                <h2 className="text-sm font-bold text-white font-mono uppercase tracking-wider">
+                  Vault Categories Overview
+                </h2>
+              </div>
+              <span className="text-xs font-mono text-slate-500">
+                Select a category to browse files or upload
+              </span>
+            </div>
 
-        <div className="flex items-center gap-2">
-          <span>Sort:</span>
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
-            className="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-xs text-slate-200 focus:outline-none"
-          >
-            <option value="date">Date Updated</option>
-            <option value="name">Drawing Name</option>
-            <option value="owner">Owner Name</option>
-            <option value="size">File Size</option>
-          </select>
-          <button
-            onClick={() => setSortOrder((o) => (o === "asc" ? "desc" : "asc"))}
-            className="p-1 rounded bg-slate-900 border border-slate-800 text-slate-300 hover:text-white cursor-pointer"
-          >
-            <ArrowUpDown className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+              {VAULT_CATEGORIES.map((cat) => {
+                const Icon = cat.icon;
+                const stats = categoryStats[cat.id] || { count: 0, bytes: 0 };
 
-      {/* 5. Drawings Display (Grid Cards or Detailed Table) */}
-      {filteredItems.length === 0 ? (
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-12 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 flex items-center justify-center mx-auto mb-4">
-            <FileCode className="w-8 h-8" />
-          </div>
-          <h3 className="text-base font-bold text-white font-mono mb-1">
-            No Drawings Found Matching Your Filters
-          </h3>
-          <p className="text-xs text-slate-400 font-mono max-w-md mx-auto mb-6">
-            Try adjusting your search keywords, clear the facing/bedroom filters, or upload a new CAD/PDF drawing to this vault folder.
-          </p>
-          <button
-            onClick={() => {
-              setEditingFile(null);
-              setIsEditModalOpen(true);
-            }}
-            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-mono text-xs font-bold inline-flex items-center gap-2 shadow-lg shadow-cyan-950 cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Upload Drawing Now</span>
-          </button>
-        </div>
-      ) : viewMode === "grid" ? (
-        /* GRID VIEW */
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-          {filteredItems.map((item) => {
-            const isDwg = item.fileType === "DWG";
-            const isPdf = item.fileType === "PDF";
-            const isDxf = item.fileType === "DXF";
-            const isImage = item.fileType === "IMAGE";
-
-            return (
-              <div
-                key={item.id}
-                onClick={() => handleOpenFile(item)}
-                className="group bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-cyan-500/50 rounded-3xl p-5 shadow-xl transition-all duration-200 flex flex-col justify-between cursor-pointer relative overflow-hidden"
-              >
-                {/* Top Header Card */}
-                <div>
-                  <div className="flex items-start justify-between gap-3 mb-3">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div
-                        className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border ${
-                          isPdf
-                            ? "bg-rose-500/20 border-rose-500/40 text-rose-400"
-                            : isImage
-                            ? "bg-amber-500/20 border-amber-500/40 text-amber-400"
-                            : "bg-cyan-500/20 border-cyan-500/40 text-cyan-400"
-                        }`}
-                      >
-                        {isPdf ? (
-                          <FileText className="w-5 h-5" />
-                        ) : isImage ? (
-                          <ImageIcon className="w-5 h-5" />
-                        ) : (
-                          <FileCode className="w-5 h-5" />
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md border ${
-                              isPdf
-                                ? "bg-rose-950 text-rose-300 border-rose-800"
-                                : isImage
-                                ? "bg-amber-950 text-amber-300 border-amber-800"
-                                : "bg-cyan-950 text-cyan-300 border-cyan-800"
-                            }`}
-                          >
-                            {item.fileType}
-                          </span>
-                          <span className="text-[10px] font-mono text-slate-400 truncate">
-                            📁 {item.folderPath}
-                          </span>
+                return (
+                  <div
+                    key={cat.id}
+                    onClick={() => handleSwitchTab(cat.tabId)}
+                    className={`group bg-slate-900 hover:bg-slate-850 border ${cat.borderColor} rounded-3xl p-5 shadow-lg transition-all duration-200 flex flex-col justify-between cursor-pointer relative overflow-hidden`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center border ${cat.bgBadge}`}>
+                          <Icon className="w-5 h-5" />
                         </div>
-                        <h3 className="text-sm font-bold text-white font-mono truncate group-hover:text-cyan-300 transition-colors mt-0.5">
-                          {item.name}
-                        </h3>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={(e) => handleToggleStar(item.id, e)}
-                      className="p-1.5 rounded-xl bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-amber-400 transition-colors cursor-pointer shrink-0"
-                    >
-                      <Star
-                        className={`w-4 h-4 ${
-                          item.isStarred ? "fill-amber-400 text-amber-400" : ""
-                        }`}
-                      />
-                    </button>
-                  </div>
-
-                  {/* Owner & Project Name */}
-                  <div className="p-3 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-1.5 text-xs font-mono mb-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-slate-400 flex items-center gap-1">
-                        <User className="w-3 h-3 text-cyan-400" />
-                        Owner / Client:
-                      </span>
-                      <span className="font-bold text-white truncate max-w-[140px]">
-                        {item.ownerName || item.clientName || "Vasthusilpy Client"}
-                      </span>
-                    </div>
-
-                    {item.mobileNo && (
-                      <div className="flex items-center justify-between text-[11px]">
-                        <span className="text-[10px] text-slate-400 flex items-center gap-1">
-                          <Phone className="w-3 h-3 text-emerald-400" />
-                          Mobile:
-                        </span>
-                        <span className="text-slate-300">{item.mobileNo}</span>
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-800/80">
-                      <span className="text-[10px] text-slate-500">Project:</span>
-                      <span className="text-cyan-300 truncate max-w-[160px] font-bold">
-                        {item.projectName}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Architectural Specs Badges (Facing, BHK, Floors, Vasthu) */}
-                  <div className="grid grid-cols-2 gap-2 text-[11px] font-mono mb-3">
-                    {item.facing && (
-                      <div className="p-2 rounded-xl bg-slate-950 border border-slate-800/80 flex items-center gap-1.5">
-                        <Compass className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                        <span className="truncate text-amber-300 font-bold">{item.facing}</span>
-                      </div>
-                    )}
-
-                    {item.bedrooms && (
-                      <div className="p-2 rounded-xl bg-slate-950 border border-slate-800/80 flex items-center gap-1.5">
-                        <Home className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                        <span className="truncate text-cyan-300 font-bold">{item.bedrooms}</span>
-                      </div>
-                    )}
-
-                    {item.floors && (
-                      <div className="p-2 rounded-xl bg-slate-950 border border-slate-800/80 flex items-center gap-1.5">
-                        <Layers className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                        <span className="truncate text-purple-300 font-bold">{item.floors}</span>
-                      </div>
-                    )}
-
-                    {item.builtUpArea && (
-                      <div className="p-2 rounded-xl bg-slate-950 border border-slate-800/80 flex items-center gap-1.5">
-                        <span className="text-[10px] text-slate-400">Plinth:</span>
-                        <span className="truncate text-emerald-300 font-bold">
-                          {item.builtUpArea}
+                        <span className="px-2 py-0.5 rounded-md bg-slate-950 text-slate-400 border border-slate-800 text-[10px] font-mono font-bold">
+                          CAT #{cat.number}
                         </span>
                       </div>
-                    )}
-                  </div>
 
-                  {/* Vasthu Chuttu Badge */}
-                  {item.vasthuChuttu && (
-                    <div className="p-2 rounded-xl bg-amber-950/30 border border-amber-500/30 text-amber-200 text-[11px] font-mono mb-3 flex items-center justify-between">
-                      <span className="text-[10px] font-bold text-amber-400">വാസ്തു ചുറ്റ്:</span>
-                      <span className="font-bold truncate max-w-[190px]">{item.vasthuChuttu}</span>
+                      <h3 className="text-base font-bold text-white font-mono group-hover:text-cyan-300 transition-colors">
+                        {cat.number}. {cat.title}
+                      </h3>
+                      <div className="text-[11px] text-slate-400 font-mono mt-0.5 line-clamp-1">
+                        {cat.titleMl}
+                      </div>
+                      <p className="text-[11px] text-slate-500 font-mono mt-2 line-clamp-2 leading-relaxed">
+                        {cat.description}
+                      </p>
                     </div>
-                  )}
 
-                  {/* Keywords Tag Badges */}
-                  {item.keywords && item.keywords.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-3">
-                      {item.keywords.slice(0, 3).map((kw, i) => (
-                        <span
-                          key={i}
-                          className="px-1.5 py-0.5 rounded bg-slate-950 text-[10px] text-slate-400 border border-slate-800 font-mono"
-                        >
-                          #{kw}
-                        </span>
-                      ))}
-                      {item.keywords.length > 3 && (
-                        <span className="text-[10px] text-slate-500 self-center font-mono">
-                          +{item.keywords.length - 3} more
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
+                    <div className="mt-5 pt-3 border-t border-slate-800/80 flex items-center justify-between">
+                      <div>
+                        <div className="text-sm font-black text-white font-mono">
+                          {stats.count} {stats.count === 1 ? "File" : "Files"}
+                        </div>
+                        <div className="text-[10px] text-slate-500 font-mono">
+                          {formatBytes(stats.bytes)}
+                        </div>
+                      </div>
 
-                {/* Card Action Footer */}
-                <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
-                  <div className="text-[10px] font-mono text-slate-500">
-                    {formatBytes(item.fileSize)}
-                  </div>
-
-                  <div className="flex items-center gap-1.5">
-                    {/* Preview / CAD Viewer */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenFile(item);
-                      }}
-                      title="Open 2D CAD / PDF Viewer"
-                      className="p-2 rounded-xl bg-cyan-600/20 hover:bg-cyan-600 text-cyan-300 hover:text-white border border-cyan-500/30 transition-all cursor-pointer"
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                    </button>
-
-                    {/* PDF Viewer (if available) */}
-                    {(item.fileType === "PDF" || item.hasPdf) && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleOpenPdfViewer(item);
+                          handleOpenUpload(cat.id);
                         }}
-                        title="View PDF Document"
-                        className="p-2 rounded-xl bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 transition-all cursor-pointer"
+                        title={`Upload to ${cat.title}`}
+                        className="p-2 rounded-xl bg-slate-800 hover:bg-cyan-600 text-slate-300 hover:text-white transition-colors cursor-pointer"
                       >
-                        <FileText className="w-3.5 h-3.5" />
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Folder Directory Quick Access */}
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FolderTree className="w-4 h-4 text-cyan-400" />
+                <h3 className="text-sm font-bold text-white font-mono uppercase tracking-wider">
+                  Vault Folder Directories
+                </h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setFolderToEdit(null);
+                    setSelectedParentForNewFolder(null);
+                    setIsFolderModalOpen(true);
+                  }}
+                  className="text-xs font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-1 font-bold cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>New Folder</span>
+                </button>
+                <button
+                  onClick={() => handleSwitchTab("vault_settings")}
+                  className="text-xs font-mono text-purple-400 hover:text-purple-300 flex items-center gap-1 cursor-pointer ml-2"
+                >
+                  <span>Manage in Settings →</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {folders.map((f) => {
+                const count = folderStats[f.id] || 0;
+                return (
+                  <div
+                    key={f.id}
+                    onClick={() => {
+                      setActiveFolderId(f.id);
+                      handleSwitchTab("vault_plan");
+                    }}
+                    className="p-3.5 rounded-2xl bg-slate-950/80 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 transition-all cursor-pointer flex items-center justify-between group"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div
+                        className="w-8 h-8 rounded-xl flex items-center justify-center border shrink-0"
+                        style={{
+                          backgroundColor: `${f.color || "#38bdf8"}15`,
+                          borderColor: `${f.color || "#38bdf8"}40`,
+                          color: f.color || "#38bdf8"
+                        }}
+                      >
+                        <Folder className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-bold text-xs text-white group-hover:text-cyan-300 truncate font-mono">
+                          {f.name}
+                        </div>
+                        <div className="text-[10px] text-slate-500 truncate font-mono">
+                          {f.path}
+                        </div>
+                      </div>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-md bg-slate-900 text-[10px] font-mono text-slate-400 border border-slate-800 shrink-0">
+                      {count}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Recent Drawings & Files Across Vault */}
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileCode className="w-4 h-4 text-cyan-400" />
+                <h3 className="text-sm font-bold text-white font-mono uppercase tracking-wider">
+                  Recently Updated Vault Files
+                </h3>
+              </div>
+              <span className="text-xs font-mono text-slate-500">
+                Latest records across all categories
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs font-mono">
+                <thead>
+                  <tr className="bg-slate-950 border-b border-slate-800 text-slate-400 uppercase text-[10px]">
+                    <th className="p-3.5">Drawing / Record</th>
+                    <th className="p-3.5">Category</th>
+                    <th className="p-3.5">Folder</th>
+                    <th className="p-3.5">Owner / Client</th>
+                    <th className="p-3.5">Format & Size</th>
+                    <th className="p-3.5 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60">
+                  {indexItems.slice(0, 8).map((item) => (
+                    <tr
+                      key={item.id}
+                      onClick={() => handleOpenFile(item)}
+                      className="hover:bg-slate-850/80 cursor-pointer transition-colors group"
+                    >
+                      <td className="p-3.5">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={(e) => handleToggleStar(item.id, e)}
+                            className="text-slate-500 hover:text-amber-400"
+                          >
+                            <Star
+                              className={`w-3.5 h-3.5 ${
+                                item.isStarred ? "fill-amber-400 text-amber-400" : ""
+                              }`}
+                            />
+                          </button>
+                          <div>
+                            <div className="font-bold text-white group-hover:text-cyan-300">
+                              {item.name}
+                            </div>
+                            <div className="text-[10px] text-slate-500">{item.facing || item.bedrooms || item.location}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-3.5">
+                        <span className="px-2 py-0.5 rounded-md bg-slate-950 text-cyan-300 border border-slate-800 text-[10px] font-bold">
+                          {item.category || "PLAN"}
+                        </span>
+                      </td>
+                      <td className="p-3.5">
+                        <span className="px-2 py-0.5 rounded-md bg-slate-950 text-slate-300 border border-slate-800 text-[10px]">
+                          📁 {item.folderPath}
+                        </span>
+                      </td>
+                      <td className="p-3.5">
+                        <div className="font-bold text-slate-200">
+                          {item.ownerName || item.clientName || "—"}
+                        </div>
+                        {item.mobileNo && (
+                          <div className="text-[10px] text-emerald-400">{item.mobileNo}</div>
+                        )}
+                      </td>
+                      <td className="p-3.5">
+                        <span className="px-2 py-0.5 rounded bg-slate-950 text-slate-300 border border-slate-800 font-bold text-[10px]">
+                          {item.fileType}
+                        </span>
+                        <span className="text-[10px] text-slate-500 ml-1.5">
+                          {formatBytes(item.fileSize)}
+                        </span>
+                      </td>
+                      <td className="p-3.5 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenFile(item);
+                            }}
+                            title="Preview CAD/PDF"
+                            className="p-1.5 rounded-lg bg-cyan-600/20 hover:bg-cyan-600 text-cyan-300 hover:text-white"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenShare(item);
+                            }}
+                            title="Share & QR Code"
+                            className="p-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white"
+                          >
+                            <Share2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={(e) => handleQuickDownload(item, e)}
+                            title="Download"
+                            className="p-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenEdit(item);
+                            }}
+                            title="Edit"
+                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          VIEW B: 5 CATEGORY TABS (PLAN, 3D, ESTIMATE, SURVEY, DOCUMENTS)
+         ========================================================================= */}
+      {activeCategoryForTab && activeCategoryMeta && (
+        <div className="space-y-6 animate-in fade-in duration-150">
+          {/* Category Banner */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-md">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${activeCategoryMeta.bgBadge}`}>
+                <activeCategoryMeta.icon className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-bold text-white font-mono">
+                    {activeCategoryMeta.number}. {activeCategoryMeta.title}
+                  </h2>
+                  <span className="px-2 py-0.5 rounded bg-slate-950 text-slate-400 text-[10px] font-mono border border-slate-800">
+                    {activeCategoryMeta.titleMl}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 font-mono mt-0.5">
+                  {activeCategoryMeta.description}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => handleOpenUpload(activeCategoryForTab)}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-md shadow-cyan-950"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>+ Upload to {activeCategoryMeta.title}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Folder Navigation Ribbon */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FolderTree className="w-4 h-4 text-cyan-400" />
+                <span className="text-xs font-mono font-bold text-white uppercase tracking-wider">
+                  Vault Directory Navigation
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {activeFolder && (
+                  <>
+                    <button
+                      onClick={() => {
+                        setFolderToEdit(activeFolder);
+                        setIsFolderModalOpen(true);
+                      }}
+                      className="text-[11px] font-mono text-slate-400 hover:text-cyan-300 flex items-center gap-1 cursor-pointer"
+                    >
+                      <Edit2 className="w-3 h-3" />
+                      <span>Edit Folder</span>
+                    </button>
+                    {!activeFolder.isSystemDefault && (
+                      <button
+                        onClick={() => {
+                          if (confirm(`Delete folder "${activeFolder.name}"? Files will be moved to root.`)) {
+                            // delete folder
+                            setFolderToEdit(activeFolder);
+                            setIsFolderModalOpen(true);
+                          }
+                        }}
+                        className="text-[11px] font-mono text-rose-400 hover:text-rose-300 flex items-center gap-1 cursor-pointer"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span>Delete</span>
                       </button>
                     )}
+                  </>
+                )}
+                <button
+                  onClick={() => {
+                    setFolderToEdit(null);
+                    setSelectedParentForNewFolder(activeFolderId);
+                    setIsFolderModalOpen(true);
+                  }}
+                  className="text-[11px] font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-1 cursor-pointer font-bold"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>+ New Folder</span>
+                </button>
+              </div>
+            </div>
 
-                    {/* Share / QR Code */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenShare(item);
-                      }}
-                      title="Share Drawing & QR Code"
-                      className="p-2 rounded-xl bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 transition-all cursor-pointer"
-                    >
-                      <Share2 className="w-3.5 h-3.5" />
-                    </button>
+            {/* Folder Badges */}
+            <div className="flex flex-wrap gap-2 pt-1">
+              <button
+                onClick={() => setActiveFolderId(null)}
+                className={`px-3.5 py-2 rounded-xl text-xs font-mono font-bold flex items-center gap-2 transition-all cursor-pointer ${
+                  activeFolderId === null
+                    ? "bg-cyan-600 text-white shadow-md shadow-cyan-950 border border-cyan-400"
+                    : "bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800 hover:border-slate-700"
+                }`}
+              >
+                <Folder className="w-3.5 h-3.5" />
+                <span>All Folders</span>
+                <span className="px-1.5 py-0.2 rounded-full bg-slate-900 text-[10px] text-slate-300 border border-slate-800">
+                  {categoryStats[activeCategoryForTab]?.count || 0}
+                </span>
+              </button>
 
-                    {/* Download */}
-                    <button
-                      onClick={(e) => handleQuickDownload(item, e)}
-                      title="Download Drawing File"
-                      className="p-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 transition-all cursor-pointer"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                    </button>
+              {folders.map((folder) => {
+                const count = indexItems.filter(
+                  (i) => i.folderId === folder.id && i.category === activeCategoryForTab
+                ).length;
+                const isSelected = activeFolderId === folder.id;
+                const isSubfolder = Boolean(folder.parentId);
 
-                    {/* Edit */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenEdit(item);
-                      }}
-                      title="Edit Metadata & Specs"
-                      className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all cursor-pointer"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
+                return (
+                  <button
+                    key={folder.id}
+                    onClick={() => setActiveFolderId(folder.id)}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-mono font-bold flex items-center gap-2 transition-all cursor-pointer border ${
+                      isSelected
+                        ? "bg-slate-800 text-white shadow-md border-cyan-500"
+                        : "bg-slate-950 text-slate-300 hover:text-white border-slate-800 hover:border-slate-700"
+                    }`}
+                  >
+                    <span
+                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ backgroundColor: folder.color || "#38bdf8" }}
+                    />
+                    <Folder className="w-3.5 h-3.5" style={{ color: folder.color || "#38bdf8" }} />
+                    <span>
+                      {isSubfolder ? `↳ ${folder.name}` : folder.name}
+                    </span>
+                    <span className="px-1.5 py-0.2 rounded-full bg-slate-900 text-[10px] text-slate-400 border border-slate-800">
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
 
-                    {/* Delete */}
-                    <button
-                      onClick={(e) => handleDeleteFile(item, e)}
-                      title="Delete Drawing"
-                      className="p-2 rounded-xl bg-slate-800 hover:bg-rose-600 text-slate-400 hover:text-white transition-all cursor-pointer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+            {/* Active Path */}
+            {activeFolder && (
+              <div className="text-[11px] font-mono text-slate-400 flex items-center gap-1.5 pt-1">
+                <span className="text-slate-500">Active Path:</span>
+                <span className="text-cyan-300 font-bold bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
+                  📁 {activeFolder.path}
+                </span>
+                {activeFolder.description && (
+                  <span className="text-slate-500 truncate hidden md:inline">
+                    • {activeFolder.description}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Search & Filter Controls */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-3">
+            <div className="flex flex-col md:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={`Search ${activeCategoryMeta.title} files by Owner, Mobile, Facing, BHK, Location, Vasthu Chuttu...`}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-10 pr-9 py-2.5 text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <select
+                  value={formatFilter}
+                  onChange={(e) => setFormatFilter(e.target.value as CADFileType | "ALL")}
+                  className="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-300 focus:outline-none focus:border-cyan-500"
+                >
+                  <option value="ALL">All Formats</option>
+                  <option value="DWG">AutoCAD DWG</option>
+                  <option value="PDF">Architectural PDF</option>
+                  <option value="DXF">AutoCAD DXF</option>
+                  <option value="IMAGE">3D / Images</option>
+                  <option value="CAD_VECTOR">2D CAD Canvas</option>
+                </select>
+
+                <button
+                  onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                  className={`px-3 py-2 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                    showAdvancedFilters || facingFilter || bedroomFilter || floorFilter
+                      ? "bg-cyan-500/20 border-cyan-500/50 text-cyan-300"
+                      : "bg-slate-950 border-slate-700 text-slate-300 hover:text-white"
+                  }`}
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Filters</span>
+                </button>
+
+                {/* View Mode Toggle */}
+                <div className="flex items-center bg-slate-950 border border-slate-700 rounded-xl p-0.5">
+                  <button
+                    onClick={() => setViewMode("grid")}
+                    className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                      viewMode === "grid" ? "bg-cyan-600 text-white" : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    <Grid className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => setViewMode("table")}
+                    className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                      viewMode === "table" ? "bg-cyan-600 text-white" : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    <List className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
-            );
-          })}
-        </div>
-      ) : (
-        /* TABLE VIEW */
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs font-mono">
-              <thead>
-                <tr className="bg-slate-950 border-b border-slate-800 text-slate-400 uppercase text-[10px]">
-                  <th className="p-3.5">Drawing File & Title</th>
-                  <th className="p-3.5">Folder</th>
-                  <th className="p-3.5">Owner & Mobile</th>
-                  <th className="p-3.5">Facing & Specs</th>
-                  <th className="p-3.5">വാസ്തു ചുറ്റ്</th>
-                  <th className="p-3.5">Format / Size</th>
-                  <th className="p-3.5 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60">
-                {filteredItems.map((item) => (
-                  <tr
+            </div>
+
+            {/* Expandable Advanced Filters */}
+            {showAdvancedFilters && (
+              <div className="pt-3 border-t border-slate-800 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                <div>
+                  <label className="block text-[10px] font-mono text-slate-400 uppercase font-bold mb-1">
+                    Facing (ദിശ)
+                  </label>
+                  <select
+                    value={facingFilter}
+                    onChange={(e) => setFacingFilter(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-mono text-amber-300 focus:outline-none focus:border-cyan-500"
+                  >
+                    {FACING_FILTERS.map((f) => (
+                      <option key={f.value} value={f.value}>
+                        {f.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-mono text-slate-400 uppercase font-bold mb-1">
+                    Bedrooms (BHK)
+                  </label>
+                  <select
+                    value={bedroomFilter}
+                    onChange={(e) => setBedroomFilter(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-mono text-cyan-300 focus:outline-none focus:border-cyan-500"
+                  >
+                    {BEDROOM_FILTERS.map((b) => (
+                      <option key={b.value} value={b.value}>
+                        {b.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-mono text-slate-400 uppercase font-bold mb-1">
+                    Number of Floors
+                  </label>
+                  <select
+                    value={floorFilter}
+                    onChange={(e) => setFloorFilter(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-mono text-purple-300 focus:outline-none focus:border-cyan-500"
+                  >
+                    {FLOOR_FILTERS.map((fl) => (
+                      <option key={fl.value} value={fl.value}>
+                        {fl.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex items-end gap-2">
+                  <button
+                    onClick={() => setStarredOnly(!starredOnly)}
+                    className={`flex-1 px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-colors ${
+                      starredOnly
+                        ? "bg-amber-500/20 border-amber-500/50 text-amber-300"
+                        : "bg-slate-950 border-slate-700 text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    <Star className={`w-3.5 h-3.5 ${starredOnly ? "fill-amber-400" : ""}`} />
+                    <span>Starred</span>
+                  </button>
+
+                  {(facingFilter || bedroomFilter || floorFilter || starredOnly || searchQuery) && (
+                    <button
+                      onClick={() => {
+                        setFacingFilter("");
+                        setBedroomFilter("");
+                        setFloorFilter("");
+                        setStarredOnly(false);
+                        setSearchQuery("");
+                      }}
+                      className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs font-mono cursor-pointer"
+                    >
+                      Reset
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Results Summary & Sorting */}
+          <div className="flex items-center justify-between text-xs font-mono text-slate-400 px-1">
+            <div>
+              Showing <strong className="text-white">{filteredItems.length}</strong> {activeCategoryMeta.title} files
+              {activeFolder && (
+                <span>
+                  {" "}
+                  in <span className="text-cyan-400 font-bold">{activeFolder.path}</span>
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span>Sort:</span>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-xs text-slate-200 focus:outline-none"
+              >
+                <option value="date">Date Updated</option>
+                <option value="name">Drawing Name</option>
+                <option value="owner">Owner Name</option>
+                <option value="size">File Size</option>
+              </select>
+              <button
+                onClick={() => setSortOrder((o) => (o === "asc" ? "desc" : "asc"))}
+                className="p-1 rounded bg-slate-900 border border-slate-800 text-slate-300 hover:text-white cursor-pointer"
+              >
+                <ArrowUpDown className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Files Display: Grid or Table */}
+          {filteredItems.length === 0 ? (
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-12 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 flex items-center justify-center mx-auto mb-4">
+                <activeCategoryMeta.icon className="w-8 h-8" />
+              </div>
+              <h3 className="text-base font-bold text-white font-mono mb-1">
+                No {activeCategoryMeta.title} Records Found
+              </h3>
+              <p className="text-xs text-slate-400 font-mono max-w-md mx-auto mb-6">
+                Upload a new record to {activeCategoryMeta.title}, adjust your active folder, or clear search keywords.
+              </p>
+              <button
+                onClick={() => handleOpenUpload(activeCategoryForTab)}
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-mono text-xs font-bold inline-flex items-center gap-2 shadow-lg shadow-cyan-950 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Upload to {activeCategoryMeta.title}</span>
+              </button>
+            </div>
+          ) : viewMode === "grid" ? (
+            /* GRID VIEW */
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+              {filteredItems.map((item) => {
+                const isPdf = item.fileType === "PDF";
+                const isImage = item.fileType === "IMAGE";
+
+                return (
+                  <div
                     key={item.id}
                     onClick={() => handleOpenFile(item)}
-                    className="hover:bg-slate-850/80 cursor-pointer transition-colors group"
+                    className="group bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-cyan-500/50 rounded-3xl p-5 shadow-xl transition-all duration-200 flex flex-col justify-between cursor-pointer relative overflow-hidden"
                   >
-                    <td className="p-3.5">
-                      <div className="flex items-center gap-2.5">
+                    <div>
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div
+                            className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border ${
+                              isPdf
+                                ? "bg-rose-500/20 border-rose-500/40 text-rose-400"
+                                : isImage
+                                ? "bg-amber-500/20 border-amber-500/40 text-amber-400"
+                                : "bg-cyan-500/20 border-cyan-500/40 text-cyan-400"
+                            }`}
+                          >
+                            {isPdf ? (
+                              <FileText className="w-5 h-5" />
+                            ) : isImage ? (
+                              <ImageIcon className="w-5 h-5" />
+                            ) : (
+                              <FileCode className="w-5 h-5" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md border ${
+                                  isPdf
+                                    ? "bg-rose-950 text-rose-300 border-rose-800"
+                                    : isImage
+                                    ? "bg-amber-950 text-amber-300 border-amber-800"
+                                    : "bg-cyan-950 text-cyan-300 border-cyan-800"
+                                }`}
+                              >
+                                {item.fileType}
+                              </span>
+                              <span className="text-[10px] font-mono text-slate-400 truncate">
+                                📁 {item.folderPath}
+                              </span>
+                            </div>
+                            <h3 className="text-sm font-bold text-white font-mono truncate group-hover:text-cyan-300 transition-colors mt-0.5">
+                              {item.name}
+                            </h3>
+                          </div>
+                        </div>
+
                         <button
                           onClick={(e) => handleToggleStar(item.id, e)}
-                          className="text-slate-500 hover:text-amber-400"
+                          className="p-1.5 rounded-xl bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-amber-400 transition-colors cursor-pointer shrink-0"
                         >
                           <Star
-                            className={`w-3.5 h-3.5 ${
+                            className={`w-4 h-4 ${
                               item.isStarred ? "fill-amber-400 text-amber-400" : ""
                             }`}
                           />
                         </button>
-                        <div>
-                          <div className="font-bold text-white group-hover:text-cyan-300">
-                            {item.name}
-                          </div>
-                          <div className="text-[10px] text-slate-400">{item.projectName}</div>
+                      </div>
+
+                      {/* Owner & Details */}
+                      <div className="p-3 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-1.5 text-xs font-mono mb-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                            <User className="w-3 h-3 text-cyan-400" />
+                            Owner / Client:
+                          </span>
+                          <span className="font-bold text-white truncate max-w-[150px]">
+                            {item.ownerName || item.clientName || "Vasthusilpy Client"}
+                          </span>
                         </div>
-                      </div>
-                    </td>
 
-                    <td className="p-3.5">
-                      <span className="px-2 py-0.5 rounded-md bg-slate-950 text-cyan-300 border border-slate-800 text-[10px]">
-                        📁 {item.folderPath}
-                      </span>
-                    </td>
+                        {item.mobileNo && (
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                              <Phone className="w-3 h-3 text-emerald-400" />
+                              Mobile:
+                            </span>
+                            <span className="text-slate-300">{item.mobileNo}</span>
+                          </div>
+                        )}
 
-                    <td className="p-3.5">
-                      <div className="font-bold text-slate-200">
-                        {item.ownerName || item.clientName || "—"}
+                        {item.location && (
+                          <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-800/80">
+                            <span className="text-[10px] text-slate-500">Location:</span>
+                            <span className="text-cyan-300 truncate max-w-[160px] font-bold">
+                              {item.location}
+                            </span>
+                          </div>
+                        )}
                       </div>
-                      {item.mobileNo && (
-                        <div className="text-[10px] text-emerald-400">{item.mobileNo}</div>
+
+                      {/* Architectural Specs Badges (Facing, BHK, Floors) */}
+                      {(item.facing || item.bedrooms || item.floors || item.builtUpArea) && (
+                        <div className="grid grid-cols-2 gap-2 text-[11px] font-mono mb-3">
+                          {item.facing && (
+                            <div className="p-2 rounded-xl bg-slate-950 border border-slate-800/80 flex items-center gap-1.5">
+                              <Compass className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                              <span className="truncate text-amber-300 font-bold">{item.facing}</span>
+                            </div>
+                          )}
+
+                          {item.bedrooms && (
+                            <div className="p-2 rounded-xl bg-slate-950 border border-slate-800/80 flex items-center gap-1.5">
+                              <Home className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                              <span className="truncate text-cyan-300 font-bold">{item.bedrooms}</span>
+                            </div>
+                          )}
+
+                          {item.floors && (
+                            <div className="p-2 rounded-xl bg-slate-950 border border-slate-800/80 flex items-center gap-1.5">
+                              <Layers className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                              <span className="truncate text-purple-300 font-bold">{item.floors}</span>
+                            </div>
+                          )}
+
+                          {item.builtUpArea && (
+                            <div className="p-2 rounded-xl bg-slate-950 border border-slate-800/80 flex items-center gap-1.5">
+                              <span className="text-[10px] text-slate-400">Plinth:</span>
+                              <span className="truncate text-emerald-300 font-bold">
+                                {item.builtUpArea}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       )}
-                    </td>
 
-                    <td className="p-3.5">
-                      <div className="text-amber-300 font-bold">{item.facing || "—"}</div>
-                      <div className="text-[10px] text-slate-400">
-                        {item.bedrooms || "—"} • {item.floors || "—"}
-                      </div>
-                    </td>
+                      {/* Vasthu Chuttu Badge */}
+                      {item.vasthuChuttu && (
+                        <div className="p-2 rounded-xl bg-amber-950/30 border border-amber-500/30 text-amber-200 text-[11px] font-mono mb-3 flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-amber-400">വാസ്തു ചുറ്റ്:</span>
+                          <span className="font-bold truncate max-w-[190px]">{item.vasthuChuttu}</span>
+                        </div>
+                      )}
 
-                    <td className="p-3.5">
-                      <span className="text-amber-200 font-bold text-[11px]">
-                        {item.vasthuChuttu || "—"}
-                      </span>
-                    </td>
+                      {/* Auto Keywords Badges */}
+                      {item.keywords && item.keywords.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mb-3">
+                          {item.keywords.slice(0, 3).map((kw, i) => (
+                            <span
+                              key={i}
+                              className="px-1.5 py-0.5 rounded bg-slate-950 text-[10px] text-slate-400 border border-slate-800 font-mono"
+                            >
+                              #{kw}
+                            </span>
+                          ))}
+                          {item.keywords.length > 3 && (
+                            <span className="text-[10px] text-slate-500 self-center font-mono">
+                              +{item.keywords.length - 3} more
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
 
-                    <td className="p-3.5">
-                      <span className="px-2 py-0.5 rounded bg-slate-950 text-slate-300 border border-slate-800 font-bold text-[10px]">
-                        {item.fileType}
-                      </span>
-                      <div className="text-[10px] text-slate-500 mt-0.5">
+                    {/* Card Actions */}
+                    <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
+                      <div className="text-[10px] font-mono text-slate-500">
                         {formatBytes(item.fileSize)}
                       </div>
-                    </td>
 
-                    <td className="p-3.5 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
+                      <div className="flex items-center gap-1.5">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleOpenFile(item);
                           }}
-                          title="Preview CAD/PDF"
-                          className="p-1.5 rounded-lg bg-cyan-600/20 hover:bg-cyan-600 text-cyan-300 hover:text-white"
+                          title="Open CAD / PDF Viewer"
+                          className="p-2 rounded-xl bg-cyan-600/20 hover:bg-cyan-600 text-cyan-300 hover:text-white border border-cyan-500/30 transition-all cursor-pointer"
                         >
                           <Eye className="w-3.5 h-3.5" />
                         </button>
+
+                        {(item.fileType === "PDF" || item.hasPdf) && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenPdfViewer(item);
+                            }}
+                            title="View PDF Document"
+                            className="p-2 rounded-xl bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 transition-all cursor-pointer"
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleOpenShare(item);
                           }}
                           title="Share & QR Code"
-                          className="p-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white"
+                          className="p-2 rounded-xl bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 transition-all cursor-pointer"
                         >
                           <Share2 className="w-3.5 h-3.5" />
                         </button>
+
                         <button
                           onClick={(e) => handleQuickDownload(item, e)}
                           title="Download"
-                          className="p-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white"
+                          className="p-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 transition-all cursor-pointer"
                         >
                           <Download className="w-3.5 h-3.5" />
                         </button>
+
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleOpenEdit(item);
                           }}
                           title="Edit"
-                          className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300"
+                          className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all cursor-pointer"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
+
+                        <button
+                          onClick={(e) => handleDeleteFile(item, e)}
+                          title="Delete"
+                          className="p-2 rounded-xl bg-slate-800 hover:bg-rose-600 text-slate-400 hover:text-white transition-all cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
-                    </td>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            /* TABLE VIEW */
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs font-mono">
+                  <thead>
+                    <tr className="bg-slate-950 border-b border-slate-800 text-slate-400 uppercase text-[10px]">
+                      <th className="p-3.5">Drawing / Record</th>
+                      <th className="p-3.5">Folder</th>
+                      <th className="p-3.5">Owner & Mobile</th>
+                      <th className="p-3.5">Facing & Specs</th>
+                      <th className="p-3.5">വാസ്തു ചുറ്റ്</th>
+                      <th className="p-3.5">Format / Size</th>
+                      <th className="p-3.5 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60">
+                    {filteredItems.map((item) => (
+                      <tr
+                        key={item.id}
+                        onClick={() => handleOpenFile(item)}
+                        className="hover:bg-slate-850/80 cursor-pointer transition-colors group"
+                      >
+                        <td className="p-3.5">
+                          <div className="flex items-center gap-2.5">
+                            <button
+                              onClick={(e) => handleToggleStar(item.id, e)}
+                              className="text-slate-500 hover:text-amber-400"
+                            >
+                              <Star
+                                className={`w-3.5 h-3.5 ${
+                                  item.isStarred ? "fill-amber-400 text-amber-400" : ""
+                                }`}
+                              />
+                            </button>
+                            <div>
+                              <div className="font-bold text-white group-hover:text-cyan-300">
+                                {item.name}
+                              </div>
+                              <div className="text-[10px] text-slate-400">{item.location}</div>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="p-3.5">
+                          <span className="px-2 py-0.5 rounded-md bg-slate-950 text-cyan-300 border border-slate-800 text-[10px]">
+                            📁 {item.folderPath}
+                          </span>
+                        </td>
+
+                        <td className="p-3.5">
+                          <div className="font-bold text-slate-200">
+                            {item.ownerName || item.clientName || "—"}
+                          </div>
+                          {item.mobileNo && (
+                            <div className="text-[10px] text-emerald-400">{item.mobileNo}</div>
+                          )}
+                        </td>
+
+                        <td className="p-3.5">
+                          <div className="text-amber-300 font-bold">{item.facing || "—"}</div>
+                          <div className="text-[10px] text-slate-400">
+                            {item.bedrooms || "—"} • {item.floors || "—"}
+                          </div>
+                        </td>
+
+                        <td className="p-3.5">
+                          <span className="text-amber-200 font-bold text-[11px]">
+                            {item.vasthuChuttu || "—"}
+                          </span>
+                        </td>
+
+                        <td className="p-3.5">
+                          <span className="px-2 py-0.5 rounded bg-slate-950 text-slate-300 border border-slate-800 font-bold text-[10px]">
+                            {item.fileType}
+                          </span>
+                          <div className="text-[10px] text-slate-500 mt-0.5">
+                            {formatBytes(item.fileSize)}
+                          </div>
+                        </td>
+
+                        <td className="p-3.5 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenFile(item);
+                              }}
+                              title="Preview CAD/PDF"
+                              className="p-1.5 rounded-lg bg-cyan-600/20 hover:bg-cyan-600 text-cyan-300 hover:text-white"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenShare(item);
+                              }}
+                              title="Share & QR Code"
+                              className="p-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white"
+                            >
+                              <Share2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={(e) => handleQuickDownload(item, e)}
+                              title="Download"
+                              className="p-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenEdit(item);
+                              }}
+                              title="Edit"
+                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={(e) => handleDeleteFile(item, e)}
+                              title="Delete"
+                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-600 text-slate-400 hover:text-white"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* =========================================================================
+          VIEW C: SETTINGS & FOLDER MANAGEMENT TAB (vault_settings)
+         ========================================================================= */}
+      {currentSubTab === "vault_settings" && (
+        <div className="space-y-6 animate-in fade-in duration-150">
+          {/* Header Banner */}
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl relative overflow-hidden">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="px-2.5 py-0.5 rounded-full bg-purple-950 text-purple-300 border border-purple-800/80 text-[10px] font-mono font-bold">
+                    CONFIGURATION & FOLDER MANAGER
+                  </span>
+                </div>
+                <h2 className="text-xl font-bold text-white font-mono">
+                  Vault Settings & Folder Administration
+                </h2>
+                <p className="text-xs text-slate-400 font-mono mt-1 max-w-xl">
+                  Add new folders, edit folder hierarchies & colors, delete folders, inspect storage metrics, and trigger Google Drive synchronization.
+                </p>
+              </div>
+
+              <button
+                onClick={() => {
+                  setFolderToEdit(null);
+                  setSelectedParentForNewFolder(null);
+                  setIsFolderModalOpen(true);
+                }}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-mono text-xs font-bold flex items-center gap-2 shadow-lg shadow-purple-950 cursor-pointer self-start sm:self-center shrink-0"
+              >
+                <FolderPlus className="w-4 h-4" />
+                <span>+ Add New Folder</span>
+              </button>
+            </div>
+          </div>
+
+          {/* 1. FOLDER MANAGEMENT SECTION (Add, Edit, Delete Folders) */}
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-purple-950 text-purple-400 border border-purple-800/60 flex items-center justify-center">
+                  <FolderTree className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white font-mono">
+                    Vault Folder Directories ({folders.length})
+                  </h3>
+                  <div className="text-[11px] text-slate-400 font-mono">
+                    Manage hierarchical organization (VISHNU, DEEPAK, DIBIN, and custom subfolders).
+                  </div>
+                </div>
+              </div>
+
+              {/* Folder Search */}
+              <div className="relative w-full sm:w-64">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={folderSearchQuery}
+                  onChange={(e) => setFolderSearchQuery(e.target.value)}
+                  placeholder="Filter folders..."
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-8 pr-3 py-1.5 text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-purple-500"
+                />
+              </div>
+            </div>
+
+            {/* Folder Table / List */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs font-mono">
+                <thead>
+                  <tr className="bg-slate-950 border-b border-slate-800 text-slate-400 uppercase text-[10px]">
+                    <th className="p-3.5">Folder Name & Path</th>
+                    <th className="p-3.5">Color Tag</th>
+                    <th className="p-3.5">Parent Directory</th>
+                    <th className="p-3.5">Files Stored</th>
+                    <th className="p-3.5">Status</th>
+                    <th className="p-3.5 text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60">
+                  {folders
+                    .filter((f) =>
+                      folderSearchQuery.trim()
+                        ? f.name.toLowerCase().includes(folderSearchQuery.toLowerCase()) ||
+                          f.path.toLowerCase().includes(folderSearchQuery.toLowerCase())
+                        : true
+                    )
+                    .map((folder) => {
+                      const count = folderStats[folder.id] || 0;
+                      const parent = folders.find((p) => p.id === folder.parentId);
+
+                      return (
+                        <tr key={folder.id} className="hover:bg-slate-850/60 transition-colors">
+                          <td className="p-3.5">
+                            <div className="flex items-center gap-2.5">
+                              <div
+                                className="w-8 h-8 rounded-xl flex items-center justify-center border shrink-0"
+                                style={{
+                                  backgroundColor: `${folder.color || "#38bdf8"}15`,
+                                  borderColor: `${folder.color || "#38bdf8"}40`,
+                                  color: folder.color || "#38bdf8"
+                                }}
+                              >
+                                <Folder className="w-4 h-4" />
+                              </div>
+                              <div>
+                                <div className="font-bold text-white flex items-center gap-1.5">
+                                  <span>{folder.name}</span>
+                                  {folder.isSystemDefault && (
+                                    <span className="px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 text-[9px]">
+                                      DEFAULT
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-[10px] text-slate-400">{folder.path}</div>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="p-3.5">
+                            <div className="flex items-center gap-1.5">
+                              <span
+                                className="w-3 h-3 rounded-full border border-white/20"
+                                style={{ backgroundColor: folder.color || "#38bdf8" }}
+                              />
+                              <span className="text-[11px] text-slate-300">{folder.color || "#38bdf8"}</span>
+                            </div>
+                          </td>
+
+                          <td className="p-3.5">
+                            <span className="text-slate-400">
+                              {parent ? `📁 ${parent.name}` : <em className="text-slate-600">Root Directory</em>}
+                            </span>
+                          </td>
+
+                          <td className="p-3.5">
+                            <span className="px-2 py-0.5 rounded bg-slate-950 text-cyan-300 border border-slate-800 font-bold">
+                              {count} {count === 1 ? "file" : "files"}
+                            </span>
+                          </td>
+
+                          <td className="p-3.5">
+                            <span className="text-emerald-400 flex items-center gap-1 text-[11px]">
+                              <Check className="w-3 h-3" />
+                              Active
+                            </span>
+                          </td>
+
+                          <td className="p-3.5 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {/* Add Subfolder */}
+                              <button
+                                onClick={() => {
+                                  setFolderToEdit(null);
+                                  setSelectedParentForNewFolder(folder.id);
+                                  setIsFolderModalOpen(true);
+                                }}
+                                title="Add Subfolder here"
+                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 hover:text-white"
+                              >
+                                <FolderPlus className="w-3.5 h-3.5" />
+                              </button>
+
+                              {/* Edit Folder */}
+                              <button
+                                onClick={() => {
+                                  setFolderToEdit(folder);
+                                  setIsFolderModalOpen(true);
+                                }}
+                                title="Edit Folder Details"
+                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-purple-600 text-slate-300 hover:text-white"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+
+                              {/* Delete Folder */}
+                              <button
+                                onClick={() => {
+                                  setFolderToEdit(folder);
+                                  setIsFolderModalOpen(true);
+                                }}
+                                title="Delete Folder"
+                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-600 text-slate-400 hover:text-white"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* 2. STORAGE METRICS BREAKDOWN BY CATEGORY */}
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
+            <div className="flex items-center gap-2.5 pb-3 border-b border-slate-800">
+              <div className="w-9 h-9 rounded-xl bg-cyan-950 text-cyan-400 border border-cyan-800/60 flex items-center justify-center">
+                <Database className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white font-mono">
+                  Storage Allocation by Category
+                </h3>
+                <div className="text-[11px] text-slate-400 font-mono">
+                  Real-time breakdown of storage volume and record density across 5 categories.
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+              {VAULT_CATEGORIES.map((cat) => {
+                const stats = categoryStats[cat.id] || { count: 0, bytes: 0 };
+                const pct = totalVaultSize > 0 ? Math.round((stats.bytes / totalVaultSize) * 100) : 0;
+
+                return (
+                  <div
+                    key={cat.id}
+                    className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2"
+                  >
+                    <div className="flex items-center justify-between text-xs font-mono">
+                      <span className="font-bold text-white">{cat.number}. {cat.title}</span>
+                      <span className="text-cyan-400 font-bold">{pct}%</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-cyan-500 to-blue-500"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 pt-1">
+                      <span>{stats.count} files</span>
+                      <span className="text-slate-200">{formatBytes(stats.bytes)}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 3. GOOGLE DRIVE SYNC & CLOUD BACKUP */}
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-950 text-emerald-400 border border-emerald-800/60 flex items-center justify-center shrink-0">
+                  <Cloud className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white font-mono">
+                    Google Drive Cloud Storage Sync
+                  </h3>
+                  <p className="text-xs text-slate-400 font-mono mt-0.5">
+                    Synchronize your local CAD storage vault, DXF files, and architectural PDFs with your Google Drive root folder.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setIsDriveSyncModalOpen(true)}
+                className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-xs font-bold flex items-center gap-2 shadow-lg shadow-emerald-950 cursor-pointer self-start sm:self-center shrink-0"
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span>Open Drive Sync Center</span>
+              </button>
+            </div>
+          </div>
+
+          {/* 4. DANGER ZONE / RESET */}
+          <div className="bg-slate-900 border border-rose-500/30 rounded-3xl p-6 shadow-xl space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-400 border border-rose-500/30 flex items-center justify-center shrink-0">
+                  <ShieldAlert className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white font-mono">
+                    Reset Vault & Delete All Settings
+                  </h3>
+                  <p className="text-xs text-slate-400 font-mono mt-0.5">
+                    Clear custom folders, purge uploaded files, and reset to clean starter root folders: /VISHNU, /DEEPAK, and /DIBIN.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setIsWipeConfirmOpen(true)}
+                className="px-4 py-2.5 rounded-xl bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 font-mono text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors self-start sm:self-center shrink-0"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Reset & Wipe Storage</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* 6. All Associated Modals */}
+      {/* =========================================================================
+          ALL ASSOCIATED MODALS
+         ========================================================================= */}
 
       {/* File Edit / Upload Modal */}
       {isEditModalOpen && (
         <CadFileEditModal
           file={editingFile}
           defaultFolderId={activeFolderId}
+          defaultCategory={uploadDefaultCategory}
           isOpen={isEditModalOpen}
           onClose={() => setIsEditModalOpen(false)}
           onSaved={() => {

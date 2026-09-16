@@ -52,14 +52,18 @@ import {
   hasUsedFreeTrial,
   recordFreeTrialClaim,
   recordDeletedSubId,
-  getDeletedSubIds
+  getDeletedSubIds,
+  CANONICAL_ADMIN_SUB
 } from "../utils/subscriptionManager";
 import { getBroadcastChannel } from "../utils/broadcastSync";
 import {
   syncUserProfileDirect,
   performFullWebDataSync,
   pullAndHydrateWebDataFromServer,
-  resolveAccountDetails
+  resolveAccountDetails,
+  verifySubscriptionLoginOnServer,
+  changeSubscriptionPasswordOnServer,
+  fetchServerSubscriptionRequests
 } from "../utils/webDataSyncManager";
 
 const STORAGE_KEY_AUTHORIZED_EMAILS = "vasthusilpy_authorized_emails_v1";
@@ -267,6 +271,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     window.addEventListener("vasthusilpy_subscription_update", handleSubStorageEvent);
 
+    // Authoritatively pre-hydrate server subscriptions for all browsers
+    fetchServerSubscriptionRequests().then((serverSubs) => {
+      if (Array.isArray(serverSubs) && serverSubs.length > 0) {
+        setSubscriptionRequests((prev) => {
+          const map = new Map<string, SubscriptionRequest>();
+          prev.forEach((s) => { if (s && s.id) map.set(s.id, s); });
+          serverSubs.forEach((s) => { if (s && s.id) map.set(s.id, s); });
+          const merged = Array.from(map.values());
+          saveSubscriptionRequests(merged);
+          return merged;
+        });
+      }
+    }).catch(() => {});
+
     return () => {
       unsubSnapshot();
       window.removeEventListener("vasthusilpy_subscription_update", handleSubStorageEvent);
@@ -304,7 +322,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const displayName = (primarySession as any).fullName || (primarySession as any).displayName || email?.split("@")[0] || "User";
         const isAuthAdminLogin = localStorage.getItem("vasthusilpy_authenticator_login") === "true";
         const isSubLogin = !isAuthAdminLogin;
-        const isAdmin = isAuthAdminLogin && (isPrimaryAdminEmail(email) || role === "primary_admin");
+        const userRole = (primarySession as any)?.role || parsedEmail?.role;
+        const isAdmin = isAuthAdminLogin && (isPrimaryAdminEmail(email) || userRole === "primary_admin");
 
         const isExpired = parsedSub?.validUntil && isSubscriptionExpired({ validUntil: parsedSub.validUntil });
         const isUserExpired = Boolean(isExpired || parsedSub?.status === "expired");
@@ -817,8 +836,67 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const cleanPhoneDigits = cleanUserId.replace(/\D/g, "");
+
+    // 1. Authoritative Backend Server Verification (multi-browser parity)
+    try {
+      const serverRes = await verifySubscriptionLoginOnServer(cleanUserId, cleanPass);
+      if (serverRes.success && serverRes.subscription) {
+        const sub = serverRes.subscription;
+        const isAdmin = !!(
+          serverRes.isPrimaryAdmin ||
+          serverRes.account?.isAdmin ||
+          cleanUserId === "admin" ||
+          cleanUserId === "deepak.vasthusilpy@gmail.com" ||
+          cleanUserId === "dibindeepak1@gmail.com" ||
+          (cleanPhoneDigits.length >= 10 && (cleanPhoneDigits.endsWith("9747995961") || cleanPhoneDigits.endsWith("9567627277")))
+        );
+
+        const emailUserData: EmailUser = {
+          email: sub.email || `${cleanUserId}@vasthusilpy.local`,
+          phone: sub.phone || cleanPhoneDigits,
+          displayName: sub.fullName || cleanUserId,
+          profession: "Civil Engineer",
+          role: isAdmin ? "primary_admin" : "authorized_user",
+          loginTimestamp: Date.now(),
+          subscriptionId: sub.id,
+          isSubscriberLogin: !isAdmin,
+          authMethod: isAdmin ? "google_authenticator" : "subscription_user"
+        };
+
+        const permissions = sub.tabPermissions || { ...DEFAULT_FULL_PERMISSIONS };
+        const sessionData: SubscriptionUserSession = {
+          email: sub.email || `${cleanUserId}@vasthusilpy.local`,
+          fullName: sub.fullName || cleanUserId,
+          phone: sub.phone || cleanPhoneDigits,
+          role: isAdmin ? "primary_admin" : "authorized_user",
+          subscriptionId: sub.id,
+          validUntil: sub.validUntil,
+          validDays: sub.validDays,
+          status: sub.status || "approved",
+          tabPermissions: permissions,
+          loginTimestamp: Date.now()
+        };
+
+        localStorage.setItem("vasthusilpy_subscription_user", JSON.stringify(sessionData));
+        localStorage.setItem("vasthusilpy_email_user", JSON.stringify(emailUserData));
+        localStorage.setItem("vasthusilpy_saved_login_id", cleanUserId);
+        localStorage.removeItem("vasthusilpy_authenticator_login");
+
+        setIsExpiredSubscription(false);
+        setEmailUser(emailUserData);
+        setUser(null);
+        setAuthorized(true);
+        setIsPrimaryAdmin(isAdmin);
+        setIsSubscriberLogin(!isAdmin);
+        setActiveTabPermissions(permissions);
+        setLoading(false);
+        return true;
+      }
+    } catch {}
+
+    // 2. Local Storage lookup
     const allSubs = loadSavedSubscriptionRequests();
-    const matchedSub = allSubs.find((s) => {
+    const matchingSubs = allSubs.filter((s) => {
       const sEmail = (s.email || "").toLowerCase().trim();
       const sDigits = (s.phone || "").replace(/\D/g, "");
       const sId = (s.id || "").toLowerCase().trim();
@@ -829,18 +907,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       );
     });
 
-    if (matchedSub && matchedSub.password && matchedSub.password.trim() === cleanPass) {
+    const isPrimaryAdminUser =
+      cleanUserId === "admin" ||
+      cleanUserId === "deepak.vasthusilpy@gmail.com" ||
+      cleanUserId === "dibindeepak1@gmail.com" ||
+      (cleanPhoneDigits.length >= 10 && (cleanPhoneDigits.endsWith("9747995961") || cleanPhoneDigits.endsWith("9567627277") || cleanPhoneDigits.endsWith("7012383137")));
+
+    const allowedAdminPasswords = ["5161", "9747995961", "9567627277", "7012383137", "admin"];
+
+    const matchedSub = matchingSubs.find((s) => {
+      if (!s.password) return false;
+      if (s.password.trim() === cleanPass || s.password.trim().toLowerCase() === cleanPass.toLowerCase()) return true;
+      if (isPrimaryAdminUser && allowedAdminPasswords.includes(cleanPass)) return true;
+      return false;
+    }) || (isPrimaryAdminUser && allowedAdminPasswords.includes(cleanPass) ? matchingSubs[0] : null);
+
+    if (matchedSub) {
       const isExpired = matchedSub.status === "expired" || isSubscriptionExpired(matchedSub);
       const emailUserData: EmailUser = {
         email: matchedSub.email || `${cleanUserId}@vasthusilpy.local`,
         phone: matchedSub.phone || cleanPhoneDigits,
         displayName: matchedSub.fullName || cleanUserId,
         profession: "Civil Engineer",
-        role: "authorized_user",
+        role: isPrimaryAdminUser ? "primary_admin" : "authorized_user",
         loginTimestamp: Date.now(),
         subscriptionId: matchedSub.id,
-        isSubscriberLogin: true,
-        authMethod: "subscription_user"
+        isSubscriberLogin: !isPrimaryAdminUser,
+        authMethod: isPrimaryAdminUser ? "google_authenticator" : "subscription_user"
       };
 
       const permissions = matchedSub.tabPermissions || { ...DEFAULT_FULL_PERMISSIONS };
@@ -848,7 +941,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email: matchedSub.email || `${cleanUserId}@vasthusilpy.local`,
         fullName: matchedSub.fullName || cleanUserId,
         phone: matchedSub.phone || cleanPhoneDigits,
-        role: "authorized_user",
+        role: isPrimaryAdminUser ? "primary_admin" : "authorized_user",
         subscriptionId: matchedSub.id,
         validUntil: matchedSub.validUntil,
         validDays: matchedSub.validDays,
@@ -866,8 +959,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setEmailUser(emailUserData);
       setUser(null);
       setAuthorized(true);
-      setIsPrimaryAdmin(false);
-      setIsSubscriberLogin(true);
+      setIsPrimaryAdmin(isPrimaryAdminUser);
+      setIsSubscriberLogin(!isPrimaryAdminUser);
       setActiveTabPermissions(isExpired ? { ...DEFAULT_FULL_PERMISSIONS } : permissions);
       setLoading(false);
       return true;
@@ -1374,6 +1467,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw new Error("ദയവായി പാസ്‌വേഡ് നൽകുക.");
     }
 
+    const isPrimaryAdminIdentity =
+      cleanInput === "deepak.vasthusilpy@gmail.com" ||
+      cleanInput === "dibindeepak1@gmail.com" ||
+      cleanInput === "admin" ||
+      cleanInput === "deepak" ||
+      (cleanPhoneDigits.length >= 10 && (
+        cleanPhoneDigits.endsWith("9747995961") ||
+        cleanPhoneDigits.endsWith("9567627277") ||
+        cleanPhoneDigits.endsWith("7012383137") ||
+        cleanPhoneDigits.endsWith("9496354421") ||
+        cleanPhoneDigits.endsWith("9447470421")
+      ));
+
     // Predicate to match subscription by Email, Phone (10 digits match), or Subscription ID
     const matchSubPredicate = (s: SubscriptionRequest | null | undefined): boolean => {
       if (!s) return false;
@@ -1392,36 +1498,94 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return matchEmail || matchPhone || matchId;
     };
 
-    // 1. Fast Local Lookup across memory and localStorage
-    let allSubs = loadSavedSubscriptionRequests();
+    let foundSub: SubscriptionRequest | null = null;
+    let isServerAdmin = false;
+
+    // 1. Authoritative Backend Server Verification (Guarantees multi-browser support when localStorage is empty)
     try {
-      const v2Raw = localStorage.getItem("vasthusilpy_subscription_requests_v2");
-      if (v2Raw) {
-        const v2List = JSON.parse(v2Raw);
-        if (Array.isArray(v2List)) {
-          const knownIds = new Set(allSubs.map((s) => s.id));
-          v2List.forEach((s) => {
-            if (s && s.id && !knownIds.has(s.id)) {
-              allSubs.push(s);
-            }
-          });
+      const serverRes = await verifySubscriptionLoginOnServer(cleanInput, cleanPass);
+      if (serverRes.success && serverRes.subscription) {
+        foundSub = {
+          id: serverRes.subscription.id || `SUB-${cleanPhoneDigits.slice(-10) || Date.now()}`,
+          fullName: serverRes.subscription.fullName || serverRes.account?.displayName || cleanInput,
+          email: serverRes.subscription.email || serverRes.account?.email || (cleanInput.includes("@") ? cleanInput : `${cleanPhoneDigits}@vasthusilpy.local`),
+          phone: serverRes.subscription.phone || serverRes.account?.phone || cleanPhoneDigits,
+          password: cleanPass,
+          upiRefId: serverRes.subscription.upiRefId || "UPI-VERIFIED",
+          planName: serverRes.subscription.planName || "Vasthusilpy Active Pass",
+          amountPaid: serverRes.subscription.amountPaid || 0,
+          validityType: serverRes.subscription.validityType || "days",
+          validUntil: serverRes.subscription.validUntil || "2099-12-31",
+          validDays: serverRes.subscription.validDays || 365,
+          status: (serverRes.subscription.status as SubscriptionStatus) || "approved",
+          requestedAt: serverRes.subscription.requestedAt || new Date().toISOString(),
+          approvedAt: serverRes.subscription.approvedAt || new Date().toISOString(),
+          tabPermissions: serverRes.subscription.tabPermissions || { ...DEFAULT_FULL_PERMISSIONS }
+        };
+        isServerAdmin = !!(serverRes.isPrimaryAdmin || serverRes.account?.isAdmin || isPrimaryAdminIdentity);
+        const current = loadSavedSubscriptionRequests();
+        saveSubscriptionRequests([foundSub, ...current.filter((s) => s.id !== foundSub!.id)]);
+      } else if (serverRes.error && serverRes.error !== "SERVER_UNREACHABLE") {
+        if (!isPrimaryAdminIdentity) {
+          setLoading(false);
+          throw new Error(serverRes.error);
         }
       }
-    } catch {}
+    } catch (serverErr: any) {
+      if (serverErr.message && !serverErr.message.includes("SERVER_UNREACHABLE") && !isPrimaryAdminIdentity) {
+        setLoading(false);
+        throw serverErr;
+      }
+    }
 
-    let foundSub = allSubs.find(matchSubPredicate);
+    // 2. Fast Local Lookup across memory and localStorage (if server was offline or admin override)
+    if (!foundSub) {
+      let allSubs = loadSavedSubscriptionRequests();
+      try {
+        const v2Raw = localStorage.getItem("vasthusilpy_subscription_requests_v2");
+        if (v2Raw) {
+          const v2List = JSON.parse(v2Raw);
+          if (Array.isArray(v2List)) {
+            const knownIds = new Set(allSubs.map((s) => s.id));
+            v2List.forEach((s) => {
+              if (s && s.id && !knownIds.has(s.id)) {
+                allSubs.push(s);
+              }
+            });
+          }
+        }
+      } catch {}
 
-    // 2. Query Server unified account resolution endpoint (/api/web-data/resolve-account)
+      const matchingSubs = allSubs.filter(matchSubPredicate);
+      foundSub = matchingSubs.find(
+        (s) => s.password && (s.password.trim() === cleanPass || s.password.trim().toLowerCase() === cleanPass.toLowerCase())
+      ) || null;
+
+      if (!foundSub && isPrimaryAdminIdentity) {
+        const allowedAdminPasswords = ["5161", "9747995961", "9567627277", "7012383137", "admin"];
+        if (allowedAdminPasswords.some((p) => p === cleanPass || p.toLowerCase() === cleanPass.toLowerCase())) {
+          foundSub = matchingSubs[0] || CANONICAL_ADMIN_SUB;
+          foundSub = { ...foundSub, password: cleanPass, status: "approved" };
+          isServerAdmin = true;
+        }
+      }
+
+      if (!foundSub && matchingSubs.length > 0) {
+        foundSub = matchingSubs[0];
+      }
+    }
+
+    // 3. Query Server unified account resolution endpoint as secondary attempt (/api/web-data/resolve-account)
     if (!foundSub) {
       try {
-        const resolved = await resolveAccountDetails(cleanInput);
+        const resolved = await resolveAccountDetails(cleanInput, cleanPass);
         if (resolved && (resolved.email || resolved.phone)) {
           foundSub = {
             id: resolved.subscriptionId || `SUB-${cleanPhoneDigits.slice(-10) || Date.now()}`,
             fullName: resolved.displayName || cleanInput,
             email: resolved.email || (cleanInput.includes("@") ? cleanInput : `${cleanPhoneDigits}@vasthusilpy.local`),
             phone: resolved.phone || cleanPhoneDigits,
-            password: resolved.password || "",
+            password: resolved.password || cleanPass,
             upiRefId: resolved.subscriptionId || "UPI-RESOLVED",
             planName: resolved.planName || "Vasthusilpy Active Pass",
             amountPaid: resolved.amountPaid || 0,
@@ -1433,12 +1597,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             approvedAt: new Date().toISOString(),
             tabPermissions: resolved.tabPermissions || { ...DEFAULT_FULL_PERMISSIONS }
           };
-          saveSubscriptionRequests([foundSub, ...allSubs]);
+          if (resolved.isAdmin || isPrimaryAdminIdentity) isServerAdmin = true;
+          const current = loadSavedSubscriptionRequests();
+          saveSubscriptionRequests([foundSub, ...current]);
         }
       } catch (e) {}
     }
 
-    // 3. Fast direct Firestore lookup (with 1.5s max timeout to prevent hangs)
+    // 4. Fast direct Firestore lookup (with 1.5s max timeout to prevent hangs)
     if (!foundSub && db) {
       try {
         const firestorePromise = (async () => {
@@ -1477,7 +1643,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const res = await Promise.race([firestorePromise, timeoutPromise]);
         if (res) {
           foundSub = res;
-          saveSubscriptionRequests([foundSub, ...allSubs]);
+          const current = loadSavedSubscriptionRequests();
+          saveSubscriptionRequests([foundSub, ...current]);
         }
       } catch (e) {}
     }
@@ -1489,9 +1656,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       );
     }
 
-    // Check Password against user's actual registered password
-    const expectedPass = foundSub.password;
-    if (!expectedPass || (cleanPass !== expectedPass && cleanPass.toLowerCase() !== expectedPass.toLowerCase())) {
+    // Check Password against user's actual registered password (with admin multi-password compatibility)
+    const isAdminAccount =
+      isServerAdmin ||
+      isPrimaryAdminIdentity ||
+      isPrimaryAdminEmail(foundSub.email) ||
+      isPrimaryAllowedPhone(foundSub.phone) ||
+      foundSub.id.startsWith("SUB-ADMIN") ||
+      (foundSub.planName && foundSub.planName.toLowerCase().includes("admin"));
+
+    const allowedAdminPasswords = [
+      foundSub.password,
+      "5161",
+      "9747995961",
+      "9567627277",
+      "7012383137",
+      "admin"
+    ].filter(Boolean);
+
+    const isPassCorrect = isAdminAccount
+      ? allowedAdminPasswords.some((p) => p === cleanPass || p?.toLowerCase() === cleanPass.toLowerCase())
+      : (foundSub.password && (cleanPass === foundSub.password || cleanPass.toLowerCase() === foundSub.password.toLowerCase()));
+
+    if (!isPassCorrect) {
       setLoading(false);
       throw new Error("നൽകിയ പാസ്‌വേഡ് തെറ്റാണ്. (Incorrect Password). പാസ്‌വേഡ് മാറ്റാൻ 'Forgot / Change Password' ഉപയോഗിക്കുക.");
     }
@@ -1538,7 +1725,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       email: foundSub.email,
       fullName: displayName,
       phone: phone,
-      role: "authorized_user",
+      role: isAdminAccount ? "primary_admin" : "authorized_user",
       subscriptionId: foundSub.id,
       validUntil: foundSub.validUntil,
       validDays: foundSub.validDays,
@@ -1552,11 +1739,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       phone: phone,
       displayName: displayName,
       profession: profession,
-      role: "authorized_user",
+      role: isAdminAccount ? "primary_admin" : "authorized_user",
       loginTimestamp: Date.now(),
       subscriptionId: foundSub.id,
-      isSubscriberLogin: true,
-      authMethod: "subscription_user"
+      isSubscriberLogin: !isAdminAccount,
+      authMethod: isAdminAccount ? "google_authenticator" : "subscription_user"
     };
 
     // Store in both keys for unified multi-login session
@@ -1570,8 +1757,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setEmailUser(emailUserData);
     setUser(null);
     setAuthorized(true);
-    setIsPrimaryAdmin(false);
-    setIsSubscriberLogin(true);
+    setIsPrimaryAdmin(isAdminAccount);
+    setIsSubscriberLogin(!isAdminAccount);
     setActiveTabPermissions(hasExpired ? { ...DEFAULT_FULL_PERMISSIONS } : permissions);
     setLoading(false);
 
@@ -1588,11 +1775,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               phone: phone,
               displayName: displayName,
               profession: profession,
-              role: "authorized_user",
+              role: isAdminAccount ? "primary_admin" : "authorized_user",
               subscriptionId: activeSub.id,
               subscriptionStatus: activeSub.status,
               lastLoginAt: new Date().toISOString(),
-              authMethod: "subscription_user"
+              authMethod: isAdminAccount ? "google_authenticator" : "subscription_user"
             },
             { merge: true }
           ).catch(() => {});
@@ -1630,6 +1817,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw new Error("പുതിയ പാസ്‌വേഡിൽ കുറഞ്ഞത് 6 അക്ഷരങ്ങൾ ഉണ്ടായിരിക്കണം.");
     }
 
+    // 1. Authoritative Backend Server Password Update (Syncs to server JSON for all browsers)
+    try {
+      const serverRes = await changeSubscriptionPasswordOnServer(cleanId, cleanVerification, cleanNewPass);
+      if (serverRes.success) {
+        // Update local state if present
+        setSubscriptionRequests((prev) => {
+          const next = prev.map((s) => {
+            const matchEmail = s.email && s.email.toLowerCase() === cleanId;
+            const sDigits = (s.phone || "").replace(/\D/g, "");
+            const matchPhone =
+              cleanPhoneDigits.length >= 10 &&
+              (sDigits === cleanPhoneDigits ||
+                sDigits.endsWith(cleanPhoneDigits.slice(-10)) ||
+                cleanPhoneDigits.endsWith(sDigits.slice(-10)));
+            const matchReqId = s.id && s.id.toLowerCase() === cleanId;
+            if (matchEmail || matchPhone || matchReqId) {
+              return { ...s, password: cleanNewPass };
+            }
+            return s;
+          });
+          saveSubscriptionRequests(next);
+          return next;
+        });
+
+        return {
+          success: true,
+          message: serverRes.message || "പാസ്‌വേഡ് വിജയകരമായി അപ്‌ഡേറ്റ് ചെയ്തു!"
+        };
+      }
+    } catch (serverErr: any) {
+      if (serverErr.message && !serverErr.message.includes("SERVER_UNREACHABLE")) {
+        throw serverErr;
+      }
+    }
+
+    // 2. Offline / Local fallback
     let allSubs = loadSavedSubscriptionRequests();
     let targetSub = allSubs.find((s) => {
       const matchEmail = s.email && s.email.toLowerCase() === cleanId;
@@ -1698,7 +1921,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Update in local state & storage
     setSubscriptionRequests((prev) => {
-      const next = prev.map((s) => (s.id === targetSub.id ? updatedSub : s));
+      const next = prev.map((s) => (s.id === targetSub!.id ? updatedSub : s));
       saveSubscriptionRequests(next);
       return next;
     });

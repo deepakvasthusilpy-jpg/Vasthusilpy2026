@@ -1,4 +1,5 @@
 import express from "express";
+import http from "http";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
@@ -3135,9 +3136,14 @@ app.get("/api/health", (req, res) => {
 });
 
 async function startServer() {
+  const server = http.createServer(app);
+
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        hmr: process.env.DISABLE_HMR === "true" ? false : { server },
+      },
       appType: "spa",
     });
     app.use(vite.middlewares);
@@ -3163,9 +3169,29 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
+  server.on("error", (err: any) => {
+    if (err && err.code === "EADDRINUSE") {
+      console.error(`[Server] Port ${PORT} already in use. Exiting process cleanly.`);
+      process.exit(1);
+    } else {
+      console.error("[Server Error]", err);
+      process.exit(1);
+    }
+  });
+
+  server.listen(PORT, "0.0.0.0", () => {
     console.log(`Vasthusilpy server running on http://0.0.0.0:${PORT}`);
   });
+
+  const shutdown = () => {
+    server.close(() => {
+      process.exit(0);
+    });
+    setTimeout(() => process.exit(0), 1500).unref();
+  };
+
+  process.on("SIGTERM", shutdown);
+  process.on("SIGINT", shutdown);
 }
 
 startServer();

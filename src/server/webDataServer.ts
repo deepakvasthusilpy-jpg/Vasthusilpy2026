@@ -507,17 +507,30 @@ export function registerWebDataRoutes(app: Express) {
   });
 
   // -------------------------------------------------------------
+  // GET ALL SUBSCRIPTIONS AUTHORITATIVE LIST
+  // -------------------------------------------------------------
+  app.get("/api/web-data/subscriptions", (req: Request, res: Response) => {
+    try {
+      const subs = readJsonFile<any[]>("subscription_requests.json", []);
+      return res.json({ success: true, subscriptions: subs });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // -------------------------------------------------------------
   // RESOLVE ACCOUNT BY EMAIL OR MOBILE (Ensures identical data on all logins)
   // -------------------------------------------------------------
   app.post("/api/web-data/resolve-account", (req: Request, res: Response) => {
     try {
-      const { identifier } = req.body;
+      const { identifier, password } = req.body;
       if (!identifier) {
         return res.status(400).json({ success: false, error: "Identifier is required" });
       }
 
       const cleanInput = (identifier || "").toLowerCase().trim();
       const cleanDigits = cleanInput.replace(/\D/g, "");
+      const cleanPass = (password || "").trim();
 
       const primaryEmails = ["deepak.vasthusilpy@gmail.com", "dibindeepak1@gmail.com"];
       const primaryPhones = ["9747995961", "9567627277", "7012383137", "9496354421", "9447470421"];
@@ -526,39 +539,34 @@ export function registerWebDataRoutes(app: Express) {
       const isPrimaryPhone = primaryPhones.some(
         (p) => cleanDigits && (cleanDigits === p || cleanDigits.endsWith(p.slice(-10)) || p.endsWith(cleanDigits.slice(-10)))
       );
-
-      if (
+      const isPrimary =
         isPrimaryEmail ||
         isPrimaryPhone ||
         cleanInput === "admin" ||
         cleanInput === "deepak" ||
         cleanInput.includes("deepak.vasthusilpy") ||
-        cleanInput.includes("dibindeepak")
-      ) {
-        const activePhone = cleanDigits.length >= 10 ? cleanDigits.slice(-10) : "9747995961";
-        return res.json({
-          success: true,
-          account: {
-            email: "deepak.vasthusilpy@gmail.com",
-            phone: activePhone,
-            displayName: "DEEPAK C",
-            profession: "Vasthu Consultant & Civil Engineer",
-            role: "primary_admin",
-            isAdmin: true,
-            subscriptionId: "SUB-ADMIN-DEEPAK",
-            status: "approved",
-            validUntil: "2099-12-31",
-            password: "9747995961",
-            linkedIdentities: [
-              "deepak.vasthusilpy@gmail.com",
-              "9747995961",
-              "9567627277",
-              "7012383137",
-              "9496354421",
-              "9447470421"
-            ]
-          }
-        });
+        cleanInput.includes("dibindeepak");
+
+      // 1. Read subscription_requests.json to find any actual subscriptions for this user
+      const subs = readJsonFile<any[]>("subscription_requests.json", []);
+      const matchingSubs = subs.filter((s) => {
+        const sEmail = (s.email || "").toLowerCase().trim();
+        const sPhone = (s.phone || "").replace(/\D/g, "");
+        const sId = (s.id || "").toLowerCase().trim();
+        return (
+          sEmail === cleanInput ||
+          (cleanDigits.length >= 10 && (sPhone === cleanDigits || sPhone.endsWith(cleanDigits.slice(-10)) || cleanDigits.endsWith(sPhone.slice(-10)))) ||
+          sId === cleanInput
+        );
+      });
+
+      // If user entered a password, find the subscription matching that password first
+      let matchedSub = matchingSubs.find(
+        (s) => cleanPass && s.password && (s.password.trim() === cleanPass || s.password.trim().toLowerCase() === cleanPass.toLowerCase())
+      );
+      // Fallback to most recently updated / approved subscription
+      if (!matchedSub && matchingSubs.length > 0) {
+        matchedSub = matchingSubs.find((s) => s.status === "approved") || matchingSubs[matchingSubs.length - 1];
       }
 
       // Check user_profiles.json
@@ -572,18 +580,51 @@ export function registerWebDataRoutes(app: Express) {
         );
       });
 
-      // Check subscription_requests.json
-      const subs = readJsonFile<any[]>("subscription_requests.json", []);
-      const matchedSub = subs.find((s) => {
-        const sEmail = (s.email || "").toLowerCase().trim();
-        const sPhone = (s.phone || "").replace(/\D/g, "");
-        const sId = (s.id || "").toLowerCase().trim();
-        return (
-          sEmail === cleanInput ||
-          (cleanDigits.length >= 10 && (sPhone === cleanDigits || sPhone.endsWith(cleanDigits.slice(-10)))) ||
-          sId === cleanInput
-        );
-      });
+      // Handle Primary Admin Account
+      if (isPrimary) {
+        const activePhone = cleanDigits.length >= 10 ? cleanDigits.slice(-10) : (matchedSub?.phone || "9747995961");
+        // For primary admin, both the user's password (e.g. 5161), the phone number, or matchedSub password are valid
+        const validPasswords = [
+          matchedSub?.password,
+          "5161",
+          activePhone,
+          "9747995961",
+          "9567627277",
+          "7012383137"
+        ].filter(Boolean);
+
+        // If cleanPass provided and is valid, return that so client password check matches
+        const assignedPassword = cleanPass && validPasswords.some((vp) => vp === cleanPass || vp?.toLowerCase() === cleanPass.toLowerCase())
+          ? cleanPass
+          : (matchedSub?.password || "5161");
+
+        return res.json({
+          success: true,
+          account: {
+            email: matchedSub?.email || "deepak.vasthusilpy@gmail.com",
+            phone: activePhone,
+            displayName: matchedSub?.fullName || "DEEPAK C",
+            profession: "Vasthu Consultant & Civil Engineer",
+            role: "primary_admin",
+            isAdmin: true,
+            subscriptionId: matchedSub?.id || "SUB-ADMIN-DEEPAK",
+            status: matchedSub?.status || "approved",
+            validUntil: matchedSub?.validUntil || "2099-12-31",
+            validDays: matchedSub?.validDays || 36500,
+            password: assignedPassword,
+            tabPermissions: matchedSub?.tabPermissions,
+            linkedIdentities: [
+              "deepak.vasthusilpy@gmail.com",
+              "dibindeepak1@gmail.com",
+              "9747995961",
+              "9567627277",
+              "7012383137",
+              "9496354421",
+              "9447470421"
+            ]
+          }
+        });
+      }
 
       if (matchedSub || matchedProfile) {
         const email = matchedSub?.email || matchedProfile?.email || "";
@@ -601,8 +642,8 @@ export function registerWebDataRoutes(app: Express) {
             isAdmin: false,
             subscriptionId: matchedSub?.id || "",
             status: matchedSub?.status || "approved",
-            validUntil: matchedSub?.validUntil || "",
-            validDays: matchedSub?.validDays || 30,
+            validUntil: matchedSub?.validUntil || "2099-12-31",
+            validDays: matchedSub?.validDays || 365,
             password: matchedSub?.password || "",
             tabPermissions: matchedSub?.tabPermissions,
             linkedIdentities: [email, phone].filter(Boolean)
@@ -611,6 +652,223 @@ export function registerWebDataRoutes(app: Express) {
       }
 
       return res.status(404).json({ success: false, error: "No account found matching this email or mobile number" });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // -------------------------------------------------------------
+  // VERIFY SUBSCRIPTION LOGIN DIRECTLY ON SERVER
+  // -------------------------------------------------------------
+  app.post("/api/web-data/verify-subscription-login", (req: Request, res: Response) => {
+    try {
+      const { identifier, password } = req.body;
+      if (!identifier) {
+        return res.status(400).json({ success: false, error: "ദയവായി ഇമെയിൽ അല്ലെങ്കിൽ മൊബൈൽ നമ്പർ നൽകുക." });
+      }
+      if (!password) {
+        return res.status(400).json({ success: false, error: "ദയവായി പാസ്‌വേഡ് നൽകുക." });
+      }
+
+      const cleanInput = (identifier || "").toLowerCase().trim();
+      const cleanDigits = cleanInput.replace(/\D/g, "");
+      const cleanPass = (password || "").trim();
+
+      const primaryEmails = ["deepak.vasthusilpy@gmail.com", "dibindeepak1@gmail.com"];
+      const primaryPhones = ["9747995961", "9567627277", "7012383137", "9496354421", "9447470421"];
+
+      const isPrimaryEmail = primaryEmails.includes(cleanInput);
+      const isPrimaryPhone = primaryPhones.some(
+        (p) => cleanDigits && (cleanDigits === p || cleanDigits.endsWith(p.slice(-10)) || p.endsWith(cleanDigits.slice(-10)))
+      );
+      const isPrimary =
+        isPrimaryEmail ||
+        isPrimaryPhone ||
+        cleanInput === "admin" ||
+        cleanInput === "deepak" ||
+        cleanInput.includes("deepak.vasthusilpy") ||
+        cleanInput.includes("dibindeepak");
+
+      const subs = readJsonFile<any[]>("subscription_requests.json", []);
+      const matchingSubs = subs.filter((s) => {
+        const sEmail = (s.email || "").toLowerCase().trim();
+        const sPhone = (s.phone || "").replace(/\D/g, "");
+        const sId = (s.id || "").toLowerCase().trim();
+        return (
+          sEmail === cleanInput ||
+          (cleanDigits.length >= 10 && (sPhone === cleanDigits || sPhone.endsWith(cleanDigits.slice(-10)) || cleanDigits.endsWith(sPhone.slice(-10)))) ||
+          sId === cleanInput
+        );
+      });
+
+      // Primary Admin Verification
+      if (isPrimary) {
+        const activePhone = cleanDigits.length >= 10 ? cleanDigits.slice(-10) : "9747995961";
+        const allowedAdminPasswords = [
+          "5161",
+          activePhone,
+          "9747995961",
+          "9567627277",
+          "7012383137",
+          "admin",
+          ...matchingSubs.map((s) => s.password).filter(Boolean)
+        ];
+
+        const isPassValid = allowedAdminPasswords.some(
+          (p) => p === cleanPass || p?.toLowerCase() === cleanPass.toLowerCase()
+        );
+
+        if (!isPassValid) {
+          return res.status(401).json({
+            success: false,
+            error: "നൽകിയ പാസ്‌വേഡ് തെറ്റാണ്. (Incorrect Password). പാസ്‌വേഡ് മാറ്റാൻ 'Forgot / Change Password' ഉപയോഗിക്കുക."
+          });
+        }
+
+        const approvedSub = matchingSubs.find((s) => s.status === "approved") || matchingSubs[0];
+        const subRecord = approvedSub || {
+          id: "SUB-ADMIN-DEEPAK",
+          fullName: "DEEPAK C",
+          email: "deepak.vasthusilpy@gmail.com",
+          phone: activePhone,
+          password: cleanPass,
+          planName: "Primary Admin Full Access Pass",
+          amountPaid: 2400,
+          validityType: "days",
+          validUntil: "2099-12-31",
+          validDays: 36500,
+          status: "approved"
+        };
+
+        return res.json({
+          success: true,
+          isPrimaryAdmin: true,
+          subscription: {
+            ...subRecord,
+            password: cleanPass,
+            status: "approved"
+          },
+          account: {
+            email: subRecord.email || "deepak.vasthusilpy@gmail.com",
+            phone: activePhone,
+            displayName: subRecord.fullName || "DEEPAK C",
+            role: "primary_admin",
+            isAdmin: true,
+            subscriptionId: subRecord.id,
+            status: "approved",
+            validUntil: subRecord.validUntil || "2099-12-31",
+            password: cleanPass
+          }
+        });
+      }
+
+      // Standard Subscriber Verification
+      if (matchingSubs.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: "ഈ ഇമെയിൽ അല്ലെങ്കിൽ മൊബൈൽ നമ്പറിൽ സബ്‌സ്ക്രിപ്ഷൻ വിവരങ്ങൾ കണ്ടെത്തിയില്ല. ദയവായി രജിസ്റ്റർ ചെയ്യുക. (Subscription details not found. Please register)."
+        });
+      }
+
+      const passMatchedSub = matchingSubs.find(
+        (s) => s.password && (s.password.trim() === cleanPass || s.password.trim().toLowerCase() === cleanPass.toLowerCase())
+      );
+
+      if (!passMatchedSub) {
+        return res.status(401).json({
+          success: false,
+          error: "നൽകിയ പാസ്‌വേഡ് തെറ്റാണ്. (Incorrect Password). പാസ്‌വേഡ് മാറ്റാൻ 'Forgot / Change Password' ഉപയോഗിക്കുക."
+        });
+      }
+
+      return res.json({
+        success: true,
+        isPrimaryAdmin: false,
+        subscription: passMatchedSub,
+        account: {
+          email: passMatchedSub.email,
+          phone: passMatchedSub.phone,
+          displayName: passMatchedSub.fullName,
+          role: "authorized_user",
+          isAdmin: false,
+          subscriptionId: passMatchedSub.id,
+          status: passMatchedSub.status,
+          validUntil: passMatchedSub.validUntil,
+          validDays: passMatchedSub.validDays,
+          password: passMatchedSub.password,
+          tabPermissions: passMatchedSub.tabPermissions
+        }
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // -------------------------------------------------------------
+  // CHANGE / RESET SUBSCRIPTION PASSWORD (Server-wide persistence)
+  // -------------------------------------------------------------
+  app.post("/api/web-data/change-subscription-password", (req: Request, res: Response) => {
+    try {
+      const { identifier, verificationCodeOrUpi, newPassword } = req.body;
+      if (!identifier || !newPassword) {
+        return res.status(400).json({ success: false, error: "Missing required fields" });
+      }
+
+      const cleanId = (identifier || "").toLowerCase().trim();
+      const cleanDigits = cleanId.replace(/\D/g, "");
+      const cleanVerification = (verificationCodeOrUpi || "").toLowerCase().trim();
+      const cleanNewPass = (newPassword || "").trim();
+
+      if (cleanNewPass.length < 6) {
+        return res.status(400).json({ success: false, error: "പുതിയ പാസ്‌വേഡിൽ കുറഞ്ഞത് 6 അക്ഷരങ്ങൾ ഉണ്ടായിരിക്കണം." });
+      }
+
+      const subs = readJsonFile<any[]>("subscription_requests.json", []);
+      let updatedCount = 0;
+
+      subs.forEach((s) => {
+        const sEmail = (s.email || "").toLowerCase().trim();
+        const sPhone = (s.phone || "").replace(/\D/g, "");
+        const sId = (s.id || "").toLowerCase().trim();
+        const matchesUser =
+          sEmail === cleanId ||
+          (cleanDigits.length >= 10 && (sPhone === cleanDigits || sPhone.endsWith(cleanDigits.slice(-10)))) ||
+          sId === cleanId;
+
+        if (matchesUser) {
+          s.password = cleanNewPass;
+          updatedCount++;
+        }
+      });
+
+      if (updatedCount > 0) {
+        writeJsonFile("subscription_requests.json", subs);
+        return res.json({ success: true, message: "പാസ്‌വേഡ് വിജയകരമായി മാറ്റിയിരിക്കുന്നു (Password updated successfully)." });
+      }
+
+      // If not in subs but is admin
+      const primaryEmails = ["deepak.vasthusilpy@gmail.com", "dibindeepak1@gmail.com"];
+      const primaryPhones = ["9747995961", "9567627277", "7012383137"];
+      if (primaryEmails.includes(cleanId) || primaryPhones.includes(cleanDigits)) {
+        subs.push({
+          id: `SUB-ADMIN-${Date.now()}`,
+          fullName: "DEEPAK C",
+          email: "deepak.vasthusilpy@gmail.com",
+          phone: cleanDigits || "9747995961",
+          password: cleanNewPass,
+          planName: "Admin Authorization",
+          amountPaid: 2400,
+          validityType: "days",
+          validUntil: "2099-12-31",
+          validDays: 36500,
+          status: "approved",
+          approvedAt: new Date().toISOString()
+        });
+        writeJsonFile("subscription_requests.json", subs);
+        return res.json({ success: true, message: "അഡ്മിൻ പാസ്‌വേഡ് വിജയകരമായി മാറ്റിയിരിക്കുന്നു." });
+      }
+
+      return res.status(404).json({ success: false, error: "അക്കൗണ്ട് കണ്ടെത്താനായില്ല." });
     } catch (err: any) {
       return res.status(500).json({ success: false, error: err.message });
     }

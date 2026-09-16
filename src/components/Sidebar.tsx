@@ -71,7 +71,9 @@ import {
   FileCheck,
   QrCode,
   Smartphone,
-  Monitor
+  Monitor,
+  Settings,
+  FolderTree
 } from "lucide-react";
 import { useViewMode } from "../context/ViewModeContext";
 
@@ -142,8 +144,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
       activeText: "text-cyan-300",
       subTabs: [
         { id: "home_overview" as TabType, label: "Home & Profile", sub: "BUSINESS OVERVIEW & PROFILE", icon: Sparkles },
-        { id: "data_storage" as TabType, label: "Data Storage & Vault", sub: "CAD DRAWINGS & FILES", icon: HardDrive, badge: "CAD" },
         ...(isPrimaryAdmin && !isSubscriberLogin ? [{ id: "subscription_requests" as TabType, label: "Subscription Requests", sub: "ACCESS PERMISSIONS", icon: ShieldCheck, badge: "NEW" }] : [])
+      ]
+    },
+    {
+      id: "data_storage_vault" as MainSectionType,
+      title: "Data Storage Vault",
+      subtitle: "PLANS, 3D, ESTIMATES & CAD",
+      shortLabel: "Vault",
+      icon: HardDrive,
+      defaultTab: "vault_dashboard" as TabType,
+      color: "from-cyan-500 via-blue-600 to-indigo-600",
+      activeBorder: "border-cyan-400",
+      activeText: "text-cyan-300",
+      badge: "VAULT",
+      subTabs: [
+        { id: "vault_dashboard" as TabType, label: "Vault Dashboard", sub: "ANALYTICS & METRICS", icon: LayoutGrid, badge: "LIVE" },
+        { id: "vault_plan" as TabType, label: "1. PLAN", sub: "ARCHITECTURAL & 2D CAD", icon: Compass, badge: "PLAN" },
+        { id: "vault_3d" as TabType, label: "2. 3D", sub: "3D ELEVATION & VISUALS", icon: Layers, badge: "3D" },
+        { id: "vault_estimate" as TabType, label: "3. ESTIMATE", sub: "BOQ & ESTIMATES", icon: FileSpreadsheet, badge: "EST" },
+        { id: "vault_survey" as TabType, label: "4. SURVEY", sub: "LAND SURVEY & FMB", icon: MapPin, badge: "SURVEY" },
+        { id: "vault_documents" as TabType, label: "5. DOCUMENTS", sub: "PERMITS & OFFICE DOCS", icon: FileText, badge: "DOCS" },
+        { id: "vault_settings" as TabType, label: "Settings & Folders", sub: "FOLDERS, SYNC & BACKUP", icon: Settings, badge: "CONFIG" }
       ]
     },
     {
@@ -337,16 +359,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       id: "personal_bills" as MainSectionType,
       title: "Personal Bills & Payments",
-      subtitle: "UTILITIES, SALARY & RD",
+      subtitle: "UTILITIES & EXPENSES",
       shortLabel: "Payments",
       icon: Wallet,
-      defaultTab: "staff_salary" as TabType,
+      defaultTab: "poov_mala_bill" as TabType,
       color: "from-purple-500 via-pink-500 to-amber-500",
       activeBorder: "border-purple-400",
       activeText: "text-purple-300",
-      badge: "NEW",
+      badge: "BILLS",
       subTabs: [
-        { id: "staff_salary" as TabType, label: "Staff Salary & Payments", sub: "SALARY REGISTER", icon: Users, badge: "SALARY" },
         { id: "poov_mala_bill" as TabType, label: "Poov Mala Bill", sub: "DAILY FLOWER BILL", icon: Sparkles, badge: "CALC" },
         { id: "kseb_bills" as TabType, label: "KSEB Electricity Bills", sub: "POWER UTILITIES", icon: Zap, badge: "KSEB" },
         { id: "health_insurance" as TabType, label: "Health Insurance", sub: "MEDICLAIM POLICIES", icon: HeartPulse, badge: "HEALTH" },

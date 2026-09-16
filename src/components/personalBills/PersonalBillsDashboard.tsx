@@ -28,26 +28,20 @@ interface PersonalBillsDashboardProps {
 }
 
 export const PersonalBillsDashboard: React.FC<PersonalBillsDashboardProps> = ({
-  initialSubTab = "staff_salary"
+  initialSubTab = "poov_mala"
 }) => {
-  const [activeTab, setActiveTab] = useState<PersonalBillsTabType>(initialSubTab);
+  const [activeTab, setActiveTab] = useState<PersonalBillsTabType>(
+    initialSubTab === "staff_salary" ? "poov_mala" : initialSubTab
+  );
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   useEffect(() => {
     if (initialSubTab) {
-      setActiveTab(initialSubTab);
+      setActiveTab(initialSubTab === "staff_salary" ? "poov_mala" : initialSubTab);
     }
   }, [initialSubTab]);
 
   const subTabs = [
-    {
-      id: "staff_salary" as PersonalBillsTabType,
-      label: "സ്റ്റാഫ് ശമ്പളം & പേയ്‌മെന്റുകൾ",
-      subtitle: "Staff Salary & Slips",
-      icon: Users,
-      color: "from-purple-500 to-pink-500",
-      accent: "text-purple-300"
-    },
     {
       id: "poov_mala" as PersonalBillsTabType,
       label: "പൂവ് മാല ബിൽ",
@@ -167,8 +161,7 @@ export const PersonalBillsDashboard: React.FC<PersonalBillsDashboardProps> = ({
 
       {/* RENDER ACTIVE SUB-TAB CONTENT */}
       <div className="transition-all duration-300">
-        {activeTab === "staff_salary" && <StaffSalaryTab />}
-        {(activeTab === "poov_mala" || activeTab === "poov_mala_bill") && <PoovMalaBillTab />}
+        {(activeTab === "poov_mala" || activeTab === "poov_mala_bill" || activeTab === "staff_salary") && <PoovMalaBillTab />}
         {(activeTab === "kseb_bills" || activeTab === "kseb_bill") && <KsebBillTab />}
         {activeTab === "health_insurance" && <HealthInsuranceTab />}
         {(activeTab === "rd_accounts" || activeTab === "rd_deposit") && <RdAccountTab />}

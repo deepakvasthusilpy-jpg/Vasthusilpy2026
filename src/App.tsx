@@ -52,6 +52,7 @@ import { ClientInvoicePortal } from "./components/office/clientView/ClientInvoic
 import { PublicCadSharePortal } from "./components/home/dataStorage/PublicCadSharePortal";
 import { PublicPlanVerificationPortal } from "./components/planTemplate/PublicPlanVerificationPortal";
 import { HomePage } from "./components/home/HomePage";
+import { DataStorageTab } from "./components/home/DataStorageTab";
 import {
   INITIAL_ESTIMATES_LIST,
   EstimateProject,
@@ -167,6 +168,8 @@ export default function App() {
               ? ("online_applications_directory" as TabType)
               : sec === "personal_bills"
               ? ("poov_mala_bill" as TabType)
+              : sec === "data_storage_vault"
+              ? ("vault_dashboard" as TabType)
               : ("home_overview" as TabType))
         };
       }
@@ -608,6 +611,16 @@ export default function App() {
             />
           )}
 
+          {/* DATA STORAGE VAULT SECTION (SEPARATE MAIN TAB WITH SUB TABS) */}
+          {activeSection === "data_storage_vault" && (
+            <DataStorageTab
+              userRole={isPrimaryAdmin ? "ADMIN" : "USER"}
+              userEmail={user?.email || emailUser?.email || "deepak@vasthusilpy.com"}
+              activeSubTab={activeTab}
+              onSubTabChange={(tab) => setActiveTab(tab)}
+            />
+          )}
+
           {/* VASTHU SECTION */}
           {activeSection === "vasthu" && (
             <div className="space-y-6">
@@ -989,9 +1002,7 @@ export default function App() {
           {activeSection === "personal_bills" && (
             <PersonalBillsDashboard
               initialSubTab={
-                activeTab === "staff_salary"
-                  ? "staff_salary"
-                  : activeTab === "poov_mala_bill" || activeTab === "poov_mala"
+                activeTab === "poov_mala_bill" || activeTab === "poov_mala" || activeTab === "staff_salary"
                   ? "poov_mala"
                   : activeTab === "kseb_bills" || activeTab === "kseb_bill"
                   ? "kseb_bills"
@@ -1003,7 +1014,7 @@ export default function App() {
                   ? "licence_panchayath"
                   : activeTab === "personal_vendors" || activeTab === "all_vendors" || activeTab === "all_vendors_bills"
                   ? "all_vendors"
-                  : "staff_salary"
+                  : "poov_mala"
               }
             />
           )}

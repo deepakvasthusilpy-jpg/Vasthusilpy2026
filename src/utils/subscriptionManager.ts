@@ -512,6 +512,55 @@ export const ALL_APP_MODULES: TabPermissionDefinition[] = [
         description: "Vendor directory, custom bill creation, GPay UPI QR codes and ledger"
       }
     ]
+  },
+  {
+    sectionId: "data_storage_vault",
+    sectionTitle: "Data Storage Vault",
+    sectionTitleMl: "ഡാറ്റാ സ്റ്റോറേജ് & ഫയൽ വോൾട്ട്",
+    tabs: [
+      {
+        id: "vault_dashboard" as TabType,
+        label: "Vault Dashboard",
+        labelMl: "ഡാഷ്‌ബോർഡ്",
+        description: "Storage overview, category distribution, recent uploads and search"
+      },
+      {
+        id: "vault_plan" as TabType,
+        label: "1. Plan (Architectural & Vastu)",
+        labelMl: "1. പ്ലാൻ",
+        description: "2D Floor plans, Vastu layout, structural drawings and CAD files"
+      },
+      {
+        id: "vault_3d" as TabType,
+        label: "2. 3D (Elevations & Renders)",
+        labelMl: "2. 3D എലിവേഷൻ",
+        description: "3D exterior elevations, interior renders and walkthroughs"
+      },
+      {
+        id: "vault_estimate" as TabType,
+        label: "3. Estimate (BOQ & Costing)",
+        labelMl: "3. എസ്റ്റിമേറ്റ്",
+        description: "Detailed estimation sheets, BOQ reports and rate cards"
+      },
+      {
+        id: "vault_survey" as TabType,
+        label: "4. Survey (Land & FMB)",
+        labelMl: "4. സർവ്വേ & FMB",
+        description: "Land survey sketches, FMB subdivision plans and plot layouts"
+      },
+      {
+        id: "vault_documents" as TabType,
+        label: "5. Documents & Permits",
+        labelMl: "5. ഡോക്യുമെന്റുകൾ",
+        description: "LSGD building permits, office documents, deeds and contracts"
+      },
+      {
+        id: "vault_settings" as TabType,
+        label: "Vault Settings & Folders",
+        labelMl: "ഫോൾഡർ ക്രമീകരണങ്ങൾ",
+        description: "Add, edit, delete folders, storage quota and cloud sync"
+      }
+    ]
   }
 ];
 
@@ -750,7 +799,7 @@ export const CANONICAL_ADMIN_SUB: SubscriptionRequest = {
   fullName: "DEEPAK C",
   email: "deepak.vasthusilpy@gmail.com",
   phone: "9747995961",
-  password: "9747995961",
+  password: "5161",
   upiRefId: "UPI-ADMIN-CANONICAL",
   requestedAt: "2026-01-01T00:00:00.000Z",
   planName: "Primary Admin Full Access Pass",
@@ -767,11 +816,49 @@ export const CANONICAL_ADMIN_SUB: SubscriptionRequest = {
 export const CANONICAL_ADMIN_SUBS: SubscriptionRequest[] = [
   CANONICAL_ADMIN_SUB,
   {
+    id: "SUB-2026-4188",
+    fullName: "DEEPAK",
+    email: "deepak.vasthusilpy@gmail.com",
+    phone: "9747995961",
+    password: "5161",
+    upiRefId: "DIRECT-ADMIN",
+    requestedAt: "2026-09-15T12:26:12.194Z",
+    planName: "Admin Direct Authorization",
+    amountPaid: 999,
+    validityType: "days",
+    validUntil: "2027-09-15",
+    validDays: 365,
+    status: "approved",
+    notes: "deepak-user",
+    approvedAt: "2026-09-15T12:26:12.194Z",
+    approvedBy: "deepak.vasthusilpy@gmail.com",
+    tabPermissions: { ...DEFAULT_FULL_PERMISSIONS }
+  },
+  {
+    id: "SUB-2026-8947",
+    fullName: "DIBIN",
+    email: "dibindeepak1@gmail.com",
+    phone: "9567627277",
+    password: "5161",
+    upiRefId: "DIRECT-ADMIN",
+    requestedAt: "2026-09-15T12:26:43.369Z",
+    planName: "Admin Direct Authorization",
+    amountPaid: 999,
+    validityType: "days",
+    validUntil: "2027-09-15",
+    validDays: 365,
+    status: "approved",
+    notes: "dibin-user",
+    approvedAt: "2026-09-15T12:26:43.369Z",
+    approvedBy: "deepak.vasthusilpy@gmail.com",
+    tabPermissions: { ...DEFAULT_FULL_PERMISSIONS }
+  },
+  {
     id: "SUB-ADMIN-DEEPAK-2",
     fullName: "DEEPAK C",
     email: "deepak.vasthusilpy@gmail.com",
     phone: "9567627277",
-    password: "9567627277",
+    password: "5161",
     upiRefId: "UPI-ADMIN-CANONICAL-2",
     requestedAt: "2026-01-01T00:00:00.000Z",
     planName: "Primary Admin Full Access Pass",
@@ -789,7 +876,7 @@ export const CANONICAL_ADMIN_SUBS: SubscriptionRequest[] = [
     fullName: "DIBIN DEEPAK",
     email: "dibindeepak1@gmail.com",
     phone: "7012383137",
-    password: "7012383137",
+    password: "5161",
     upiRefId: "UPI-ADMIN-DIBIN",
     requestedAt: "2026-01-01T00:00:00.000Z",
     planName: "Admin Full Access Pass",

@@ -188,17 +188,13 @@ export const HomePage: React.FC<HomePageProps> = ({ activeTab = "home_overview",
           </button>
 
           <button
-            onClick={() => setActiveTab && setActiveTab("data_storage")}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-mono text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === "data_storage"
-                ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-950/50 border border-white/30"
-                : "text-purple-200/80 hover:text-white hover:bg-white/10"
-            }`}
+            onClick={() => onNavigate("data_storage_vault", "vault_dashboard")}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-mono text-xs font-bold transition-all cursor-pointer whitespace-nowrap text-purple-200/80 hover:text-white hover:bg-white/10`}
           >
             <HardDrive className="w-4 h-4 text-emerald-300" />
-            <span>ഡാറ്റ സ്റ്റോറേജ് (Data Storage & CAD Vault)</span>
+            <span>ഡാറ്റ സ്റ്റോറേജ് വോൾട്ട് (Data Storage Vault)</span>
             <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-200 font-mono text-[10px] font-bold border border-emerald-400/40">
-              CAD / DWG
+              VAULT
             </span>
           </button>
 

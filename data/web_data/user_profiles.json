@@ -1,10 +1,21 @@
 [
   {
     "email": "deepak.vasthusilpy@gmail.com",
-    "phone": "9567627277",
+    "phone": "9747995961",
     "displayName": "DEEPAK C",
-    "profession": "Vasthu Architect / Engineer",
-    "role": "authorized_user",
-    "updatedAt": "2026-09-14T08:49:19.697Z"
+    "profession": "Vasthu Consultant & Civil Engineer",
+    "role": "primary_admin",
+    "updatedAt": "2026-09-16T06:46:45.271Z",
+    "linkedPhones": [
+      "9747995961",
+      "9567627277",
+      "7012383137",
+      "9496354421",
+      "9447470421"
+    ],
+    "isSubscriberLogin": true,
+    "authMethod": "subscription_user",
+    "loginTimestamp": 1789534001985,
+    "subscriptionId": "SUB-ADMIN-DEEPAK"
   }
 ]

@@ -1,4 +1,9 @@
 export type CADCategory =
+  | "PLAN"
+  | "3D"
+  | "ESTIMATE"
+  | "SURVEY"
+  | "DOCUMENTS"
   | "ARCHITECTURAL_PLAN"
   | "STRUCTURAL_DETAILS"
   | "VASTU_THACHU_SHASTRA"
@@ -9,6 +14,18 @@ export type CADCategory =
   | "SITE_LAYOUT"
   | "ESTIMATE_BOQ"
   | "GENERAL_OFFICE";
+
+export type VaultStandardCategory = "PLAN" | "3D" | "ESTIMATE" | "SURVEY" | "DOCUMENTS";
+
+export function mapToVaultCategory(cat?: string): VaultStandardCategory {
+  if (!cat) return "PLAN";
+  const c = cat.toUpperCase();
+  if (c === "3D" || c.includes("3D") || c.includes("ELEVATION")) return "3D";
+  if (c === "ESTIMATE" || c.includes("ESTIMATE") || c.includes("BOQ") || c.includes("COST")) return "ESTIMATE";
+  if (c === "SURVEY" || c.includes("SURVEY") || c.includes("FMB") || c.includes("TRAVERSE")) return "SURVEY";
+  if (c === "DOCUMENTS" || c.includes("DOCUMENT") || c.includes("OFFICE") || c.includes("PERMIT") || c.includes("LSGD")) return "DOCUMENTS";
+  return "PLAN";
+}
 
 export type CADFileType = "DWG" | "DXF" | "PDF" | "IMAGE" | "DOC" | "CAD_VECTOR" | "OTHER";
 

@@ -402,19 +402,19 @@ export async function pullAndHydrateWebDataFromServer(accountIdentifier?: string
     const d = result.data;
     const syncedAt = result.syncedAt || new Date().toISOString();
 
-    // Helper to merge arrays preserving unique records by id
+    // Helper to merge arrays preserving unique records by id (server authoritative)
     const mergeById = (localKey: string, serverItems: any[]): any[] => {
       if (!Array.isArray(serverItems) || serverItems.length === 0) {
         return readLocalJson(localKey, []);
       }
       const local = readLocalJson<any[]>(localKey, []);
       const map = new Map<string, any>();
-      // Put server authoritative items first
-      serverItems.forEach((item) => {
+      // First populate with local items
+      local.forEach((item) => {
         if (item?.id) map.set(item.id, item);
       });
-      // Merge local items if they exist
-      local.forEach((item) => {
+      // Then OVERWRITE with authoritative server items
+      serverItems.forEach((item) => {
         if (item?.id) {
           const prev = map.get(item.id);
           map.set(item.id, prev ? { ...prev, ...item } : item);
@@ -530,15 +530,21 @@ export async function pullAndHydrateWebDataFromServer(accountIdentifier?: string
  * Resolves account identity by either Email OR Mobile Number,
  * ensuring both login identifiers point to the identical canonical account.
  */
-export async function resolveAccountDetails(identifier?: string | null): Promise<any | null> {
+export async function resolveAccountDetails(
+  identifier?: string | null,
+  password?: string | null
+): Promise<any | null> {
   if (!identifier || typeof identifier !== "string" || !identifier.trim()) return null;
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000);
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
     const res = await fetch("/api/web-data/resolve-account", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ identifier: identifier.trim() }),
+      body: JSON.stringify({
+        identifier: identifier.trim(),
+        password: password ? password.trim() : undefined
+      }),
       signal: controller.signal
     });
     clearTimeout(timeoutId);
@@ -552,6 +558,94 @@ export async function resolveAccountDetails(identifier?: string | null): Promise
     console.warn("[WebDataSync] resolveAccountDetails notice:", e);
   }
   return null;
+}
+
+/**
+ * Authoritatively verifies subscription login credentials with backend server.
+ * Guarantees cross-browser login parity regardless of local storage state.
+ */
+export async function verifySubscriptionLoginOnServer(
+  identifier: string,
+  password: string
+): Promise<{ success: boolean; isPrimaryAdmin?: boolean; subscription?: any; account?: any; error?: string }> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    const res = await fetch("/api/web-data/verify-subscription-login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        identifier: identifier.trim(),
+        password: password.trim()
+      }),
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
+    const data = await res.json().catch(() => null);
+    if (res.ok && data && data.success) {
+      return {
+        success: true,
+        isPrimaryAdmin: data.isPrimaryAdmin,
+        subscription: data.subscription,
+        account: data.account
+      };
+    }
+    return {
+      success: false,
+      error: data?.error || (res.status === 401 ? "നൽകിയ പാസ്‌വേഡ് തെറ്റാണ്. (Incorrect Password)." : "ലോഗിൻ സാധ്യമായില്ല.")
+    };
+  } catch (e: any) {
+    console.warn("[WebDataSync] verifySubscriptionLoginOnServer offline fallback notice:", e);
+    return { success: false, error: "SERVER_UNREACHABLE" };
+  }
+}
+
+/**
+ * Changes/resets subscription password and persists authoritatively to server.
+ */
+export async function changeSubscriptionPasswordOnServer(
+  identifier: string,
+  verificationCodeOrUpi: string,
+  newPassword: string
+): Promise<{ success: boolean; message?: string; error?: string }> {
+  try {
+    const res = await fetch("/api/web-data/change-subscription-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        identifier: identifier.trim(),
+        verificationCodeOrUpi: verificationCodeOrUpi.trim(),
+        newPassword: newPassword.trim()
+      })
+    });
+    const data = await res.json().catch(() => null);
+    if (res.ok && data && data.success) {
+      return { success: true, message: data.message };
+    }
+    return { success: false, error: data?.error || "പാസ്‌വേഡ് മാറ്റാൻ കഴിഞ്ഞില്ല." };
+  } catch (e: any) {
+    console.warn("[WebDataSync] changeSubscriptionPasswordOnServer error:", e);
+    return { success: false, error: e.message };
+  }
+}
+
+/**
+ * Fetches authoritative subscriptions directly from the server.
+ */
+export async function fetchServerSubscriptionRequests(): Promise<any[]> {
+  try {
+    const res = await fetch("/api/web-data/subscriptions");
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && Array.isArray(data.subscriptions)) {
+        return data.subscriptions;
+      }
+    }
+  } catch (e) {
+    console.warn("[WebDataSync] fetchServerSubscriptionRequests notice:", e);
+  }
+  return [];
 }
 
 /**
