@@ -22,10 +22,7 @@ interface ThemeSelectorModalProps {
 
 const THEME_ICONS: Record<Theme, React.FC<{ className?: string }>> = {
   dark: Moon,
-  light: Sun,
-  neoclassical: Columns,
   baroque: Crown,
-  ethereal: Sparkles,
   anthropomorphic: Trees,
   ai_platform: Cpu
 };
@@ -35,7 +32,7 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({
   onClose
 }) => {
   const { theme, setTheme, themesList, cycleNextTheme, isSystemTheme } = useTheme();
-  const [selectedCategory, setSelectedCategory] = React.useState<"all" | "dark" | "light" | "artistic">("all");
+  const [selectedCategory, setSelectedCategory] = React.useState<"all" | "dark" | "artistic">("all");
 
   if (!isOpen) return null;
 
@@ -97,9 +94,8 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({
             <span className="text-slate-500 font-mono text-[11px] mr-1">FILTER:</span>
             {(
               [
-                { id: "all", label: "All Themes (6)" },
+                { id: "all", label: "All Themes (4)" },
                 { id: "dark", label: "Dark View" },
-                { id: "light", label: "Light View" },
                 { id: "artistic", label: "Artistic & Architectural" }
               ] as const
             ).map((cat) => (

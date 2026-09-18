@@ -55,10 +55,7 @@ interface HeaderProps {
 
 const THEME_HEADER_ICONS: Record<Theme, React.FC<{ className?: string }>> = {
   dark: Moon,
-  light: Sun,
-  neoclassical: Columns,
   baroque: Crown,
-  ethereal: Sparkles,
   anthropomorphic: Trees,
   ai_platform: Cpu
 };

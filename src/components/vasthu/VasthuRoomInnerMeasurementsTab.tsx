@@ -26,13 +26,46 @@ export const VasthuRoomInnerMeasurementsTab: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [selectedYoniFilter, setSelectedYoniFilter] = useState<number | "ALL">("ALL");
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const [measurementUnit, setMeasurementUnit] = useState<"feet" | "kol_viral" | "cm" | "meter">("feet");
 
-  // Custom Interactive Room Dimension Calculator State
+  // Custom Interactive Room Dimension Calculator State in Inches
   const [calcRoomType, setCalcRoomType] = useState<string>("Living Room / Hall");
-  const [calcLengthFt, setCalcLengthFt] = useState<number>(14);
-  const [calcLengthIn, setCalcLengthIn] = useState<number>(0);
-  const [calcWidthFt, setCalcWidthFt] = useState<number>(12);
-  const [calcWidthIn, setCalcWidthIn] = useState<number>(0);
+  const [totalLengthInches, setTotalLengthInches] = useState<number>(14 * 12);
+  const [totalWidthInches, setTotalWidthInches] = useState<number>(12 * 12);
+
+  const calcLengthFt = Math.floor(totalLengthInches / 12);
+  const calcLengthIn = totalLengthInches % 12;
+  const calcWidthFt = Math.floor(totalWidthInches / 12);
+  const calcWidthIn = totalWidthInches % 12;
+
+  // Unit Formatters
+  const formatRoomDimension = (room: RoomDimensionRecord) => {
+    switch (measurementUnit) {
+      case "kol_viral":
+        return room.kolViral;
+      case "cm":
+        return room.dimensionCm;
+      case "meter":
+        return `${(room.lengthFt * 0.3048 + room.lengthIn * 0.0254).toFixed(2)} m × ${(room.widthFt * 0.3048 + room.widthIn * 0.0254).toFixed(2)} m`;
+      case "feet":
+      default:
+        return room.dimensionLabel;
+    }
+  };
+
+  const formatRoomChuttu = (room: RoomDimensionRecord) => {
+    switch (measurementUnit) {
+      case "kol_viral":
+        return room.innerChuttuKolViral;
+      case "cm":
+        return `${room.innerChuttuCm} cm`;
+      case "meter":
+        return `${(room.innerChuttuCm / 100).toFixed(2)} m`;
+      case "feet":
+      default:
+        return `${(room.innerChuttuCm / 30.48).toFixed(1)} feet (${room.innerChuttuCm} cm)`;
+    }
+  };
 
   // Filtered room records
   const filteredRooms = useMemo(() => {
@@ -64,11 +97,11 @@ export const VasthuRoomInnerMeasurementsTab: React.FC = () => {
 
   // Live calculation of custom room dimensions
   const customCalcResult = useMemo(() => {
-    const totalLengthInches = Math.max(1, calcLengthFt * 12 + calcLengthIn);
-    const totalWidthInches = Math.max(1, calcWidthFt * 12 + calcWidthIn);
+    const lenInches = Math.max(1, totalLengthInches);
+    const widInches = Math.max(1, totalWidthInches);
 
-    const lengthCm = totalLengthInches * 2.54;
-    const widthCm = totalWidthInches * 2.54;
+    const lengthCm = lenInches * 2.54;
+    const widthCm = widInches * 2.54;
 
     // Inner perimeter: 2 * (L + W)
     const chuttuCm = Math.round(2 * (lengthCm + widthCm));
@@ -80,7 +113,7 @@ export const VasthuRoomInnerMeasurementsTab: React.FC = () => {
     const viral = totalVirals % 24;
 
     // Area
-    const areaSqFt = ((totalLengthInches * totalWidthInches) / 144).toFixed(1);
+    const areaSqFt = ((lenInches * widInches) / 144).toFixed(1);
     const areaSqM = ((lengthCm * widthCm) / 10000).toFixed(2);
 
     // Ayadi Shadvarga calculations
@@ -132,14 +165,12 @@ export const VasthuRoomInnerMeasurementsTab: React.FC = () => {
       lengthCm: Math.round(lengthCm),
       widthCm: Math.round(widthCm)
     };
-  }, [calcLengthFt, calcLengthIn, calcWidthFt, calcWidthIn]);
+  }, [totalLengthInches, totalWidthInches]);
 
   const handleApplyDimensionToCalc = (room: RoomDimensionRecord) => {
     setCalcRoomType(room.roomType);
-    setCalcLengthFt(room.lengthFt);
-    setCalcLengthIn(room.lengthIn);
-    setCalcWidthFt(room.widthFt);
-    setCalcWidthIn(room.widthIn);
+    setTotalLengthInches(room.lengthFt * 12 + room.lengthIn);
+    setTotalWidthInches(room.widthFt * 12 + room.widthIn);
 
     const calcEl = document.getElementById("room-custom-calculator-anchor");
     if (calcEl) {
@@ -179,6 +210,62 @@ export const VasthuRoomInnerMeasurementsTab: React.FC = () => {
           >
             <Printer className="w-4 h-4 text-cyan-400" />
             <span>Print Vastu Catalog</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Unit Selection Button Bar */}
+      <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <div className="p-2 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+            <Maximize2 className="w-4 h-4" />
+          </div>
+          <div>
+            <span className="text-xs font-mono font-bold text-white block">അളവ് യൂണിറ്റ് തിരഞ്ഞെടുക്കുക (Select Measurement Unit)</span>
+            <span className="text-[10px] text-slate-400">Switch global display unit for all room dimensions and inner perimeters</span>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1.5 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
+          <button
+            onClick={() => setMeasurementUnit("feet")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition cursor-pointer ${
+              measurementUnit === "feet"
+                ? "bg-cyan-500 text-slate-950 shadow"
+                : "text-slate-400 hover:text-white hover:bg-slate-900"
+            }`}
+          >
+            Feet (അടി)
+          </button>
+          <button
+            onClick={() => setMeasurementUnit("kol_viral")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition cursor-pointer ${
+              measurementUnit === "kol_viral"
+                ? "bg-cyan-500 text-slate-950 shadow"
+                : "text-slate-400 hover:text-white hover:bg-slate-900"
+            }`}
+          >
+            Kol &amp; Viral (കോൽ &amp; വിരൽ)
+          </button>
+          <button
+            onClick={() => setMeasurementUnit("cm")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition cursor-pointer ${
+              measurementUnit === "cm"
+                ? "bg-cyan-500 text-slate-950 shadow"
+                : "text-slate-400 hover:text-white hover:bg-slate-900"
+            }`}
+          >
+            Centimeter (സെ.മീ)
+          </button>
+          <button
+            onClick={() => setMeasurementUnit("meter")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition cursor-pointer ${
+              measurementUnit === "meter"
+                ? "bg-cyan-500 text-slate-950 shadow"
+                : "text-slate-400 hover:text-white hover:bg-slate-900"
+            }`}
+          >
+            Meter (മീറ്റർ)
           </button>
         </div>
       </div>
@@ -235,31 +322,122 @@ export const VasthuRoomInnerMeasurementsTab: React.FC = () => {
             <div className="grid grid-cols-2 gap-3">
               {/* Length */}
               <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-2">
-                <span className="text-[11px] font-mono text-cyan-400 font-bold block">നീളം (Length)</span>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-[10px] font-mono text-slate-400 block mb-1">Feet (അടി)</label>
-                    <input
-                      type="number"
-                      min={4}
-                      max={50}
-                      value={calcLengthFt}
-                      onChange={(e) => setCalcLengthFt(Math.max(1, parseInt(e.target.value) || 1))}
-                      className="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono text-white text-center focus:outline-none focus:border-cyan-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-mono text-slate-400 block mb-1">Inches (ഇഞ്ച്)</label>
-                    <input
-                      type="number"
-                      min={0}
-                      max={11}
-                      value={calcLengthIn}
-                      onChange={(e) => setCalcLengthIn(Math.max(0, Math.min(11, parseInt(e.target.value) || 0)))}
-                      className="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono text-white text-center focus:outline-none focus:border-cyan-500"
-                    />
-                  </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-mono text-cyan-400 font-bold">നീളം (Length)</span>
+                  <span className="text-[10px] font-mono text-cyan-300/80 bg-cyan-950/80 px-1.5 py-0.5 rounded border border-cyan-800/60 uppercase">
+                    {measurementUnit === "feet" ? "Feet" : measurementUnit === "kol_viral" ? "Kol & Viral" : measurementUnit === "cm" ? "Centimeter" : "Meter"}
+                  </span>
                 </div>
+
+                {measurementUnit === "feet" && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] font-mono text-slate-400 block mb-1">Feet (അടി)</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={50}
+                        value={calcLengthFt}
+                        onChange={(e) => {
+                          const ft = Math.max(1, parseInt(e.target.value) || 1);
+                          const inRem = totalLengthInches % 12;
+                          setTotalLengthInches(ft * 12 + inRem);
+                        }}
+                        className="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono text-white text-center focus:outline-none focus:border-cyan-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-mono text-slate-400 block mb-1">Inches (ഇഞ്ച്)</label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={11}
+                        value={calcLengthIn}
+                        onChange={(e) => {
+                          const ft = Math.floor(totalLengthInches / 12);
+                          const inRem = Math.max(0, Math.min(11, parseInt(e.target.value) || 0));
+                          setTotalLengthInches(ft * 12 + inRem);
+                        }}
+                        className="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono text-white text-center focus:outline-none focus:border-cyan-500"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {measurementUnit === "kol_viral" && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] font-mono text-slate-400 block mb-1">Kol (കോൽ)</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={30}
+                        value={Math.floor(Math.round((totalLengthInches * 2.54) / 3) / 24)}
+                        onChange={(e) => {
+                          const kol = Math.max(1, parseInt(e.target.value) || 1);
+                          const currentVirals = Math.round((totalLengthInches * 2.54) / 3);
+                          const viralRem = currentVirals % 24;
+                          const newVirals = kol * 24 + viralRem;
+                          setTotalLengthInches(Math.round((newVirals * 3) / 2.54));
+                        }}
+                        className="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono text-white text-center focus:outline-none focus:border-cyan-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-mono text-slate-400 block mb-1">Viral (വിരൽ)</label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={23}
+                        value={Math.round((totalLengthInches * 2.54) / 3) % 24}
+                        onChange={(e) => {
+                          const currentVirals = Math.round((totalLengthInches * 2.54) / 3);
+                          const kol = Math.floor(currentVirals / 24);
+                          const viralRem = Math.max(0, Math.min(23, parseInt(e.target.value) || 0));
+                          const newVirals = kol * 24 + viralRem;
+                          setTotalLengthInches(Math.round((newVirals * 3) / 2.54));
+                        }}
+                        className="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono text-white text-center focus:outline-none focus:border-cyan-500"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {measurementUnit === "cm" && (
+                  <div>
+                    <label className="text-[10px] font-mono text-slate-400 block mb-1">Centimeters (സെ.മീ)</label>
+                    <input
+                      type="number"
+                      min={50}
+                      max={1500}
+                      value={Math.round(totalLengthInches * 2.54)}
+                      onChange={(e) => {
+                        const cm = Math.max(10, parseFloat(e.target.value) || 10);
+                        setTotalLengthInches(cm / 2.54);
+                      }}
+                      className="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono text-white text-center focus:outline-none focus:border-cyan-500"
+                    />
+                  </div>
+                )}
+
+                {measurementUnit === "meter" && (
+                  <div>
+                    <label className="text-[10px] font-mono text-slate-400 block mb-1">Meters (മീറ്റർ)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min={0.5}
+                      max={15}
+                      value={Number((totalLengthInches * 2.54 / 100).toFixed(2))}
+                      onChange={(e) => {
+                        const m = Math.max(0.1, parseFloat(e.target.value) || 0.1);
+                        setTotalLengthInches((m * 100) / 2.54);
+                      }}
+                      className="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono text-white text-center focus:outline-none focus:border-cyan-500"
+                    />
+                  </div>
+                )}
+
                 <div className="text-[10px] font-mono text-slate-500 text-center">
                   ≈ {customCalcResult.lengthCm} cm
                 </div>
@@ -267,31 +445,122 @@ export const VasthuRoomInnerMeasurementsTab: React.FC = () => {
 
               {/* Width */}
               <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-2">
-                <span className="text-[11px] font-mono text-cyan-400 font-bold block">വീതി (Width)</span>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-[10px] font-mono text-slate-400 block mb-1">Feet (അടി)</label>
-                    <input
-                      type="number"
-                      min={3}
-                      max={50}
-                      value={calcWidthFt}
-                      onChange={(e) => setCalcWidthFt(Math.max(1, parseInt(e.target.value) || 1))}
-                      className="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono text-white text-center focus:outline-none focus:border-cyan-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-mono text-slate-400 block mb-1">Inches (ഇഞ്ച്)</label>
-                    <input
-                      type="number"
-                      min={0}
-                      max={11}
-                      value={calcWidthIn}
-                      onChange={(e) => setCalcWidthIn(Math.max(0, Math.min(11, parseInt(e.target.value) || 0)))}
-                      className="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono text-white text-center focus:outline-none focus:border-cyan-500"
-                    />
-                  </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-mono text-cyan-400 font-bold">വീതി (Width)</span>
+                  <span className="text-[10px] font-mono text-cyan-300/80 bg-cyan-950/80 px-1.5 py-0.5 rounded border border-cyan-800/60 uppercase">
+                    {measurementUnit === "feet" ? "Feet" : measurementUnit === "kol_viral" ? "Kol & Viral" : measurementUnit === "cm" ? "Centimeter" : "Meter"}
+                  </span>
                 </div>
+
+                {measurementUnit === "feet" && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] font-mono text-slate-400 block mb-1">Feet (അടി)</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={50}
+                        value={calcWidthFt}
+                        onChange={(e) => {
+                          const ft = Math.max(1, parseInt(e.target.value) || 1);
+                          const inRem = totalWidthInches % 12;
+                          setTotalWidthInches(ft * 12 + inRem);
+                        }}
+                        className="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono text-white text-center focus:outline-none focus:border-cyan-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-mono text-slate-400 block mb-1">Inches (ഇഞ്ച്)</label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={11}
+                        value={calcWidthIn}
+                        onChange={(e) => {
+                          const ft = Math.floor(totalWidthInches / 12);
+                          const inRem = Math.max(0, Math.min(11, parseInt(e.target.value) || 0));
+                          setTotalWidthInches(ft * 12 + inRem);
+                        }}
+                        className="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono text-white text-center focus:outline-none focus:border-cyan-500"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {measurementUnit === "kol_viral" && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] font-mono text-slate-400 block mb-1">Kol (കോൽ)</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={30}
+                        value={Math.floor(Math.round((totalWidthInches * 2.54) / 3) / 24)}
+                        onChange={(e) => {
+                          const kol = Math.max(1, parseInt(e.target.value) || 1);
+                          const currentVirals = Math.round((totalWidthInches * 2.54) / 3);
+                          const viralRem = currentVirals % 24;
+                          const newVirals = kol * 24 + viralRem;
+                          setTotalWidthInches(Math.round((newVirals * 3) / 2.54));
+                        }}
+                        className="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono text-white text-center focus:outline-none focus:border-cyan-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-mono text-slate-400 block mb-1">Viral (വിരൽ)</label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={23}
+                        value={Math.round((totalWidthInches * 2.54) / 3) % 24}
+                        onChange={(e) => {
+                          const currentVirals = Math.round((totalWidthInches * 2.54) / 3);
+                          const kol = Math.floor(currentVirals / 24);
+                          const viralRem = Math.max(0, Math.min(23, parseInt(e.target.value) || 0));
+                          const newVirals = kol * 24 + viralRem;
+                          setTotalWidthInches(Math.round((newVirals * 3) / 2.54));
+                        }}
+                        className="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono text-white text-center focus:outline-none focus:border-cyan-500"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {measurementUnit === "cm" && (
+                  <div>
+                    <label className="text-[10px] font-mono text-slate-400 block mb-1">Centimeters (സെ.മീ)</label>
+                    <input
+                      type="number"
+                      min={50}
+                      max={1500}
+                      value={Math.round(totalWidthInches * 2.54)}
+                      onChange={(e) => {
+                        const cm = Math.max(10, parseFloat(e.target.value) || 10);
+                        setTotalWidthInches(cm / 2.54);
+                      }}
+                      className="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono text-white text-center focus:outline-none focus:border-cyan-500"
+                    />
+                  </div>
+                )}
+
+                {measurementUnit === "meter" && (
+                  <div>
+                    <label className="text-[10px] font-mono text-slate-400 block mb-1">Meters (മീറ്റർ)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min={0.5}
+                      max={15}
+                      value={Number((totalWidthInches * 2.54 / 100).toFixed(2))}
+                      onChange={(e) => {
+                        const m = Math.max(0.1, parseFloat(e.target.value) || 0.1);
+                        setTotalWidthInches((m * 100) / 2.54);
+                      }}
+                      className="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono text-white text-center focus:outline-none focus:border-cyan-500"
+                    />
+                  </div>
+                )}
+
                 <div className="text-[10px] font-mono text-slate-500 text-center">
                   ≈ {customCalcResult.widthCm} cm
                 </div>
@@ -495,33 +764,34 @@ export const VasthuRoomInnerMeasurementsTab: React.FC = () => {
                   </span>
                 </div>
 
-                {/* Primary Dimension Callout */}
-                <div className="bg-slate-950 rounded-xl p-3 border border-slate-800/80 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-base font-black font-mono text-cyan-300">{room.dimensionLabel}</span>
-                    <span className="text-xs font-mono text-slate-300">{room.areaSqFt} Sq.Ft</span>
-                  </div>
-                  <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
-                    <span>{room.dimensionCm}</span>
-                    <span>{room.areaSqM} m²</span>
-                  </div>
-                  <div className="text-[10px] font-mono text-cyan-400/80 pt-1 border-t border-slate-800/60">
-                    {room.kolViral}
-                  </div>
-                </div>
-
-                {/* Metrics: Chuttu, Yoni & Direction */}
-                <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
-                  <div className="p-2 bg-slate-950/60 rounded-lg border border-slate-800/60">
-                    <span className="text-[9px] text-slate-500 block uppercase">അകച്ചുറ്റ് (Inner Perimeter)</span>
-                    <span className="text-slate-200 font-bold">{room.innerChuttuCm} cm</span>
-                    <span className="text-[9px] text-slate-400 block">{room.innerChuttuKolViral}</span>
+                {/* Minimum 5 Vasthu Measurements for Selected Room */}
+                <div className="bg-slate-950 rounded-xl p-3 border border-slate-800 space-y-2 text-xs font-mono">
+                  <div className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider border-b border-slate-800 pb-1 flex items-center justify-between">
+                    <span>പ്രധാന 5+ വാസ്തു അളവുകൾ (5+ Vasthu Measurements)</span>
+                    <span className="text-[9px] bg-cyan-950 text-cyan-300 px-1.5 py-0.5 rounded border border-cyan-800">Verified</span>
                   </div>
 
-                  <div className="p-2 bg-slate-950/60 rounded-lg border border-slate-800/60">
-                    <span className="text-[9px] text-slate-500 block uppercase">യോനി (Ayadi Yoni)</span>
-                    <span className="text-slate-200 font-bold">{room.yoniName}</span>
-                    <span className="text-[9px] text-emerald-400 block">യോനി {room.yoni}</span>
+                  <div className="space-y-1.5 text-[11px]">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400">1. റൂം അളവ് ({measurementUnit.toUpperCase()}):</span>
+                      <span className="text-cyan-300 font-bold">{formatRoomDimension(room)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400">2. അകച്ചുറ്റ് (Perimeter Chuttu):</span>
+                      <span className="text-white font-bold">{formatRoomChuttu(room)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400">3. അയാദി യോനി (Ayadi Yoni):</span>
+                      <span className="text-emerald-300 font-bold">{room.yoniName} (യോനി {room.yoni})</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400">4. തറ വിസ്തീർണ്ണം (Floor Area):</span>
+                      <span className="text-slate-200">{room.areaSqFt} Sq.Ft ({room.areaSqM} m²)</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400">5. ഉത്തമ ദിശ &amp; കോൺ:</span>
+                      <span className="text-cyan-200">{room.recommendedDirectionMl}</span>
+                    </div>
                   </div>
                 </div>
 

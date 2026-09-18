@@ -41,6 +41,14 @@ export interface BuildingRuleItem {
   keywords?: string[];
   chapter?: string;
   tables?: string[];
+  applicableOccupancies?: string[];
+}
+
+export interface RuleSearchParams {
+  ruleNumber?: string;
+  keywords?: string;
+  occupancyType?: string;
+  category?: string;
 }
 
 export const OCCUPANCY_GROUPS: OccupancyGroup[] = [
@@ -809,6 +817,188 @@ export function extractNumbers(text: string): number[] {
   return matches ? matches.map((m) => parseInt(m, 10)) : [];
 }
 
+export function searchBuildingRulesEngine(
+  params: RuleSearchParams
+): BuildingRuleItem[] {
+  const {
+    ruleNumber = "",
+    keywords = "",
+    occupancyType = "ALL",
+    category = "ALL"
+  } = params;
+
+  const cleanRuleNum = ruleNumber.trim().toLowerCase();
+  const cleanKeywords = keywords.trim().toLowerCase();
+  const occ = occupancyType.trim().toUpperCase();
+  const cat = category.trim();
+
+  const ruleNumbers = extractNumbers(cleanRuleNum);
+
+  return BUILDING_RULES_LIST.filter((item) => {
+    // 1. Category check
+    if (cat !== "ALL" && item.category !== cat) {
+      return false;
+    }
+
+    // 2. Occupancy check
+    if (occ !== "ALL") {
+      const occList = item.applicableOccupancies || ["ALL"];
+      const matchesOccDirect =
+        occList.includes(occ) || occList.includes("ALL");
+
+      const occText = [
+        item.titleMl,
+        item.titleEn,
+        item.summaryMl,
+        item.summaryEn,
+        ...(item.keywords || []),
+        ...(item.keyPointsMl || []),
+        ...(item.keyPointsEn || [])
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      const occGroupMatch =
+        occText.includes(`group ${occ.toLowerCase()}`) ||
+        occText.includes(`ഗ്രൂപ്പ് ${occ.toLowerCase()}`) ||
+        occText.includes(`group ${occ.toLowerCase()} `) ||
+        (occ === "A1" &&
+          (occText.includes("റസിഡൻഷ്യൽ") ||
+            occText.includes("residential") ||
+            occText.includes("വാസഗൃഹ") ||
+            occText.includes("dwelling") ||
+            occText.includes("house") ||
+            occText.includes("flat") ||
+            occText.includes("apartment"))) ||
+        (occ === "A2" &&
+          (occText.includes("lodge") ||
+            occText.includes("hostel") ||
+            occText.includes("resort") ||
+            occText.includes("ഹോസ്റ്റൽ") ||
+            occText.includes("ലോഡ്ജ്"))) ||
+        (occ === "B" &&
+          (occText.includes("school") ||
+            occText.includes("college") ||
+            occText.includes("education") ||
+            occText.includes("സ്കൂൾ") ||
+            occText.includes("വിദ്യാഭ്യാസ"))) ||
+        (occ === "C" &&
+          (occText.includes("hospital") ||
+            occText.includes("clinic") ||
+            occText.includes("medical") ||
+            occText.includes("ആശുപത്രി"))) ||
+        (occ === "D" &&
+          (occText.includes("assembly") ||
+            occText.includes("auditorium") ||
+            occText.includes("hall") ||
+            occText.includes("സമ്മേളന") ||
+            occText.includes("ഓഡിറ്റോറിയം"))) ||
+        (occ === "D1" &&
+          (occText.includes("theatre") ||
+            occText.includes("cinema") ||
+            occText.includes("club") ||
+            occText.includes("വിനോദ"))) ||
+        (occ === "E" &&
+          (occText.includes("office") ||
+            occText.includes("business") ||
+            occText.includes("ബാങ്ക്") ||
+            occText.includes("ഓഫീസ്"))) ||
+        (occ === "F" &&
+          (occText.includes("commercial") ||
+            occText.includes("shop") ||
+            occText.includes("mercantile") ||
+            occText.includes("കട") ||
+            occText.includes("വാണിജ്യ"))) ||
+        (occ === "G1" &&
+          (occText.includes("industrial") ||
+            occText.includes("factory") ||
+            occText.includes("വ്യവസായ"))) ||
+        (occ === "G2" &&
+          (occText.includes("hazard industrial") ||
+            occText.includes("heavy industrial"))) ||
+        (occ === "G3" &&
+          (occText.includes("farm") ||
+            occText.includes("poultry") ||
+            occText.includes("dairy") ||
+            occText.includes("ഫാം"))) ||
+        (occ === "H" &&
+          (occText.includes("storage") ||
+            occText.includes("godown") ||
+            occText.includes("warehouse") ||
+            occText.includes("ഗോഡൗൺ"))) ||
+        (occ === "I" &&
+          (occText.includes("hazardous") ||
+            occText.includes("petrol pump") ||
+            occText.includes("fuel station") ||
+            occText.includes("പെട്രോൾ"))) ||
+        (occ === "J" &&
+          (occText.includes("multiplex") ||
+            occText.includes("mall") ||
+            occText.includes("മാൾ")));
+
+      if (!matchesOccDirect && !occGroupMatch) {
+        return false;
+      }
+    }
+
+    // 3. Rule Number search (if specified)
+    if (cleanRuleNum) {
+      const itemNumbers = [
+        ...(item.ruleNumberInts || []),
+        ...extractNumbers(item.ruleNumber)
+      ];
+      const matchNum =
+        ruleNumbers.length > 0 &&
+        ruleNumbers.some((rn) => itemNumbers.includes(rn));
+      const matchRuleString = item.ruleNumber
+        .toLowerCase()
+        .includes(cleanRuleNum);
+
+      if (!matchNum && !matchRuleString) {
+        return false;
+      }
+    }
+
+    // 4. Keywords / Text search (if specified)
+    if (cleanKeywords) {
+      const tokens = cleanKeywords.split(/\s+/).filter(Boolean);
+      const searchableText = [
+        item.ruleNumber,
+        item.titleMl,
+        item.titleEn,
+        item.summaryMl,
+        item.summaryEn,
+        item.category,
+        item.chapter || "",
+        ...(item.tables || []),
+        ...(item.keywords || []),
+        ...(item.keyPointsMl || []),
+        ...(item.keyPointsEn || [])
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      const allTokensMatch = tokens.every((token) => {
+        if (/^\d+$/.test(token)) {
+          const num = parseInt(token, 10);
+          const itemNumbers = [
+            ...(item.ruleNumberInts || []),
+            ...extractNumbers(item.ruleNumber)
+          ];
+          return itemNumbers.includes(num) || searchableText.includes(token);
+        }
+        return searchableText.includes(token);
+      });
+
+      if (!allTokensMatch) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+}
+
 export function searchBuildingRules(
   query: string,
   category: string = "ALL"
@@ -830,9 +1020,9 @@ export function searchBuildingRules(
       ...extractNumbers(item.ruleNumber)
     ];
 
-    const hasNumericMatch = queryNumbers.length > 0 && queryNumbers.some((num) =>
-      itemNumbers.includes(num)
-    );
+    const hasNumericMatch =
+      queryNumbers.length > 0 &&
+      queryNumbers.some((num) => itemNumbers.includes(num));
 
     // 3. Multi-word token search
     const tokens = cleanQuery.split(/\s+/).filter(Boolean);
@@ -855,7 +1045,6 @@ export function searchBuildingRules(
       .toLowerCase();
 
     const allTokensMatch = tokens.every((token) => {
-      // If token is purely numeric, check numeric match or substring
       if (/^\d+$/.test(token)) {
         const num = parseInt(token, 10);
         return itemNumbers.includes(num) || searchableText.includes(token);
@@ -863,6 +1052,9 @@ export function searchBuildingRules(
       return searchableText.includes(token);
     });
 
-    return allTokensMatch || (queryNumbers.length > 0 && hasNumericMatch && tokens.length <= 2);
+    return (
+      allTokensMatch ||
+      (queryNumbers.length > 0 && hasNumericMatch && tokens.length <= 2)
+    );
   });
 }

@@ -153,21 +153,18 @@ html, body, #root, header, aside, main, div, section, article, nav, button, inpu
    TWILIGHT GLASS DEFAULT / DARK MODE CASCADE SPECIFICATIONS:
    Frosted translucent glass, rich twilight purple/pink glows
    ========================================================= */
-html.dark, html:not(.light):not(.neoclassical) {
+html.dark {
   color-scheme: dark;
 }
 
 html.dark body,
-html.dark #root,
-html:not(.light):not(.neoclassical) body,
-html:not(.light):not(.neoclassical) #root {
+html.dark #root {
   background: radial-gradient(circle at 50% -10%, #350849 0%, #160327 45%, #0e021a 100%) fixed, #0e021a;
   color: #fdf4ff;
 }
 
 /* Transform standard slate dark classes into Twilight Glass */
-html.dark .bg-slate-950,
-html:not(.light):not(.neoclassical) .bg-slate-950 {
+html.dark .bg-slate-950 {
   background-color: rgba(14, 2, 26, 0.85);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
@@ -178,13 +175,7 @@ html.dark .bg-slate-900\/95,
 html.dark .bg-slate-900\/90,
 html.dark .bg-slate-900\/80,
 html.dark .bg-slate-900\/60,
-html.dark .bg-slate-900\/50,
-html:not(.light):not(.neoclassical) .bg-slate-900,
-html:not(.light):not(.neoclassical) .bg-slate-900\/95,
-html:not(.light):not(.neoclassical) .bg-slate-900\/90,
-html:not(.light):not(.neoclassical) .bg-slate-900\/80,
-html:not(.light):not(.neoclassical) .bg-slate-900\/60,
-html:not(.light):not(.neoclassical) .bg-slate-900\/50 {
+html.dark .bg-slate-900\/50 {
   background-color: rgba(255, 255, 255, 0.07);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
@@ -194,11 +185,7 @@ html:not(.light):not(.neoclassical) .bg-slate-900\/50 {
 html.dark .bg-slate-800,
 html.dark .bg-slate-800\/80,
 html.dark .bg-slate-800\/50,
-html.dark .bg-slate-800\/30,
-html:not(.light):not(.neoclassical) .bg-slate-800,
-html:not(.light):not(.neoclassical) .bg-slate-800\/80,
-html:not(.light):not(.neoclassical) .bg-slate-800\/50,
-html:not(.light):not(.neoclassical) .bg-slate-800\/30 {
+html.dark .bg-slate-800\/30 {
   background-color: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -209,21 +196,13 @@ html.dark .border-slate-800,
 html.dark .border-slate-800\/80,
 html.dark .border-slate-800\/90,
 html.dark .border-slate-700,
-html.dark .border-slate-900,
-html:not(.light):not(.neoclassical) .border-slate-800,
-html:not(.light):not(.neoclassical) .border-slate-800\/80,
-html:not(.light):not(.neoclassical) .border-slate-800\/90,
-html:not(.light):not(.neoclassical) .border-slate-700,
-html:not(.light):not(.neoclassical) .border-slate-900 {
+html.dark .border-slate-900 {
   border-color: rgba(255, 255, 255, 0.14);
 }
 
 html.dark input:not([type="checkbox"]):not([type="radio"]),
 html.dark select,
-html.dark textarea,
-html:not(.light):not(.neoclassical) input:not([type="checkbox"]):not([type="radio"]),
-html:not(.light):not(.neoclassical) select,
-html:not(.light):not(.neoclassical) textarea {
+html.dark textarea {
   background-color: rgba(255, 255, 255, 0.05);
   color: #ffffff;
   border-color: rgba(255, 255, 255, 0.18);
@@ -232,9 +211,7 @@ html:not(.light):not(.neoclassical) textarea {
 }
 
 html.dark thead,
-html.dark th,
-html:not(.light):not(.neoclassical) thead,
-html:not(.light):not(.neoclassical) th {
+html.dark th {
   background-color: rgba(36, 6, 56, 0.85);
   color: #fdf4ff;
   border-color: rgba(255, 255, 255, 0.15);
@@ -440,110 +417,14 @@ html.light .bg-blueprint-grid {
    DARK MODE DESIGN SPECIFICATIONS:
    Soft white text on deep slate gray canvas (#020617 / #0f172a)
    ========================================================= */
-html.dark:not(.baroque):not(.ethereal):not(.anthropomorphic):not(.ai_platform) {
+html.dark:not(.baroque):not(.anthropomorphic):not(.ai_platform) {
   color-scheme: dark;
 }
 
-html.dark:not(.baroque):not(.ethereal):not(.anthropomorphic):not(.ai_platform) body,
-html.dark:not(.baroque):not(.ethereal):not(.anthropomorphic):not(.ai_platform) #root {
+html.dark:not(.baroque):not(.anthropomorphic):not(.ai_platform) body,
+html.dark:not(.baroque):not(.anthropomorphic):not(.ai_platform) #root {
   background-color: #020617;
   color: #f8fafc;
-}
-
-/* =========================================================
-   1. NEOCLASSICAL THEME (Parian Marble, Roman Ivory & Bronze)
-   ========================================================= */
-html.neoclassical {
-  color-scheme: light;
-}
-
-html.neoclassical body,
-html.neoclassical #root {
-  background-color: #f6f3eb;
-  color: #2a241b;
-}
-
-/* Deep Canvas / Page Body */
-html.neoclassical .bg-slate-950,
-html.neoclassical .bg-slate-950\/95,
-html.neoclassical .bg-slate-950\/90,
-html.neoclassical .bg-slate-950\/80 {
-  background-color: #ece6d8;
-  color: #2a241b;
-}
-
-/* Card Containers & Panels -> Parian Marble White */
-html.neoclassical .bg-slate-900,
-html.neoclassical .bg-slate-900\/95,
-html.neoclassical .bg-slate-900\/90,
-html.neoclassical .bg-slate-900\/80,
-html.neoclassical .bg-slate-900\/60,
-html.neoclassical .bg-slate-900\/50 {
-  background-color: #fbfaf7;
-  color: #2a241b;
-}
-
-/* Elevated Subcards & Inner Sections */
-html.neoclassical .bg-slate-800,
-html.neoclassical .bg-slate-800\/80,
-html.neoclassical .bg-slate-800\/50,
-html.neoclassical .bg-slate-800\/30 {
-  background-color: #eee7d8;
-  color: #383024;
-}
-
-/* Antique Roman Travertine & Bronze Borders */
-html.neoclassical .border-slate-800,
-html.neoclassical .border-slate-800\/80,
-html.neoclassical .border-slate-800\/90,
-html.neoclassical .border-slate-700,
-html.neoclassical .border-slate-900 {
-  border-color: #d6ccba;
-}
-
-/* Typography Hierarchy */
-html.neoclassical .text-white,
-html.neoclassical .text-slate-100,
-html.neoclassical .text-slate-200 {
-  color: #201a12;
-}
-
-html.neoclassical .text-slate-300,
-html.neoclassical .text-slate-400 {
-  color: #4a4031;
-}
-
-html.neoclassical .text-slate-500 {
-  color: #796d5a;
-}
-
-/* Inputs & Form Controls */
-html.neoclassical input:not([type="checkbox"]):not([type="radio"]),
-html.neoclassical select,
-html.neoclassical textarea {
-  background-color: #fbfaf7;
-  color: #201a12;
-  border-color: #d6ccba;
-}
-
-html.neoclassical input::placeholder,
-html.neoclassical textarea::placeholder {
-  color: #8c7f69;
-}
-
-/* Table Headings */
-html.neoclassical thead,
-html.neoclassical th {
-  background-color: #e4dcce;
-  color: #201a12;
-}
-
-html.neoclassical .bg-blueprint-grid,
-html.neoclassical .bg-blueprint-grid-dark {
-  background-size: 32px 32px;
-  background-image: 
-    linear-gradient(to right, rgba(146, 108, 46, 0.08) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(146, 108, 46, 0.08) 1px, transparent 1px);
 }
 
 /* =========================================================
@@ -642,104 +523,6 @@ html.baroque .bg-blueprint-grid-dark {
   background-image: 
     linear-gradient(to right, rgba(212, 175, 55, 0.1) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(212, 175, 55, 0.1) 1px, transparent 1px);
-}
-
-/* =========================================================
-   3. ETHEREAL THEME (Twilight Sapphire, Starlight & Aurora Mist)
-   ========================================================= */
-html.ethereal {
-  color-scheme: dark;
-}
-
-html.ethereal body,
-html.ethereal #root {
-  background-color: #060b1c;
-  color: #f1f5ff;
-}
-
-/* Deep Canvas / Page Background */
-html.ethereal .bg-slate-950,
-html.ethereal .bg-slate-950\/95,
-html.ethereal .bg-slate-950\/90,
-html.ethereal .bg-slate-950\/80 {
-  background-color: #030612;
-  color: #f1f5ff;
-}
-
-/* Main Cards & Panels -> Deep Celestial Sapphire */
-html.ethereal .bg-slate-900,
-html.ethereal .bg-slate-900\/95,
-html.ethereal .bg-slate-900\/90,
-html.ethereal .bg-slate-900\/80,
-html.ethereal .bg-slate-900\/60,
-html.ethereal .bg-slate-900\/50 {
-  background-color: #0c1432;
-  color: #f1f5ff;
-}
-
-/* Elevated Subcards */
-html.ethereal .bg-slate-800,
-html.ethereal .bg-slate-800\/80,
-html.ethereal .bg-slate-800\/50,
-html.ethereal .bg-slate-800\/30 {
-  background-color: #14214e;
-  color: #e2eafc;
-}
-
-/* Celestial Ice & Starlight Borders */
-html.ethereal .border-slate-800,
-html.ethereal .border-slate-800\/80,
-html.ethereal .border-slate-800\/90,
-html.ethereal .border-slate-700,
-html.ethereal .border-slate-900 {
-  border-color: #24356d;
-}
-
-/* Luminous Starlight Typography */
-html.ethereal .text-white,
-html.ethereal .text-slate-100,
-html.ethereal .text-slate-200 {
-  color: #ffffff;
-}
-
-html.ethereal .text-slate-300 {
-  color: #d1dcfa;
-}
-
-html.ethereal .text-slate-400 {
-  color: #9cb1e8;
-}
-
-html.ethereal .text-slate-500 {
-  color: #6a82c4;
-}
-
-/* Form Controls in Ethereal Mode */
-html.ethereal input:not([type="checkbox"]):not([type="radio"]),
-html.ethereal select,
-html.ethereal textarea {
-  background-color: #060b1c;
-  color: #ffffff;
-  border-color: #24356d;
-}
-
-html.ethereal input::placeholder,
-html.ethereal textarea::placeholder {
-  color: #5d75ba;
-}
-
-html.ethereal thead,
-html.ethereal th {
-  background-color: #101c44;
-  color: #a5c4ff;
-}
-
-html.ethereal .bg-blueprint-grid,
-html.ethereal .bg-blueprint-grid-dark {
-  background-size: 32px 32px;
-  background-image: 
-    linear-gradient(to right, rgba(56, 189, 248, 0.12) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(167, 139, 250, 0.12) 1px, transparent 1px);
 }
 
 /* =========================================================

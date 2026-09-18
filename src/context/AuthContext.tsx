@@ -463,49 +463,62 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Listen for Firebase Auth State Changes with 24-hour Session Check & Offline Error Resilience
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setLoading(true);
+    if (!auth) {
+      setLoading(false);
+      return;
+    }
 
-      const savedEmailSession = localStorage.getItem("vasthusilpy_email_user");
-      if (!currentUser) {
-        if (!savedEmailSession) {
-          setUser(null);
-          setAuthorized(false);
-          setIsPrimaryAdmin(false);
-        }
-        setLoading(false);
-        return;
-      }
+    let unsubscribe: () => void = () => {};
+    try {
+      unsubscribe = onAuthStateChanged(
+        auth,
+        async (currentUser) => {
+          setLoading(true);
 
-      const email = currentUser.email ? currentUser.email.toLowerCase().trim() : "";
+          const savedEmailSession = localStorage.getItem("vasthusilpy_email_user");
+          if (!currentUser) {
+            if (!savedEmailSession) {
+              setUser(null);
+              setAuthorized(false);
+              setIsPrimaryAdmin(false);
+            }
+            setLoading(false);
+            return;
+          }
 
-      if (!email) {
-        await firebaseSignOut(auth).catch(() => {});
-        setUser(null);
-        setAuthorized(false);
-        setIsPrimaryAdmin(false);
-        setAuthError("ഇമെയിൽ വിവരങ്ങൾ ലഭ്യമല്ല. ദയവായി അക്കൗണ്ട് തിരിഞ്ഞെടുത്ത് ലോഗിൻ ചെയ്യുക.");
-        setLoading(false);
-        return;
-      }
+          const email = currentUser.email ? currentUser.email.toLowerCase().trim() : "";
 
-      // Check 24-Hour Session Expiry
-      const googleLoginTimeStr = localStorage.getItem("vasthusilpy_google_login_time");
-      if (googleLoginTimeStr) {
-        const loginTime = parseInt(googleLoginTimeStr, 10);
-        if (Date.now() - loginTime > ONE_DAY_MS) {
-          await firebaseSignOut(auth).catch(() => {});
-          localStorage.removeItem("vasthusilpy_google_login_time");
-          setUser(null);
-          setAuthorized(false);
-          setIsPrimaryAdmin(false);
-          setAuthError("24 മണിക്കൂർ സെഷൻ കാലാവധി കഴിഞ്ഞു (24-Hour Session Expired). ദയവായി വീണ്ടും ലോഗിൻ ചെയ്യുക.");
-          setLoading(false);
-          return;
-        }
-      } else {
-        localStorage.setItem("vasthusilpy_google_login_time", Date.now().toString());
-      }
+          if (!email) {
+            if (auth) {
+              await firebaseSignOut(auth).catch(() => {});
+            }
+            setUser(null);
+            setAuthorized(false);
+            setIsPrimaryAdmin(false);
+            setAuthError("ഇമെയിൽ വിവരങ്ങൾ ലഭ്യമല്ല. ദയവായി അക്കൗണ്ട് തിരിഞ്ഞെടുത്ത് ലോഗിൻ ചെയ്യുക.");
+            setLoading(false);
+            return;
+          }
+
+          // Check 24-Hour Session Expiry
+          const googleLoginTimeStr = localStorage.getItem("vasthusilpy_google_login_time");
+          if (googleLoginTimeStr) {
+            const loginTime = parseInt(googleLoginTimeStr, 10);
+            if (Date.now() - loginTime > ONE_DAY_MS) {
+              if (auth) {
+                await firebaseSignOut(auth).catch(() => {});
+              }
+              localStorage.removeItem("vasthusilpy_google_login_time");
+              setUser(null);
+              setAuthorized(false);
+              setIsPrimaryAdmin(false);
+              setAuthError("24 മണിക്കൂർ സെഷൻ കാലാവധി കഴിഞ്ഞു (24-Hour Session Expired). ദയവായി വീണ്ടും ലോഗിൻ ചെയ്യുക.");
+              setLoading(false);
+              return;
+            }
+          } else {
+            localStorage.setItem("vasthusilpy_google_login_time", Date.now().toString());
+          }
 
       const isAdmin = isPrimaryAdminEmail(email);
 
@@ -667,7 +680,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         // Unauthorized User (not in registered emails list)
-        await firebaseSignOut(auth).catch(() => {});
+        if (auth) {
+          await firebaseSignOut(auth).catch(() => {});
+        }
         setUser(null);
         setAuthorized(false);
         setIsPrimaryAdmin(false);
@@ -676,10 +691,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         );
         setLoading(false);
       }
+    }, (error) => {
+      console.warn("onAuthStateChanged observer error:", error);
+      setLoading(false);
     });
+  } catch (err) {
+    console.warn("Failed to subscribe to auth state changes:", err);
+    setLoading(false);
+  }
 
-    return () => unsubscribe();
-  }, []);
+  return () => {
+    if (typeof unsubscribe === "function") {
+      unsubscribe();
+    }
+  };
+}, []);
 
   // Interval check to auto logout user when 24 hours pass while app is active
   useEffect(() => {
@@ -1152,20 +1178,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOutUser = async () => {
     setLoading(true);
     try {
+      // 1. Clear local storage tokens immediately
       localStorage.removeItem("vasthusilpy_email_user");
       localStorage.removeItem("vasthusilpy_subscription_user");
       localStorage.removeItem("vasthusilpy_google_login_time");
       localStorage.removeItem("vasthusilpy_authenticator_login");
+
+      // 2. Unconditionally clear local session states
       setEmailUser(null);
       setActiveTabPermissions({ ...DEFAULT_FULL_PERMISSIONS });
-      await firebaseSignOut(auth);
       setUser(null);
       setAuthorized(false);
       setIsPrimaryAdmin(false);
       setIsSubscriberLogin(false);
       setAuthError(null);
+
+      // 3. Gracefully attempt Firebase Auth sign-out if available
+      if (auth) {
+        try {
+          await firebaseSignOut(auth);
+        } catch (authErr: any) {
+          // Catch any "Database is closing" / IndexedDB aborts in iframe sandboxes without logging as error
+          console.warn("Firebase Auth sign-out notice (offline/closing):", authErr?.message || authErr);
+        }
+      }
     } catch (err: any) {
-      console.error("Sign Out Error:", err);
+      console.warn("Sign Out notice:", err?.message || err);
     } finally {
       setLoading(false);
     }

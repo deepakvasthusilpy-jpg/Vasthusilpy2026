@@ -54,9 +54,9 @@ try {
   console.warn("Firebase Firestore offline fallback notice:", e);
 }
 
-export const auth = authInstance;
-export const storage = storageInstance;
-export const db = dbInstance;
+export const auth = authInstance || null;
+export const storage = storageInstance || null;
+export const db = dbInstance || null;
 
 export const FIREBASE_PROJECT_ID = (firebaseConfig as any)?.projectId || "vasthusilpy-web";
 

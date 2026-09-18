@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ThachuRow } from "../types";
-import { X, CheckCircle2, AlertTriangle, Info, Copy, Check } from "lucide-react";
+import { X, CheckCircle2, AlertTriangle, Info, Copy, Check, ChevronDown } from "lucide-react";
 
 interface RowDetailModalProps {
   row: ThachuRow | null;
@@ -8,7 +8,22 @@ interface RowDetailModalProps {
 }
 
 export const RowDetailModal: React.FC<RowDetailModalProps> = ({ row, onClose }) => {
-  const [copied, setCopied] = React.useState(false);
+  const [copied, setCopied] = useState<boolean>(false);
+  const [dragOffset, setDragOffset] = useState<number>(0);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+
+  const startYRef = useRef<number | null>(null);
+  const currentYRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
 
   if (!row) return null;
 
@@ -31,12 +46,78 @@ export const RowDetailModal: React.FC<RowDetailModalProps> = ({ row, onClose }) 
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // Touch event handlers for mobile swipe down
+  const handleTouchStart = (e: React.TouchEvent) => {
+    startYRef.current = e.touches[0].clientY;
+    currentYRef.current = e.touches[0].clientY;
+    setIsDragging(true);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (startYRef.current === null) return;
+    currentYRef.current = e.touches[0].clientY;
+    const delta = currentYRef.current - startYRef.current;
+    if (delta > 0) {
+      setDragOffset(delta);
+    } else {
+      setDragOffset(0);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (startYRef.current !== null && currentYRef.current !== null) {
+      const delta = currentYRef.current - startYRef.current;
+      if (delta > 85) {
+        onClose();
+        return;
+      }
+    }
+    startYRef.current = null;
+    currentYRef.current = null;
+    setDragOffset(0);
+    setIsDragging(false);
+  };
+
   return (
-    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-slate-900 rounded-2xl max-w-2xl w-full border border-slate-800 shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+    <div
+      id="row-detail-modal-backdrop"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+      className="fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 transition-opacity duration-200"
+    >
+      <div
+        id="row-detail-modal-container"
+        style={{
+          transform: dragOffset > 0 ? `translateY(${dragOffset}px)` : "translateY(0)",
+          transition: isDragging ? "none" : "transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
+        }}
+        className="bg-slate-900 rounded-t-3xl sm:rounded-2xl max-w-2xl w-full border-t sm:border border-slate-800 shadow-2xl overflow-hidden will-change-transform"
+      >
+        {/* Mobile Swipe Bar / Drag Pill */}
+        <div
+          id="row-detail-modal-drag-handle"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          className="w-full pt-3 pb-1 flex flex-col items-center justify-center sm:hidden bg-slate-950 cursor-grab active:cursor-grabbing select-none"
+        >
+          <div className="w-12 h-1.5 bg-slate-600 hover:bg-slate-500 rounded-full transition-colors" />
+          <div className="flex items-center gap-1 text-[10px] text-slate-500 font-mono mt-1">
+            <ChevronDown className="w-3 h-3 text-slate-400 animate-bounce" />
+            <span>Swipe down to dismiss</span>
+          </div>
+        </div>
+
         {/* Header */}
         <div
-          className={`p-5 flex items-center justify-between text-slate-950 font-mono ${
+          id="row-detail-modal-header"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          className={`p-4 sm:p-5 flex items-center justify-between text-slate-950 font-mono select-none ${
             row.phalam === "ഉത്തമം"
               ? "bg-emerald-500"
               : row.phalam === "മധ്യമം"
@@ -44,31 +125,34 @@ export const RowDetailModal: React.FC<RowDetailModalProps> = ({ row, onClose }) 
               : "bg-rose-500"
           }`}
         >
-          <div className="flex items-center gap-3">
-            {row.phalam === "ഉത്തമം" && <CheckCircle2 className="w-7 h-7 text-slate-950" />}
-            {row.phalam === "മധ്യമം" && <Info className="w-7 h-7 text-slate-950" />}
-            {row.phalam === "അധമം" && <AlertTriangle className="w-7 h-7 text-slate-950" />}
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            {row.phalam === "ഉത്തമം" && <CheckCircle2 className="w-6 h-6 sm:w-7 sm:h-7 text-slate-950 shrink-0" />}
+            {row.phalam === "മധ്യമം" && <Info className="w-6 h-6 sm:w-7 sm:h-7 text-slate-950 shrink-0" />}
+            {row.phalam === "അധമം" && <AlertTriangle className="w-6 h-6 sm:w-7 sm:h-7 text-slate-950 shrink-0" />}
             <div>
-              <div className="text-xs uppercase font-bold text-slate-900 tracking-wider">
+              <div className="text-[10px] sm:text-xs uppercase font-bold text-slate-900 tracking-wider">
                 TECHNICAL SPECIFICATION #{row.id}
               </div>
-              <h3 className="text-xl font-bold font-mono">
+              <h3 className="text-base sm:text-xl font-bold font-mono">
                 കോൽ {row.kol} വിരൽ {row.viral} — {row.phalam}
               </h3>
             </div>
           </div>
 
           <button
+            id="row-detail-modal-close-btn"
+            type="button"
             onClick={onClose}
-            className="p-1.5 hover:bg-slate-950/20 rounded-lg text-slate-950 transition cursor-pointer"
+            className="p-1.5 hover:bg-slate-950/20 active:bg-slate-950/30 rounded-lg text-slate-950 transition cursor-pointer"
+            title="Close"
           >
             <X className="w-6 h-6" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto font-mono text-xs">
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className="p-4 sm:p-6 space-y-4 max-h-[65vh] sm:max-h-[75vh] overflow-y-auto font-mono text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">
             <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
               <span className="text-slate-400 block text-[11px]">KOL & VIRAL</span>
               <strong className="text-sm font-bold text-white">
@@ -129,7 +213,7 @@ export const RowDetailModal: React.FC<RowDetailModalProps> = ({ row, onClose }) 
               <strong className="text-sm font-bold text-slate-200">{row.azhchaFullName}</strong>
             </div>
 
-            <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
+            <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 col-span-2 sm:col-span-1">
               <span className="text-slate-400 block text-[11px]">PAKSHANTHARA VYAYAM</span>
               <strong className="text-sm font-bold text-slate-200">{row.pakshantharaVyayam}</strong>
             </div>
@@ -144,15 +228,19 @@ export const RowDetailModal: React.FC<RowDetailModalProps> = ({ row, onClose }) 
         {/* Footer */}
         <div className="p-4 bg-slate-950 border-t border-slate-800 flex items-center justify-end gap-3 font-mono">
           <button
+            id="row-detail-modal-copy-btn"
+            type="button"
             onClick={handleCopy}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-cyan-300 rounded-xl text-xs font-bold transition cursor-pointer border border-slate-700"
+            className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-cyan-300 rounded-xl text-xs font-bold transition cursor-pointer border border-slate-700"
           >
             {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4 text-cyan-400" />}
             <span>{copied ? "COPIED TO CLIPBOARD" : "COPY DETAILS"}</span>
           </button>
           <button
+            id="row-detail-modal-footer-close-btn"
+            type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition cursor-pointer border border-slate-700"
+            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-white rounded-xl text-xs font-bold transition cursor-pointer border border-slate-700"
           >
             CLOSE
           </button>
@@ -161,3 +249,4 @@ export const RowDetailModal: React.FC<RowDetailModalProps> = ({ row, onClose }) 
     </div>
   );
 };
+
