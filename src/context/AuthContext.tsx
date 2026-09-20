@@ -2,7 +2,9 @@ import React, { createContext, useContext, useState, useEffect, useRef } from "r
 import {
   User,
   signOut as firebaseSignOut,
-  onAuthStateChanged
+  onAuthStateChanged,
+  signInWithPopup,
+  GoogleAuthProvider
 } from "firebase/auth";
 import {
   doc,
@@ -142,6 +144,7 @@ interface AuthContextType {
   }) => Promise<boolean>;
   loginWithPassword: (userIdInput: string, passwordInput: string) => Promise<boolean>;
   loginWithSubscription: (emailOrPhoneInput: string, passwordInput: string) => Promise<boolean>;
+  loginWithGoogle: () => Promise<boolean>;
   submitSubscriptionRequest: (details: {
     fullName: string;
     email: string;
@@ -1173,6 +1176,72 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     return true;
+  };
+
+  const loginWithGoogle = async (): Promise<boolean> => {
+    setAuthError(null);
+    if (!auth) {
+      throw new Error("Firebase Auth is not initialized.");
+    }
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const firebaseUser = result.user;
+      const email = firebaseUser.email || "";
+      const displayName = firebaseUser.displayName || email.split("@")[0];
+      const photoURL = firebaseUser.photoURL || "";
+      const isAdmin = isPrimaryAdminEmail(email);
+
+      const emailUserObj: EmailUser = {
+        email,
+        displayName,
+        role: isAdmin ? "primary_admin" : "authorized_user",
+        loginTimestamp: Date.now(),
+        photoURL,
+        authMethod: "google_oauth",
+        lastLoginAt: new Date().toISOString()
+      };
+
+      setUser(firebaseUser);
+      setEmailUser(emailUserObj);
+      setAuthorized(true);
+      setIsPrimaryAdmin(isAdmin);
+      setIsSubscriberLogin(false);
+
+      localStorage.setItem("vasthusilpy_email_user", JSON.stringify(emailUserObj));
+      localStorage.setItem("vasthusilpy_authorized", "true");
+      localStorage.setItem("vasthusilpy_is_primary_admin", isAdmin ? "true" : "false");
+      localStorage.setItem("vasthusilpy_google_login_time", Date.now().toString());
+
+      if (db) {
+        try {
+          const docId = emailToDocId(email);
+          await setDoc(doc(db, "users", docId), {
+            email,
+            displayName,
+            photoURL,
+            role: isAdmin ? "primary_admin" : "authorized_user",
+            lastLoginAt: new Date().toISOString(),
+            authMethod: "google_oauth"
+          }, { merge: true });
+        } catch (e) {
+          console.warn("Firestore user sync notice:", e);
+        }
+      }
+
+      try {
+        await pullAndHydrateWebDataFromServer(email);
+        await performFullWebDataSync();
+      } catch (syncErr) {
+        console.warn("Google post-login sync notice:", syncErr);
+      }
+
+      return true;
+    } catch (err: any) {
+      console.error("Google login error:", err);
+      setAuthError(err?.message || "Google Sign-In failed.");
+      throw err;
+    }
   };
 
   const signOutUser = async () => {
@@ -2208,6 +2277,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signUpUser,
         loginWithPassword,
         loginWithSubscription,
+        loginWithGoogle,
         submitSubscriptionRequest,
         loginWithGoogleAuthenticator,
         sendEmailOtp,
