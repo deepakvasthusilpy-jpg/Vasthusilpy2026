@@ -43,7 +43,7 @@ import { EstimateSheetTab } from "./components/estimate/EstimateSheetTab";
 import { StageCompletionCertificateTab } from "./components/estimate/StageCompletionCertificateTab";
 import { ItemsOfWorkTab } from "./components/estimate/ItemsOfWorkTab";
 import { EngineerSealsTab } from "./components/estimate/EngineerSealsTab";
-import { ValuationTab } from "./components/estimate/valuation/ValuationTab";
+
 import { AIEstimateBoqTab } from "./components/aiAgent/AIEstimateBoqTab";
 import { ReadOnlyEstimateVerificationPortal } from "./components/estimate/ReadOnlyEstimateVerificationPortal";
 import { PublicAgreementVerificationPortal } from "./components/construction/PublicAgreementVerificationPortal";
@@ -914,7 +914,6 @@ export default function App() {
                   }}
                   onCreateNewProject={handleCreateNewEstimate}
                   onGoToSeals={() => setActiveTab("engineer_seals")}
-                  onGoToValuation={() => setActiveTab("valuation")}
                   onOpenStageCertificates={(proj) => {
                     setSelectedEstimateProject(proj);
                     setActiveTab("stage_completion_certificate");
@@ -959,7 +958,7 @@ export default function App() {
                 />
               )}
 
-              {activeTab === "valuation" && <ValuationTab />}
+
 
               {activeTab === "stage_completion_certificate" && (
                 <StageCompletionCertificateTab

@@ -452,7 +452,6 @@ export interface ValuationCertificate {
 export type EstimateTabType =
   | "estimate_dashboard"
   | "estimate_sheet"
-  | "valuation"
   | "stage_completion_certificate"
   | "items_of_work"
   | "engineer_seals";

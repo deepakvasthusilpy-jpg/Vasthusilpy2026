@@ -36,7 +36,8 @@ import {
   Sparkles,
   ShieldCheck,
   CheckCheck,
-  ChevronRight
+  ChevronRight,
+  LogOut
 } from "lucide-react";
 
 export const LoginPage: React.FC = () => {
@@ -44,6 +45,7 @@ export const LoginPage: React.FC = () => {
     loginWithGoogleAuthenticator,
     loginWithSubscription,
     loginWithGoogle,
+    signOutUser,
     submitSubscriptionRequest,
     changeSubscriptionPassword,
     subscriptionRequests,
@@ -436,6 +438,22 @@ export const LoginPage: React.FC = () => {
   return (
     <div className="relative min-h-screen w-full flex flex-col items-center justify-between p-4 sm:p-6 overflow-hidden bg-gradient-to-b from-[#0e021a] via-[#240638] to-[#590d45] select-none font-sans">
       
+      {/* Top Right Logout Button */}
+      <div className="absolute top-4 right-4 z-30">
+        <button
+          type="button"
+          onClick={async () => {
+            await signOutUser();
+            setLocalSuccess("Session cleared successfully.");
+          }}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-mono backdrop-blur-md shadow-lg transition-all cursor-pointer"
+          title="Sign out / Clear Session"
+        >
+          <LogOut className="w-3.5 h-3.5 text-pink-300" />
+          <span>Logout / Reset</span>
+        </button>
+      </div>
+
       {/* 1. SCENIC TWILIGHT ARTWORK BACKGROUND (Matches Mockup Image) */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
         {/* Soft Ambient Aurora Gradients */}

@@ -35,7 +35,6 @@ interface EstimateDashboardProps {
   onSelectProject: (proj: EstimateProject) => void;
   onCreateNewProject: () => void;
   onGoToSeals: () => void;
-  onGoToValuation?: () => void;
   onOpenStageCertificates?: (proj: EstimateProject) => void;
   onDeleteProject?: (id: string) => void;
   onDuplicateProject?: (proj: EstimateProject) => void;
@@ -49,7 +48,6 @@ export const EstimateDashboard: React.FC<EstimateDashboardProps> = ({
   onSelectProject,
   onCreateNewProject,
   onGoToSeals,
-  onGoToValuation,
   onOpenStageCertificates,
   onDeleteProject,
   onDuplicateProject,
@@ -231,15 +229,7 @@ export const EstimateDashboard: React.FC<EstimateDashboardProps> = ({
               <span>Engineer & Seals</span>
             </button>
 
-            {onGoToValuation && (
-              <button
-                onClick={onGoToValuation}
-                className="bg-slate-900 hover:bg-slate-800 text-cyan-300 border border-cyan-800/80 px-3.5 py-2 rounded-xl text-xs font-mono font-bold flex items-center gap-2 transition-colors cursor-pointer"
-              >
-                <FileCheck2 className="w-4 h-4 text-cyan-400" />
-                <span>Valuation (Sec 28B/28C)</span>
-              </button>
-            )}
+
 
             <button
               onClick={onCreateNewProject}

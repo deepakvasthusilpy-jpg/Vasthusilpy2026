@@ -225,7 +225,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       subTabs: [
         { id: "estimate_dashboard" as TabType, label: "Estimate Dashboard", sub: "ESTIMATES DIRECTORY", icon: FileSpreadsheet },
         { id: "estimate_sheet" as TabType, label: "Detailed Rate Estimate (BOQ)", sub: "QUANTITY SURVEY SHEET", icon: Calculator, badge: "BOQ" },
-        { id: "valuation" as TabType, label: "Valuation Certificate", sub: "BANK & GOVT VALUATION", icon: FileCheck2, badge: "GOVT" },
         { id: "stage_completion_certificate" as TabType, label: "Stage & Completion Certificate", sub: "CERTIFICATES", icon: Award, badge: "CERT" },
         { id: "items_of_work" as TabType, label: "Items of Work Library", sub: "WORK ITEM MASTER", icon: ListPlus, badge: "LIBRARY" },
         { id: "engineer_seals" as TabType, label: "Engineer Seals & Signatures", sub: "OFFICIAL CERTIFICATION", icon: ShieldCheck }

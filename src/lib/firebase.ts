@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getAuth, inMemoryPersistence, setPersistence } from "firebase/auth";
 import { getFirestore, initializeFirestore, setLogLevel } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import firebaseConfig from "../../firebase-applet-config.json";
@@ -12,6 +12,7 @@ let dbInstance: any;
 try {
   app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
   authInstance = getAuth(app);
+  setPersistence(authInstance, inMemoryPersistence).catch(() => {});
 } catch (e) {
   console.warn("Firebase Auth initialization notice:", e);
 }
