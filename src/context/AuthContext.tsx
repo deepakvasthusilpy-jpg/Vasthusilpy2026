@@ -144,7 +144,6 @@ interface AuthContextType {
   }) => Promise<boolean>;
   loginWithPassword: (userIdInput: string, passwordInput: string) => Promise<boolean>;
   loginWithSubscription: (emailOrPhoneInput: string, passwordInput: string) => Promise<boolean>;
-  loginWithGoogle: () => Promise<boolean>;
   submitSubscriptionRequest: (details: {
     fullName: string;
     email: string;
@@ -1176,160 +1175,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     return true;
-  };
-
-  const loginWithGoogle = async (): Promise<boolean> => {
-    setAuthError(null);
-    if (!auth) {
-      throw new Error("Firebase Auth is not initialized.");
-    }
-
-    const isInIframe = (() => {
-      try {
-        return window.self !== window.top;
-      } catch {
-        return true;
-      }
-    })();
-
-    if (isInIframe) {
-      const fallbackEmail = "deepak.vasthusilpy@gmail.com";
-      const emailUserObj: EmailUser = {
-        email: fallbackEmail,
-        displayName: "Deepak (Vasthusilpy Admin)",
-        role: "primary_admin",
-        loginTimestamp: Date.now(),
-        photoURL: "",
-        authMethod: "google_oauth_iframe",
-        lastLoginAt: new Date().toISOString()
-      };
-
-      setEmailUser(emailUserObj);
-      setAuthorized(true);
-      setIsPrimaryAdmin(true);
-      setIsSubscriberLogin(false);
-
-      localStorage.setItem("vasthusilpy_email_user", JSON.stringify(emailUserObj));
-      localStorage.setItem("vasthusilpy_authorized", "true");
-      localStorage.setItem("vasthusilpy_is_primary_admin", "true");
-      localStorage.setItem("vasthusilpy_google_login_time", Date.now().toString());
-
-      try {
-        await pullAndHydrateWebDataFromServer(fallbackEmail);
-        await performFullWebDataSync();
-      } catch (syncErr) {
-        console.warn("Google iframe login sync notice:", syncErr);
-      }
-      return true;
-    }
-
-    try {
-      const provider = new GoogleAuthProvider();
-      let firebaseUser: any = null;
-      try {
-        const result = await signInWithPopup(auth, provider);
-        firebaseUser = result.user;
-      } catch (popupErr: any) {
-        console.warn("Popup sign-in notice / iframe restriction fallback:", popupErr?.message || popupErr);
-        // Fallback session for sandboxed environments or popup blocks
-        const fallbackEmail = "deepak.vasthusilpy@gmail.com";
-        const emailUserObj: EmailUser = {
-          email: fallbackEmail,
-          displayName: "Deepak (Vasthusilpy Admin)",
-          role: "primary_admin",
-          loginTimestamp: Date.now(),
-          photoURL: "",
-          authMethod: "google_oauth_fallback",
-          lastLoginAt: new Date().toISOString()
-        };
-
-        setEmailUser(emailUserObj);
-        setAuthorized(true);
-        setIsPrimaryAdmin(true);
-        setIsSubscriberLogin(false);
-
-        localStorage.setItem("vasthusilpy_email_user", JSON.stringify(emailUserObj));
-        localStorage.setItem("vasthusilpy_authorized", "true");
-        localStorage.setItem("vasthusilpy_is_primary_admin", "true");
-        localStorage.setItem("vasthusilpy_google_login_time", Date.now().toString());
-
-        try {
-          await pullAndHydrateWebDataFromServer(fallbackEmail);
-          await performFullWebDataSync();
-        } catch (syncErr) {
-          console.warn("Google fallback sync notice:", syncErr);
-        }
-        return true;
-      }
-
-      const email = firebaseUser.email || "";
-      const cleanEmail = email.toLowerCase().trim();
-      if (cleanEmail !== "deepak.vasthusilpy@gmail.com" && cleanEmail !== "dibindeepak1@gmail.com") {
-        await firebaseSignOut(auth).catch(() => {});
-        setAuthError("Unauthorized Google account. Only deepak.vasthusilpy@gmail.com is authorized to sign in with Google.");
-        return false;
-      }
-
-      const displayName = firebaseUser.displayName || email.split("@")[0];
-      const photoURL = firebaseUser.photoURL || "";
-      const isAdmin = isPrimaryAdminEmail(email);
-
-      const emailUserObj: EmailUser = {
-        email,
-        displayName,
-        role: isAdmin ? "primary_admin" : "authorized_user",
-        loginTimestamp: Date.now(),
-        photoURL,
-        authMethod: "google_oauth",
-        lastLoginAt: new Date().toISOString()
-      };
-
-      setUser(firebaseUser);
-      setEmailUser(emailUserObj);
-      setAuthorized(true);
-      setIsPrimaryAdmin(isAdmin);
-      setIsSubscriberLogin(false);
-
-      localStorage.setItem("vasthusilpy_email_user", JSON.stringify(emailUserObj));
-      localStorage.setItem("vasthusilpy_authorized", "true");
-      localStorage.setItem("vasthusilpy_is_primary_admin", isAdmin ? "true" : "false");
-      localStorage.setItem("vasthusilpy_google_login_time", Date.now().toString());
-
-      if (db) {
-        try {
-          const docId = emailToDocId(email);
-          await setDoc(doc(db, "users", docId), {
-            email,
-            displayName,
-            photoURL,
-            role: isAdmin ? "primary_admin" : "authorized_user",
-            lastLoginAt: new Date().toISOString(),
-            authMethod: "google_oauth"
-          }, { merge: true });
-        } catch (e) {
-          console.warn("Firestore user sync notice:", e);
-        }
-      }
-
-      try {
-        await pullAndHydrateWebDataFromServer(email);
-        await performFullWebDataSync();
-      } catch (syncErr) {
-        console.warn("Google post-login sync notice:", syncErr);
-      }
-
-      return true;
-    } catch (err: any) {
-      console.warn("Google login notice:", err?.message || err);
-      let friendlyMsg = err?.message || "Google Sign-In failed.";
-      if (err?.code === "auth/cancelled-popup-request" || err?.code === "auth/popup-closed-by-user") {
-        friendlyMsg = "Google Sign-In window was closed. Please click 'Sign in with Google' again when ready.";
-      } else if (err?.code === "auth/popup-blocked") {
-        friendlyMsg = "Google Sign-In popup was blocked by your browser. Please allow popups for this site and try again.";
-      }
-      setAuthError(friendlyMsg);
-      return false;
-    }
   };
 
   const signOutUser = async () => {
@@ -2365,7 +2210,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signUpUser,
         loginWithPassword,
         loginWithSubscription,
-        loginWithGoogle,
         submitSubscriptionRequest,
         loginWithGoogleAuthenticator,
         sendEmailOtp,
