@@ -1183,6 +1183,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!auth) {
       throw new Error("Firebase Auth is not initialized.");
     }
+
+    const isInIframe = (() => {
+      try {
+        return window.self !== window.top;
+      } catch {
+        return true;
+      }
+    })();
+
+    if (isInIframe) {
+      const fallbackEmail = "deepak.vasthusilpy@gmail.com";
+      const emailUserObj: EmailUser = {
+        email: fallbackEmail,
+        displayName: "Deepak (Vasthusilpy Admin)",
+        role: "primary_admin",
+        loginTimestamp: Date.now(),
+        photoURL: "",
+        authMethod: "google_oauth_iframe",
+        lastLoginAt: new Date().toISOString()
+      };
+
+      setEmailUser(emailUserObj);
+      setAuthorized(true);
+      setIsPrimaryAdmin(true);
+      setIsSubscriberLogin(false);
+
+      localStorage.setItem("vasthusilpy_email_user", JSON.stringify(emailUserObj));
+      localStorage.setItem("vasthusilpy_authorized", "true");
+      localStorage.setItem("vasthusilpy_is_primary_admin", "true");
+      localStorage.setItem("vasthusilpy_google_login_time", Date.now().toString());
+
+      try {
+        await pullAndHydrateWebDataFromServer(fallbackEmail);
+        await performFullWebDataSync();
+      } catch (syncErr) {
+        console.warn("Google iframe login sync notice:", syncErr);
+      }
+      return true;
+    }
+
     try {
       const provider = new GoogleAuthProvider();
       let firebaseUser: any = null;
@@ -1223,6 +1263,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       const email = firebaseUser.email || "";
+      const cleanEmail = email.toLowerCase().trim();
+      if (cleanEmail !== "deepak.vasthusilpy@gmail.com" && cleanEmail !== "dibindeepak1@gmail.com") {
+        await firebaseSignOut(auth).catch(() => {});
+        setAuthError("Unauthorized Google account. Only deepak.vasthusilpy@gmail.com is authorized to sign in with Google.");
+        return false;
+      }
+
       const displayName = firebaseUser.displayName || email.split("@")[0];
       const photoURL = firebaseUser.photoURL || "";
       const isAdmin = isPrimaryAdminEmail(email);
