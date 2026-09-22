@@ -34,8 +34,10 @@ import {
   Smartphone,
   Monitor,
   Cloud,
-  RefreshCw
+  RefreshCw,
+  Database
 } from "lucide-react";
+import { OfflineBackupRestoreModal } from "./office/crm/OfflineBackupRestoreModal";
 import { useViewMode } from "../context/ViewModeContext";
 import {
   performFullWebDataSync,
@@ -76,6 +78,8 @@ export const Header: React.FC<HeaderProps> = ({
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [isThemeMenuOpen, setIsThemeMenuOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [isBackupRestoreOpen, setIsBackupRestoreOpen] = useState(false);
+  const [backupInitialTab, setBackupInitialTab] = useState<"backup" | "snapshots" | "restore" | "health">("backup");
   const [isWebSyncing, setIsWebSyncing] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
   const [lastSyncStr, setLastSyncStr] = useState<string>(() => formatSyncTimestamp(getLastWebDataSyncTime()));
@@ -142,7 +146,18 @@ export const Header: React.FC<HeaderProps> = ({
       setLastSyncStr(formatSyncTimestamp(e?.detail?.syncedAt || getLastWebDataSyncTime()));
     };
     window.addEventListener("vasthusilpy_web_data_synced", handleSyncEvent);
-    return () => window.removeEventListener("vasthusilpy_web_data_synced", handleSyncEvent);
+    const handleOpenBackupModal = (e: any) => {
+      if (e?.detail?.tab) {
+        setBackupInitialTab(e.detail.tab);
+      }
+      setIsBackupRestoreOpen(true);
+    };
+    window.addEventListener("vasthusilpy_open_backup_modal", handleOpenBackupModal);
+
+    return () => {
+      window.removeEventListener("vasthusilpy_web_data_synced", handleSyncEvent);
+      window.removeEventListener("vasthusilpy_open_backup_modal", handleOpenBackupModal);
+    };
   }, []);
 
   // Close popovers on click outside
@@ -515,6 +530,26 @@ export const Header: React.FC<HeaderProps> = ({
                 </span>
               </button>
 
+              {/* BACKUP & RESTORE BUTTON ON TOP OF WEBPAGE */}
+              <button
+                id="btn-top-backup-restore"
+                type="button"
+                onClick={() => {
+                  setBackupInitialTab("backup");
+                  setIsBackupRestoreOpen(true);
+                }}
+                title="Vasthusilpy Backup & Restore Center - Data Storage Vault, Construction, Quotation, Estimator, CRM, Invoice Payments & Personal Bills"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full border border-purple-500/50 hover:border-purple-400 bg-purple-950/70 hover:bg-purple-900/80 text-purple-200 hover:text-white text-xs font-mono font-bold transition-all shadow-sm cursor-pointer backdrop-blur-md"
+              >
+                <Database className="w-3.5 h-3.5 text-purple-300 shrink-0" />
+                <span className="uppercase text-[11px] font-black tracking-wider hidden sm:inline">
+                  BACKUP
+                </span>
+                <span className="uppercase text-[10px] font-black tracking-wider sm:hidden">
+                  BKUP
+                </span>
+              </button>
+
               {isPrimaryAdmin && (
                 <button
                   onClick={() => setIsManageUsersOpen(true)}
@@ -590,6 +625,12 @@ export const Header: React.FC<HeaderProps> = ({
       <ThemeSelectorModal
         isOpen={isThemeModalOpen}
         onClose={() => setIsThemeModalOpen(false)}
+      />
+
+      <OfflineBackupRestoreModal
+        isOpen={isBackupRestoreOpen}
+        onClose={() => setIsBackupRestoreOpen(false)}
+        initialTab={backupInitialTab}
       />
     </>
   );

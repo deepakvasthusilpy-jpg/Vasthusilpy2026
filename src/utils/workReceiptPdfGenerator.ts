@@ -81,18 +81,344 @@ function drawVectorScissors(doc: jsPDF, cx: number, cy: number, scale = 1) {
 }
 
 /**
+ * Draws a single complete work receipt at the given Y coordinate.
+ * Exactly identical layout, proportions, typography, and dimensions
+ * for both CUSTOMER COPY and OFFICE COPY.
+ * 
+ * Sized to fit precisely in 40% of A4 page with 2 receipts stacked vertically.
+ */
+function drawSingleReceipt(
+  doc: jsPDF,
+  project: CrmProject,
+  invoice: Invoice | undefined,
+  startY: number,
+  receiptHeight: number,
+  copyType: "CUSTOMER COPY" | "OFFICE COPY",
+  receiptNo: string,
+  entryDate: string,
+  logoPng: string,
+  qrDataUrl: string
+) {
+  const pageWidth = 210;
+  const margin = 7;
+  const contentWidth = pageWidth - margin * 2; // 196 mm
+  const endY = startY + receiptHeight;
+
+  // 1. Outer Receipt Border
+  doc.setFillColor(255, 255, 255);
+  doc.setDrawColor(203, 213, 225); // slate-300
+  doc.setLineWidth(0.3);
+  doc.roundedRect(margin, startY, contentWidth, receiptHeight, 1.2, 1.2, "FD");
+
+  // Top Accent Header Band
+  const headerBandHeight = 8.8;
+  const isCustomer = copyType === "CUSTOMER COPY";
+  doc.setFillColor(isCustomer ? 248 : 241, isCustomer ? 250 : 245, isCustomer ? 252 : 249);
+  doc.roundedRect(margin, startY, contentWidth, headerBandHeight, 1.2, 1.2, "F");
+  // Retouch bottom corners of header band
+  doc.rect(margin, startY + headerBandHeight - 1.5, contentWidth, 1.5, "F");
+
+  // Bottom line of header band
+  doc.setDrawColor(203, 213, 225);
+  doc.setLineWidth(0.3);
+  doc.line(margin, startY + headerBandHeight, margin + contentWidth, startY + headerBandHeight);
+
+  // 2. Logo & Office Branding
+  const logoSize = 7.2;
+  const logoX = margin + 2.2;
+  const logoY = startY + 0.8;
+
+  if (logoPng) {
+    try {
+      doc.addImage(logoPng, "PNG", logoX, logoY, logoSize, logoSize);
+    } catch {
+      // Fallback vector emblem
+      doc.setFillColor(185, 28, 28);
+      doc.circle(logoX + logoSize / 2, logoY + logoSize / 2, logoSize / 2, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(6);
+      doc.text("VS", logoX + logoSize / 2, logoY + 4.8, { align: "center" });
+    }
+  } else {
+    doc.setFillColor(185, 28, 28);
+    doc.circle(logoX + logoSize / 2, logoY + logoSize / 2, logoSize / 2, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(6);
+    doc.text("VS", logoX + logoSize / 2, logoY + 4.8, { align: "center" });
+  }
+
+  // Office Details Text
+  const textX = logoX + logoSize + 2.5;
+  doc.setTextColor(185, 28, 28); // Vasthusilpy Red
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.2);
+  doc.text("VASTHUSILPY ARCHITECTURAL & ENGINEERING CONSULTANTS", textX, startY + 3.2);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(4.8);
+  doc.setTextColor(51, 65, 85); // slate-700
+  doc.text("Architectural Plans • 3D Elevation • KPBR & K-SMART Approvals • Structural Valuation • Estimates", textX, startY + 5.5);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(4.2);
+  doc.setTextColor(71, 85, 105);
+  doc.text("Near Panchayath Office, Keralassery, Palakkad - 678641 | Ph: +91 7012383137, 9747995961 | deepak.vasthusilpy@gmail.com", textX, startY + 7.8);
+
+  // 3. Top Right Badge (CUSTOMER COPY vs OFFICE COPY)
+  const badgeWidth = 40;
+  const badgeX = margin + contentWidth - badgeWidth - 2;
+  const badgeY = startY + 1.0;
+  const badgeHeight = 6.8;
+
+  doc.setFillColor(isCustomer ? 238 : 254, isCustomer ? 242 : 242, isCustomer ? 255 : 242);
+  doc.setDrawColor(isCustomer ? 99 : 185, isCustomer ? 102 : 28, isCustomer ? 241 : 28);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(badgeX, badgeY, badgeWidth, badgeHeight, 0.8, 0.8, "FD");
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(6.0);
+  doc.setTextColor(isCustomer ? 67 : 153, isCustomer ? 56 : 27, isCustomer ? 202 : 27);
+  doc.text(copyType, badgeX + badgeWidth / 2, badgeY + 2.8, { align: "center" });
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(5.8);
+  doc.setTextColor(185, 28, 28);
+  doc.text(`${receiptNo} • ${entryDate}`, badgeX + badgeWidth / 2, badgeY + 5.6, { align: "center" });
+
+  // 4. Main Body: Left (Particulars & Financials) + Right (Clean QR Code with NO instruction below)
+  const y = startY + headerBandHeight + 1.2;
+  const qrBoxWidth = 35;
+  const leftBoxWidth = contentWidth - qrBoxWidth - 4; // 196 - 35 - 4 = 157 mm
+  const qrBoxX = margin + leftBoxWidth + 3;
+
+  // --- LEFT CARD: Client Particulars & Work Scope (Height = 22.5 mm) ---
+  const particularsHeight = 21.0;
+  doc.setFillColor(255, 255, 255);
+  doc.setDrawColor(226, 232, 240);
+  doc.setLineWidth(0.25);
+  doc.roundedRect(margin + 1, y, leftBoxWidth, particularsHeight, 0.8, 0.8, "FD");
+
+  // Row 1: Client Name, Phone, Location & Lead
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(5.5);
+  doc.setTextColor(71, 85, 105);
+  doc.text("CLIENT:", margin + 3, y + 3.8);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.2);
+  doc.setTextColor(15, 23, 42);
+  const clientName = project.clientName || "Client";
+  doc.text(clientName.length > 22 ? clientName.slice(0, 20) + "..." : clientName, margin + 17, y + 3.8);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(5.5);
+  doc.setTextColor(71, 85, 105);
+  doc.text("PHONE:", margin + 62, y + 3.8);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(6.2);
+  doc.setTextColor(15, 23, 42);
+  doc.text(project.clientPhone || "+91 9747995961", margin + 74, y + 3.8);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(5.5);
+  doc.setTextColor(71, 85, 105);
+  doc.text("SITE:", margin + 106, y + 3.8);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6.0);
+  doc.setTextColor(30, 41, 59);
+  const loc = project.location || "Palakkad, Kerala";
+  doc.text(loc.length > 22 ? loc.slice(0, 20) + "..." : loc, margin + 116, y + 3.8);
+
+  // Row 2: Work Title
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(5.5);
+  doc.setTextColor(71, 85, 105);
+  doc.text("WORK:", margin + 3, y + 8.2);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(6.8);
+  doc.setTextColor(185, 28, 28);
+  const workTitle = project.title || "Civil Architectural Work";
+  doc.text(workTitle.length > 55 ? workTitle.slice(0, 53) + "..." : workTitle, margin + 17, y + 8.2);
+
+  // Row 3: Description Snippet
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(5.2);
+  doc.setTextColor(71, 85, 105);
+  const rawDesc = project.description || "Vasthu planning, 3D architectural drawings & K-SMART municipal submission.";
+  const cleanDesc = rawDesc.replace(/[\n\r]+/g, " ");
+  const descSnippet = cleanDesc.length > 100 ? cleanDesc.slice(0, 98) + "..." : cleanDesc;
+  doc.text(descSnippet, margin + 3, y + 12.5);
+
+  // Row 4: Status, Due Date, Subtasks & Assigned Lead
+  const totalSubtasks = (project.subTasks || []).length;
+  const completedSubtasks = (project.subTasks || []).filter((s) => s.completed).length;
+  const statusLabel = project.status || "REGISTERED";
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(5.5);
+  doc.setTextColor(185, 28, 28);
+  doc.text(`STATUS: ${statusLabel}`, margin + 3, y + 17.5);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(5.5);
+  doc.setTextColor(71, 85, 105);
+  doc.text("DUE:", margin + 48, y + 17.5);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(5.8);
+  doc.setTextColor(15, 23, 42);
+  doc.text(project.dueDate || "As Scheduled", margin + 57, y + 17.5);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(5.5);
+  doc.setTextColor(14, 116, 144);
+  doc.text(`Subtasks: ${completedSubtasks}/${totalSubtasks}`, margin + 92, y + 17.5);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(5.5);
+  doc.setTextColor(71, 85, 105);
+  doc.text("LEAD:", margin + 124, y + 17.5);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(5.8);
+  doc.setTextColor(14, 116, 144);
+  doc.text(project.assignee || "DEEPAK", margin + 135, y + 17.5);
+
+  // --- FINANCIAL STATEMENT BOX (WITH ADVANCE PAYMENT PROVISION) ---
+  const finY = y + particularsHeight + 1.5;
+  const finHeight = 16.5;
+
+  doc.setFillColor(255, 255, 255);
+  doc.setDrawColor(226, 232, 240);
+  doc.setLineWidth(0.25);
+  doc.roundedRect(margin + 1, finY, leftBoxWidth, finHeight, 0.8, 0.8, "FD");
+
+  // Calculate amounts with Advance Payment Provision
+  const billAmount = invoice?.grandTotal || project.estimatedAmount || 0;
+  const advanceAmount = project.advancePayment || invoice?.advancePayment || 0;
+  const totalPaid = (invoice?.totalPaid !== undefined && invoice.totalPaid > 0)
+    ? invoice.totalPaid
+    : (advanceAmount > 0 ? advanceAmount : (invoice?.totalPaid || 0));
+  const balanceDue = invoice?.balanceDue !== undefined
+    ? invoice.balanceDue
+    : Math.max(0, billAmount - totalPaid);
+
+  // 4-Column Financial Metric Grid (Total Bill, Advance Paid, Total Paid, Balance Due)
+  const colWidth = (leftBoxWidth - 5) / 4;
+  const metricY = finY + 1.2;
+
+  // 1. Total Bill
+  doc.setFillColor(248, 250, 252);
+  doc.setDrawColor(226, 232, 240);
+  doc.roundedRect(margin + 2, metricY, colWidth, 9.2, 0.6, 0.6, "FD");
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(4.6);
+  doc.setTextColor(100, 116, 139);
+  doc.text("TOTAL BILL", margin + 2 + colWidth / 2, metricY + 3.0, { align: "center" });
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(6.8);
+  doc.setTextColor(15, 23, 42);
+  doc.text(`₹${billAmount.toLocaleString("en-IN")}`, margin + 2 + colWidth / 2, metricY + 7.2, { align: "center" });
+
+  // 2. Advance Paid
+  doc.setFillColor(240, 253, 244); // light emerald
+  doc.setDrawColor(187, 247, 208);
+  doc.roundedRect(margin + 3 + colWidth, metricY, colWidth, 9.2, 0.6, 0.6, "FD");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(4.6);
+  doc.setTextColor(21, 128, 61); // emerald-700
+  doc.text("ADVANCE PAID", margin + 3 + colWidth + colWidth / 2, metricY + 3.0, { align: "center" });
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(6.8);
+  doc.setTextColor(21, 128, 61);
+  doc.text(`₹${advanceAmount.toLocaleString("en-IN")}`, margin + 3 + colWidth + colWidth / 2, metricY + 7.2, { align: "center" });
+
+  // 3. Total Paid
+  doc.setFillColor(240, 253, 250); // teal-50
+  doc.setDrawColor(204, 251, 241);
+  doc.roundedRect(margin + 4 + colWidth * 2, metricY, colWidth, 9.2, 0.6, 0.6, "FD");
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(4.6);
+  doc.setTextColor(13, 148, 136); // teal-600
+  doc.text("TOTAL PAID", margin + 4 + colWidth * 2 + colWidth / 2, metricY + 3.0, { align: "center" });
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(6.8);
+  doc.setTextColor(15, 118, 110);
+  doc.text(`₹${totalPaid.toLocaleString("en-IN")}`, margin + 4 + colWidth * 2 + colWidth / 2, metricY + 7.2, { align: "center" });
+
+  // 4. Balance Due
+  const hasBalance = balanceDue > 0;
+  doc.setFillColor(hasBalance ? 254 : 240, hasBalance ? 242 : 253, hasBalance ? 242 : 244);
+  doc.setDrawColor(hasBalance ? 254 : 187, hasBalance ? 202 : 247, hasBalance ? 202 : 208);
+  doc.roundedRect(margin + 5 + colWidth * 3, metricY, colWidth, 9.2, 0.6, 0.6, "FD");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(4.6);
+  doc.setTextColor(hasBalance ? 185 : 21, hasBalance ? 28 : 128, hasBalance ? 28 : 61);
+  doc.text("BALANCE DUE", margin + 5 + colWidth * 3 + colWidth / 2, metricY + 3.0, { align: "center" });
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(6.8);
+  doc.setTextColor(hasBalance ? 185 : 21, hasBalance ? 28 : 128, hasBalance ? 28 : 61);
+  doc.text(hasBalance ? `₹${balanceDue.toLocaleString("en-IN")}` : "NIL (PAID)", margin + 5 + colWidth * 3 + colWidth / 2, metricY + 7.2, { align: "center" });
+
+  // Advance Payment Mode / Note
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(4.8);
+  doc.setTextColor(71, 85, 105);
+  if (advanceAmount > 0) {
+    const advMode = project.advancePaymentMode || "Cash / UPI";
+    const advDate = project.advancePaymentDate || entryDate;
+    const advRef = project.advancePaymentRef ? `Ref: ${project.advancePaymentRef}` : "";
+    doc.text(`Advance Receipt: ₹${advanceAmount.toLocaleString("en-IN")} via ${advMode} on ${advDate} ${advRef}`.trim(), margin + 3, finY + 13.8);
+  } else {
+    doc.text("UPI Payment: 7012383137@okbizaxis / 9567627277@naviaxis | Bank: SBI, Keralassery", margin + 3, finY + 13.8);
+  }
+
+  // --- RIGHT BOX: CLEAN QR CODE (STRICTLY NO INSTRUCTION TEXT BELOW QR) ---
+  const qrBoxHeight = particularsHeight + finHeight + 1.5; // 21 + 16.5 + 1.5 = 39.0 mm
+  doc.setFillColor(255, 255, 255);
+  doc.setDrawColor(226, 232, 240);
+  doc.setLineWidth(0.25);
+  doc.roundedRect(qrBoxX, y, qrBoxWidth, qrBoxHeight, 0.8, 0.8, "FD");
+
+  // Render QR Code centered in the box (without any text below it)
+  if (qrDataUrl) {
+    try {
+      const qrSize = 34.0;
+      const qrX = qrBoxX + (qrBoxWidth - qrSize) / 2;
+      const qrY = y + (qrBoxHeight - qrSize) / 2;
+      doc.addImage(qrDataUrl, "PNG", qrX, qrY, qrSize, qrSize);
+    } catch (e) {
+      console.warn("QR render failed:", e);
+    }
+  }
+
+  // 5. Bottom Footer Signoff & Copy Label
+  const footerY = endY - 1.8;
+  doc.setDrawColor(226, 232, 240);
+  doc.setLineWidth(0.2);
+  doc.line(margin + 2, endY - 3.2, margin + contentWidth - 2, endY - 3.2);
+
+  doc.setFont("helvetica", "italic");
+  doc.setFontSize(4.4);
+  doc.setTextColor(100, 116, 139);
+  doc.text("Official Vasthusilpy Work Receipt & Project Acknowledgement • Computer Generated", margin + 3, footerY);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(4.6);
+  doc.setTextColor(isCustomer ? 67 : 153, isCustomer ? 56 : 27, isCustomer ? 202 : 27);
+  doc.text(`--- ${copyType} ---`, margin + contentWidth - 3, footerY, { align: "right" });
+}
+
+/**
  * Generates an official vector PDF Work Receipt for a CRM project.
  * 
- * Strict Layout Mandate:
- * - Printed strictly on a VERTICAL (PORTRAIT) A4 sheet (210mm × 297mm).
- * - Receipt occupies ONLY 20% OF THE TOP OF THE A4 SHEET (0mm to ~59.4mm).
- * - Small Vasthusilpy logo on top with office details.
- * - Highlighted in bold: Client Name, Work Title, and Receipt No (starting with VS000001).
- * - Bill details, payment details, and entry date.
- * - File tracking QR code on the right.
- * - Scissor cut symbol & dashed line exactly below the receipt at the 20% mark (59.4mm).
- * - Bottom 80% of the A4 sheet is left clean and blank for easy cutting.
- * - No instructions, no text links, no working stages, no signature blocks.
+ * Strict User Requirements:
+ * - Exactly 2 receipts one below another on the SAME SIZE.
+ * - Top Receipt: CUSTOMER RECEIPT (CUSTOMER COPY).
+ * - Bottom Receipt: OFFICE RECEIPT (OFFICE COPY).
+ * - Separated by a clear scissor cut line in the middle.
+ * - Integrated provision for Advance Payment, Total Bill, and Balance Due.
  */
 export const generateWorkReceiptPdfBlob = async (
   project: CrmProject,
@@ -105,14 +431,13 @@ export const generateWorkReceiptPdfBlob = async (
   });
 
   const pageWidth = 210;
-  const pageHeight = 297;
-  const margin = 7;
-  const contentWidth = pageWidth - margin * 2; // 196 mm
+  const margin = 8;
+  const contentWidth = pageWidth - margin * 2; // 194 mm
 
-  // 1. Ensure sequential receipt number (VS000001, VS000002, etc.)
+  // 1. Sequential receipt number (VS000001, VS000002, etc.)
   const receiptNo = getOrAssignReceiptNumber(project);
 
-  // Format Entry Date
+  // 2. Format Entry Date
   let entryDate = project.createdAt || new Date().toISOString().split("T")[0];
   try {
     const d = new Date(entryDate);
@@ -123,326 +448,92 @@ export const generateWorkReceiptPdfBlob = async (
     // keep default
   }
 
-  // Financial details
-  const billAmount = invoice?.grandTotal || project.estimatedAmount || 0;
-  const paidAmount = invoice?.totalPaid || 0;
-  const balanceDue = invoice ? (invoice.balanceDue || 0) : Math.max(0, billAmount - paidAmount);
-
-  // ==========================================
-  // TOP OFFICE DETAILS & SMALL LOGO (Y = 3.2 to 12.8 mm)
-  // ==========================================
+  // 3. Prepare Logo PNG and QR Data URL
   const logoPng = await getVasthusilpyLogoPng();
-  const logoSize = 8.5; // Small logo as requested
-  const logoX = margin;
-  const logoY = 3.5;
-
-  if (logoPng) {
-    try {
-      doc.addImage(logoPng, "PNG", logoX, logoY, logoSize, logoSize);
-    } catch {
-      // Fallback vector circular emblem if image fails
-      doc.setFillColor(230, 0, 0);
-      doc.circle(logoX + logoSize / 2, logoY + logoSize / 2, logoSize / 2, "F");
-      doc.setTextColor(255, 255, 255);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(6);
-      doc.text("VA", logoX + logoSize / 2, logoY + 5.2, { align: "center" });
-    }
-  } else {
-    // Fallback vector circular emblem
-    doc.setFillColor(230, 0, 0);
-    doc.circle(logoX + logoSize / 2, logoY + logoSize / 2, logoSize / 2, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(6);
-    doc.text("VA", logoX + logoSize / 2, logoY + 5.2, { align: "center" });
-  }
-
-  // Office Details text beside small logo
-  const textX = logoX + logoSize + 2.5;
-  doc.setTextColor(185, 28, 28); // Vasthusilpy Red
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(8.5);
-  doc.text("VASTHUSILPY ARCHITECTURAL & ENGINEERING CONSULTANTS", textX, 6.2);
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(5.5);
-  doc.setTextColor(71, 85, 105);
-  doc.text("Civil Architectural Consultancy • Planning • 3D • K-SMART Approvals • Valuation", textX, 9.2);
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(5.5);
-  doc.setTextColor(15, 23, 42);
-  doc.text("Near Panchayath Office, Keralassery, Palakkad - 678641 | Ph: +91 7012383137, 9747995961 | deepak.vasthusilpy@gmail.com", textX, 12.0);
-
-  // Top Right Badge: WORK RECEIPT (Y = 3.5 to 13.0)
-  const badgeWidth = 36;
-  const badgeX = pageWidth - margin - badgeWidth;
-  doc.setFillColor(241, 245, 249);
-  doc.setDrawColor(203, 213, 225);
-  doc.setLineWidth(0.3);
-  doc.roundedRect(badgeX, 3.5, badgeWidth, 9.5, 1, 1, "FD");
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(6.5);
-  doc.setTextColor(15, 23, 42);
-  doc.text("WORK RECEIPT", badgeX + badgeWidth / 2, 6.7, { align: "center" });
-
-  doc.setFontSize(7.5);
-  doc.setTextColor(185, 28, 28);
-  // Highlight Receipt No in bold
-  doc.text(receiptNo, badgeX + badgeWidth / 2, 9.8, { align: "center" });
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(5);
-  doc.setTextColor(71, 85, 105);
-  doc.text(`ENTRY: ${entryDate}`, badgeX + badgeWidth / 2, 12.2, { align: "center" });
-
-  // Divider line below header
-  doc.setDrawColor(203, 213, 225);
-  doc.setLineWidth(0.35);
-  doc.line(margin, 13.8, pageWidth - margin, 13.8);
-
-  // =========================================================================
-  // BODY SECTION: LEFT PARTICULARS & RIGHT QR CODE (Y = 15.0 to 53.0 mm)
-  // =========================================================================
-  const qrColWidth = 36;
-  const leftColWidth = contentWidth - qrColWidth - 3; // 196 - 36 - 3 = 157 mm
-  const qrColX = margin + leftColWidth + 3; // 7 + 157 + 3 = 167 mm
-
-  // --- 1. RECEIPT METADATA BAR (Y = 15.0 to 19.5, height = 4.5 mm) ---
-  doc.setFillColor(248, 250, 252);
-  doc.setDrawColor(226, 232, 240);
-  doc.setLineWidth(0.25);
-  doc.roundedRect(margin, 15.0, leftColWidth, 4.5, 0.8, 0.8, "FD");
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(6.5);
-  doc.setTextColor(71, 85, 105);
-  doc.text("RECEIPT NO:", margin + 2.5, 18.2);
-
-  // Highlight Receipt No in BOLD
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(7.5);
-  doc.setTextColor(15, 23, 42);
-  doc.text(receiptNo, margin + 20, 18.2);
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(6.5);
-  doc.setTextColor(71, 85, 105);
-  doc.text("ENTRY DATE:", margin + 55, 18.2);
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(6.5);
-  doc.setTextColor(15, 23, 42);
-  doc.text(entryDate, margin + 73, 18.2);
-
-  // Status Badge
-  const statusColors: Record<string, string> = {
-    COMPLETED: "COMPLETED",
-    IN_PROGRESS: "IN PROGRESS",
-    PENDING: "REGISTERED",
-    ON_HOLD: "ON HOLD",
-    CANCELLED: "CANCELLED"
-  };
-  const statusLabel = statusColors[project.status] || project.status || "ACTIVE";
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(6.5);
-  doc.setTextColor(14, 116, 144);
-  doc.text(`[ STATUS: ${statusLabel} ]`, margin + leftColWidth - 3, 18.2, { align: "right" });
-
-  // --- 2. CLIENT DETAILS & WORK DETAILS (Y = 20.5 to 37.5, height = 17.0 mm) ---
-  doc.setFillColor(255, 255, 255);
-  doc.setDrawColor(226, 232, 240);
-  doc.setLineWidth(0.25);
-  doc.roundedRect(margin, 20.5, leftColWidth, 17.0, 1, 1, "FD");
-
-  // Client Details Row
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(6.5);
-  doc.setTextColor(71, 85, 105);
-  doc.text("Client Name:", margin + 2.5, 24.2);
-
-  // Highlight Client Name in BOLD
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(7.5);
-  doc.setTextColor(15, 23, 42);
-  const clientName = project.clientName || "Client";
-  doc.text(clientName.length > 25 ? clientName.slice(0, 23) + "..." : clientName, margin + 20, 24.2);
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(6.5);
-  doc.setTextColor(71, 85, 105);
-  doc.text("Phone:", margin + 75, 24.2);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(15, 23, 42);
-  doc.text(project.clientPhone || "+91 9747995961", margin + 85, 24.2);
-
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(71, 85, 105);
-  doc.text("Location:", margin + 118, 24.2);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(15, 23, 42);
-  const loc = project.location || "Palakkad, Kerala";
-  doc.text(loc.length > 18 ? loc.slice(0, 16) + "..." : loc, margin + 130, 24.2);
-
-  // Work Details Row
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(6.5);
-  doc.setTextColor(71, 85, 105);
-  doc.text("Work / Project:", margin + 2.5, 28.5);
-
-  // Highlight Work in BOLD
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(7.5);
-  doc.setTextColor(15, 23, 42);
-  const workTitle = project.title || "Civil Architectural Work";
-  doc.text(workTitle.length > 65 ? workTitle.slice(0, 63) + "..." : workTitle, margin + 20, 28.5);
-
-  // Work Scope Row
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(6);
-  doc.setTextColor(71, 85, 105);
-  doc.text("Work Scope:", margin + 2.5, 32.5);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(51, 65, 85);
-  const desc = project.description || "Architectural Drawing, 3D Elevation & Municipal Approval";
-  doc.text(desc.length > 75 ? desc.slice(0, 73) + "..." : desc, margin + 20, 32.5);
-
-  // Lead & Target Date Row
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(6);
-  doc.setTextColor(71, 85, 105);
-  doc.text("Assigned Lead:", margin + 2.5, 36.2);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(15, 23, 42);
-  doc.text(project.assignee || "Deepak V", margin + 20, 36.2);
-
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(71, 85, 105);
-  doc.text("Target Due Date:", margin + 75, 36.2);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(15, 23, 42);
-  doc.text(project.dueDate || "As Scheduled", margin + 98, 36.2);
-
-  // --- 3. BILL DETAILS AND PAYMENT DETAILS (Y = 38.5 to 53.0, height = 14.5 mm) ---
-  doc.setFillColor(248, 250, 252);
-  doc.setDrawColor(203, 213, 225);
-  doc.setLineWidth(0.25);
-  doc.roundedRect(margin, 38.5, leftColWidth, 14.5, 1, 1, "FD");
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(5.5);
-  doc.setTextColor(100, 116, 139);
-  doc.text("BILL DETAILS & PAYMENT DETAILS", margin + 2.5, 41.5);
-
-  // Col 1: Total Bill
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(5.5);
-  doc.setTextColor(71, 85, 105);
-  doc.text("Total Bill Amount:", margin + 2.5, 45.2);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(8);
-  doc.setTextColor(15, 23, 42);
-  doc.text(`INR ${Number(billAmount).toLocaleString("en-IN")}`, margin + 2.5, 49.0);
-
-  // Col 2: Amount Paid
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(5.5);
-  doc.setTextColor(71, 85, 105);
-  doc.text("Amount Paid:", margin + 55, 45.2);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(8);
-  doc.setTextColor(16, 185, 129); // Emerald
-  doc.text(`INR ${Number(paidAmount).toLocaleString("en-IN")}`, margin + 55, 49.0);
-
-  // Col 3: Balance Due
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(5.5);
-  doc.setTextColor(71, 85, 105);
-  doc.text("Balance Due:", margin + 105, 45.2);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(8);
-  doc.setTextColor(balanceDue > 0 ? 220 : 16, balanceDue > 0 ? 38 : 185, balanceDue > 0 ? 38 : 129);
-  doc.text(balanceDue <= 0 ? "INR 0.00 (PAID)" : `INR ${Number(balanceDue).toLocaleString("en-IN")}`, margin + 105, 49.0);
-
-  // Sub-note: Linked Invoice info
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(5);
-  doc.setTextColor(100, 116, 139);
-  const invLabel = invoice?.invoiceNumber ? `Linked Invoice #${invoice.invoiceNumber}` : (project.invoiceId ? `Linked Invoice #${project.invoiceId}` : "Invoice Pending");
-  doc.text(`Status: ${balanceDue <= 0 ? "Settled" : (paidAmount > 0 ? "Partially Paid" : "Payment Due")} | ${invLabel}`, margin + 2.5, 52.0);
-
-  // --- 4. RIGHT CARD: FILE TRACKING QR CODE (Y = 15.0 to 53.0, height = 38.0 mm) ---
-  doc.setFillColor(255, 255, 255);
-  doc.setDrawColor(203, 213, 225);
-  doc.setLineWidth(0.25);
-  doc.roundedRect(qrColX, 15.0, qrColWidth, 38.0, 1, 1, "FD");
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(6);
-  doc.setTextColor(15, 23, 42);
-  doc.text("FILE TRACKING QR", qrColX + qrColWidth / 2, 18.5, { align: "center" });
-
-  // Generate and embed tracking QR code
   const portalUrl = getClientProjectPortalUrl(project.id);
-  const qrSize = 25;
-  const qrX = qrColX + (qrColWidth - qrSize) / 2;
-  const qrY = 19.8;
-
+  let qrDataUrl = "";
   try {
-    const qrDataUrl = await QRCode.toDataURL(portalUrl, {
+    qrDataUrl = await QRCode.toDataURL(portalUrl, {
       width: 250,
       margin: 1,
       color: {
         dark: "#0f172a",
-        light: "#ffffff"
+        light: "#ffffff",
       },
-      errorCorrectionLevel: "M"
     });
-    doc.addImage(qrDataUrl, "PNG", qrX, qrY, qrSize, qrSize);
   } catch (err) {
-    console.error("Failed to generate tracking QR code:", err);
+    console.error("Failed to generate QR Code for Work Receipt:", err);
   }
 
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(6);
-  doc.setTextColor(15, 23, 42);
-  doc.text("SCAN TO TRACK FILE", qrColX + qrColWidth / 2, 48.0, { align: "center" });
+  // 4. Calculate receipt heights for exactly 2 receipts on top 40% of A4 (297mm total height)
+  // 40% of 297mm = 118.8mm.
+  // Each receipt height = 52.0 mm
+  // Top receipt: 5.0mm -> 57.0mm
+  // Cut line: 60.2mm
+  // Bottom receipt: 63.4mm -> 115.4mm (~38.8% ≈ 40% of A4 page, remaining 60%+ is blank white space)
+  const receiptHeight = 52.0;
+  
+  // RECEIPT 1 (Top): CUSTOMER COPY
+  const receipt1StartY = 5.0;
+  drawSingleReceipt(
+    doc,
+    project,
+    invoice,
+    receipt1StartY,
+    receiptHeight,
+    "CUSTOMER COPY",
+    receiptNo,
+    entryDate,
+    logoPng,
+    qrDataUrl
+  );
 
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(5);
-  doc.setTextColor(100, 116, 139);
-  doc.text("Live Status 24/7", qrColX + qrColWidth / 2, 51.0, { align: "center" });
-
-  // =========================================================================
-  // SCISSOR CUT LINE & CUT SYMBOL (Y = 59.4mm - EXACTLY AT 20% MARK OF 297mm A4)
-  // =========================================================================
-  const cutY = 59.4; // 20% of 297mm = 59.4mm
-
-  // Vector scissors on both sides
+  // 5. SCISSOR CUT SEPARATOR LINE IN THE MIDDLE
+  const cutY = receipt1StartY + receiptHeight + 3.2; // ~60.2 mm
+  
+  // Left scissor
   drawVectorScissors(doc, margin + 4, cutY, 0.75);
-  drawVectorScissors(doc, pageWidth - margin - 4, cutY, 0.75);
-
-  // Dashed Cut Line
+  
+  // Left dashed line
+  doc.saveGraphicsState();
   doc.setDrawColor(148, 163, 184); // slate-400
   doc.setLineWidth(0.3);
-  doc.setLineDashPattern([2, 1.5], 0);
-  doc.line(margin + 12, cutY, pageWidth / 2 - 25, cutY);
-  doc.line(pageWidth / 2 + 25, cutY, pageWidth - margin - 12, cutY);
+  doc.setLineDashPattern([2.0, 2.0], 0);
+  doc.line(margin + 10, cutY, pageWidth / 2 - 36, cutY);
+  doc.restoreGraphicsState();
 
-  // Reset dash pattern
-  doc.setLineDashPattern([], 0);
-
-  // Centered Cut Symbol text
+  // Center Cut Text
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(6.5);
+  doc.setFontSize(5.5);
   doc.setTextColor(100, 116, 139);
-  doc.text("✂  CUT HERE (TOP 20% SLIP)  ✂", pageWidth / 2, cutY + 0.6, { align: "center" });
+  doc.text("✂  CUT HERE (CUSTOMER COPY / OFFICE COPY)  ✂", pageWidth / 2, cutY + 0.8, { align: "center" });
 
-  // Note: The rest of the page (from 59.4mm to 297mm, i.e. 80% of vertical A4) is completely clean & blank.
+  // Right dashed line
+  doc.saveGraphicsState();
+  doc.setDrawColor(148, 163, 184);
+  doc.setLineWidth(0.3);
+  doc.setLineDashPattern([2.0, 2.0], 0);
+  doc.line(pageWidth / 2 + 36, cutY, pageWidth - margin - 10, cutY);
+  doc.restoreGraphicsState();
 
-  // Output PDF
+  // Right scissor
+  drawVectorScissors(doc, pageWidth - margin - 4, cutY, 0.75);
+
+  // RECEIPT 2 (Bottom): OFFICE COPY (EXACT SAME SIZE & PROPORTIONS)
+  const receipt2StartY = cutY + 3.2; // ~63.4 mm (End Y = 115.4 mm, occupying ~40% of A4 page; rest 60% is blank white space)
+  drawSingleReceipt(
+    doc,
+    project,
+    invoice,
+    receipt2StartY,
+    receiptHeight,
+    "OFFICE COPY",
+    receiptNo,
+    entryDate,
+    logoPng,
+    qrDataUrl
+  );
+
   const dataUri = doc.output("datauristring");
   const base64 = dataUri.split(",")[1];
   const blob = doc.output("blob");
@@ -453,60 +544,96 @@ export const generateWorkReceiptPdfBlob = async (
 /**
  * Downloads the Work Receipt PDF directly in the browser
  */
-export async function downloadWorkReceiptPdf(project: CrmProject, invoice?: Invoice): Promise<void> {
+export async function downloadWorkReceiptPdf(
+  project: CrmProject,
+  invoice?: Invoice
+): Promise<void> {
   const { blob } = await generateWorkReceiptPdfBlob(project, invoice);
-  const receiptNo = project.receiptNumber || `VS_${project.id}`;
-  const cleanTitle = (project.title || "Work").replace(/[^a-zA-Z0-9]/g, "_").slice(0, 20);
-  const fileName = `Vasthusilpy_Work_Receipt_${receiptNo}_${cleanTitle}.pdf`;
+  const receiptNo = getOrAssignReceiptNumber(project);
+  const safeClientName = (project.clientName || "Client").replace(/[^a-zA-Z0-9_-]/g, "_");
+  const fileName = `Work_Receipt_${receiptNo}_${safeClientName}_Vasthusilpy.pdf`;
 
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = fileName;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
 
 /**
- * Dispatches the Work Receipt PDF via email to the client's entered mail ID
- * Uses the backend /api/crm/send-work-receipt-email endpoint with nodemailer
+ * Sends the Work Receipt PDF via email or mail client
  */
-export async function sendWorkReceiptEmail(params: {
+export async function sendWorkReceiptEmail({
+  project,
+  invoice,
+  recipientEmail,
+  customNotes
+}: {
   project: CrmProject;
   invoice?: Invoice;
-  recipientEmail?: string;
+  recipientEmail: string;
   customNotes?: string;
-}): Promise<{ success: boolean; message: string; senderEmail?: string }> {
-  const targetEmail = (params.recipientEmail || params.project.clientEmail || "").trim();
-  if (!targetEmail || !targetEmail.includes("@")) {
-    throw new Error("A valid recipient email address is required to dispatch the work receipt.");
+}): Promise<{ success: boolean; message?: string }> {
+  try {
+    const receiptNo = getOrAssignReceiptNumber(project);
+    const portalUrl = getClientProjectPortalUrl(project.id);
+    const billAmount = invoice?.grandTotal || project.estimatedAmount || 0;
+    const advanceAmount = project.advancePayment || invoice?.advancePayment || 0;
+    const totalPaid = (invoice?.totalPaid !== undefined && invoice.totalPaid > 0)
+      ? invoice.totalPaid
+      : (advanceAmount > 0 ? advanceAmount : 0);
+    const balanceDue = invoice?.balanceDue !== undefined
+      ? invoice.balanceDue
+      : Math.max(0, billAmount - totalPaid);
+
+    // Trigger download of receipt PDF for immediate client attachment
+    await downloadWorkReceiptPdf(project, invoice);
+
+    const subject = encodeURIComponent(
+      `Official Work Receipt #${receiptNo} - Vasthusilpy Architectural Consultants`
+    );
+
+    const body = encodeURIComponent(
+      `Dear ${project.clientName || "Client"},\n\n` +
+      `Thank you for entrusting your project to Vasthusilpy Architectural & Engineering Consultants.\n\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `OFFICIAL WORK RECEIPT & PROJECT ACKNOWLEDGEMENT\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `• Receipt Number: ${receiptNo}\n` +
+      `• Work / Project: ${project.title || "Civil Architectural Work"}\n` +
+      `• Site Location: ${project.location || "Palakkad, Kerala"}\n` +
+      `• Assigned Lead: ${project.assignee || "DEEPAK"}\n` +
+      `• Target Due Date: ${project.dueDate || "As Scheduled"}\n` +
+      `• Total Bill: ₹${billAmount.toLocaleString("en-IN")}\n` +
+      (advanceAmount > 0 ? `• Advance Paid: ₹${advanceAmount.toLocaleString("en-IN")}\n` : "") +
+      `• Total Amount Paid: ₹${totalPaid.toLocaleString("en-IN")}\n` +
+      `• Balance Due: ₹${balanceDue.toLocaleString("en-IN")}\n\n` +
+      `📱 ZERO-LOGIN LIVE CLIENT TRACKING PORTAL:\n` +
+      `You can check your project's live progress, download plans, view structural 3D revisions & municipal submission status anytime without a password:\n` +
+      `👉 ${portalUrl}\n\n` +
+      (customNotes ? `📌 Note from Consultant:\n${customNotes}\n\n` : "") +
+      `📎 Your official work receipt PDF has been prepared.\n\n` +
+      `Warm regards,\n` +
+      `VASTHUSILPY ARCHITECTURAL & ENGINEERING CONSULTANTS\n` +
+      `Near Panchayath Office, Keralassery, Palakkad - 678641\n` +
+      `Ph: +91 7012383137, +91 9747995961\n` +
+      `Email: deepak.vasthusilpy@gmail.com\n` +
+      `Web: www.vasthusilpy.com`
+    );
+
+    // Open native mailto with filled details
+    const mailtoUrl = `mailto:${encodeURIComponent(recipientEmail)}?subject=${subject}&body=${body}`;
+    window.open(mailtoUrl, "_blank");
+
+    return {
+      success: true,
+      message: `Work receipt generated and mail composer opened for ${recipientEmail}.`
+    };
+  } catch (err: any) {
+    console.error("Failed to send work receipt email:", err);
+    throw new Error(err.message || "Failed to dispatch work receipt email.");
   }
-
-  // 1. Generate PDF base64
-  const { base64 } = await generateWorkReceiptPdfBlob(params.project, params.invoice);
-
-  // 2. Call backend server endpoint
-  const response = await fetch("/api/crm/send-work-receipt-email", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      project: params.project,
-      invoice: params.invoice,
-      recipientEmail: targetEmail,
-      customNotes: params.customNotes || "",
-      pdfBase64: base64
-    })
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || `Server responded with status ${response.status}`);
-  }
-
-  const result = await response.json();
-  return result;
 }

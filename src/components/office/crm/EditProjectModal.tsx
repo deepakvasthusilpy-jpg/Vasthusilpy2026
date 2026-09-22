@@ -27,6 +27,10 @@ export const EditProjectModal: React.FC<EditProjectModalProps> = ({
   const [dueDate, setDueDate] = useState("2026-08-30");
   const [description, setDescription] = useState("");
   const [estimatedAmount, setEstimatedAmount] = useState<number>(20000);
+  const [advancePayment, setAdvancePayment] = useState<number>(0);
+  const [advancePaymentDate, setAdvancePaymentDate] = useState<string>("");
+  const [advancePaymentMode, setAdvancePaymentMode] = useState<"CASH" | "UPI" | "BANK_TRANSFER" | "CHEQUE">("UPI");
+  const [advancePaymentRef, setAdvancePaymentRef] = useState<string>("");
   const [editError, setEditError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -41,6 +45,10 @@ export const EditProjectModal: React.FC<EditProjectModalProps> = ({
       setDueDate(project.dueDate || "");
       setDescription(project.description || "");
       setEstimatedAmount(project.estimatedAmount || 0);
+      setAdvancePayment(project.advancePayment || 0);
+      setAdvancePaymentDate(project.advancePaymentDate || new Date().toISOString().split("T")[0]);
+      setAdvancePaymentMode(project.advancePaymentMode || "UPI");
+      setAdvancePaymentRef(project.advancePaymentRef || "");
       setEditError(null);
     }
   }, [project]);
@@ -55,6 +63,8 @@ export const EditProjectModal: React.FC<EditProjectModalProps> = ({
       return;
     }
 
+    const numAdvance = Number(advancePayment) || 0;
+
     const updated: CrmProject = {
       ...project,
       title: title.trim(),
@@ -67,11 +77,15 @@ export const EditProjectModal: React.FC<EditProjectModalProps> = ({
       dueDate,
       description: description.trim(),
       estimatedAmount: Number(estimatedAmount) || 0,
+      advancePayment: numAdvance,
+      advancePaymentDate: numAdvance > 0 ? advancePaymentDate : undefined,
+      advancePaymentMode: numAdvance > 0 ? advancePaymentMode : undefined,
+      advancePaymentRef: numAdvance > 0 && advancePaymentRef.trim() ? advancePaymentRef.trim() : undefined,
       activities: [
         {
           id: `act_${Date.now()}`,
           actor: assignee,
-          action: "Updated project details via Edit Project Form",
+          action: "Updated project and advance payment details via Edit Form",
           timestamp: new Date().toLocaleString()
         },
         ...project.activities
@@ -226,6 +240,99 @@ export const EditProjectModal: React.FC<EditProjectModalProps> = ({
                 onChange={(e) => setDueDate(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
               />
+            </div>
+          </div>
+
+          {/* Financial Terms & Advance Payment Tracking */}
+          <div className="bg-slate-950 p-4 rounded-2xl border border-emerald-500/30 space-y-3 font-mono">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+              <span className="text-emerald-400 font-bold text-xs uppercase">
+                Financial Terms & Advance Payment Received
+              </span>
+              <span className="text-[10px] text-emerald-300 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">
+                OFFICIAL WORK RECEIPT
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              <div>
+                <label className="text-slate-400 text-[10px] block mb-1">
+                  Total Estimate / Bill (₹)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={estimatedAmount}
+                  onChange={(e) => setEstimatedAmount(Number(e.target.value))}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-emerald-400 text-[10px] block mb-1 font-bold">
+                  Advance Payment (₹)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={advancePayment}
+                  onChange={(e) => setAdvancePayment(Number(e.target.value))}
+                  className="w-full bg-slate-900 border border-emerald-500/60 rounded-xl px-3 py-2 text-emerald-300 font-bold focus:outline-none focus:border-emerald-400"
+                />
+              </div>
+
+              <div>
+                <label className="text-slate-400 text-[10px] block mb-1">
+                  Payment Date
+                </label>
+                <input
+                  type="date"
+                  value={advancePaymentDate}
+                  onChange={(e) => setAdvancePaymentDate(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-slate-400 text-[10px] block mb-1">
+                  Payment Mode
+                </label>
+                <select
+                  value={advancePaymentMode}
+                  onChange={(e) => setAdvancePaymentMode(e.target.value as any)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
+                >
+                  <option value="UPI">UPI / GPay / PhonePe</option>
+                  <option value="CASH">Cash</option>
+                  <option value="BANK_TRANSFER">Bank Transfer</option>
+                  <option value="CHEQUE">Cheque / DD</option>
+                </select>
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="text-slate-400 text-[10px] block mb-1">
+                  Payment Ref / Transaction ID
+                </label>
+                <input
+                  type="text"
+                  value={advancePaymentRef}
+                  onChange={(e) => setAdvancePaymentRef(e.target.value)}
+                  placeholder="e.g. UPI Ref #4235897210"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
+              <span className="text-slate-400">
+                Total: <strong className="text-white">₹{Number(estimatedAmount || 0).toLocaleString("en-IN")}</strong>
+              </span>
+              <span className="text-emerald-400">
+                Paid: <strong>₹{Number(advancePayment || 0).toLocaleString("en-IN")}</strong>
+              </span>
+              <span className="text-amber-400 font-bold">
+                Balance: ₹{Math.max(0, Number(estimatedAmount || 0) - Number(advancePayment || 0)).toLocaleString("en-IN")}
+              </span>
             </div>
           </div>
 

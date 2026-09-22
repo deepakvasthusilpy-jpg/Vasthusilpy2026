@@ -36,7 +36,8 @@ import {
   Plus,
   Sparkles,
   ChevronRight,
-  FileText
+  FileText,
+  Database
 } from "lucide-react";
 
 interface ConstructionDashboardProps {
@@ -166,6 +167,15 @@ export const ConstructionDashboard: React.FC<ConstructionDashboardProps> = ({
           >
             <ShieldCheck className="w-4 h-4" />
             <span className="hidden sm:inline">QR വെരിഫിക്കേഷൻ</span>
+          </button>
+
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent("vasthusilpy_open_backup_modal", { detail: { tab: "backup" } }))}
+            className="px-3.5 py-2 bg-gradient-to-r from-purple-950 to-slate-900 hover:from-purple-900 hover:to-slate-800 text-purple-200 hover:text-white border border-purple-600/40 text-xs font-mono font-bold rounded-2xl transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+            title="Backup & Restore Construction Data & All Tabs"
+          >
+            <Database className="w-4 h-4 text-purple-400" />
+            <span className="hidden sm:inline">ബാക്കപ്പ് & റീസ്റ്റോർ</span>
           </button>
         </div>
       </div>

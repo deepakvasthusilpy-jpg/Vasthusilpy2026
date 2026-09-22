@@ -20,7 +20,8 @@ import {
   CheckCircle2,
   Clock,
   ArrowRight,
-  Plus
+  Plus,
+  Database
 } from "lucide-react";
 
 interface PersonalBillsDashboardProps {
@@ -133,8 +134,22 @@ export const PersonalBillsDashboard: React.FC<PersonalBillsDashboardProps> = ({
           })}
         </div>
 
-        {/* PROVISION BUTTON: CREATE NEW BILL */}
-        <div className="flex items-center justify-end px-1.5 shrink-0">
+        {/* PROVISION BUTTONS: CREATE NEW BILL & BACKUP */}
+        <div className="flex items-center justify-end gap-2 px-1.5 shrink-0 flex-wrap">
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent("vasthusilpy_open_backup_modal", { detail: { tab: "backup" } }))}
+            className="w-full md:w-auto flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-2xl bg-purple-950/80 hover:bg-purple-900 text-purple-200 hover:text-white font-black text-xs shadow-lg transition-all cursor-pointer border border-purple-500/40"
+            title="Backup & Restore Personal Bills & Workspace"
+          >
+            <div className="p-1 rounded-lg bg-black/30">
+              <Database className="w-3.5 h-3.5 text-purple-400" />
+            </div>
+            <div className="text-left">
+              <div className="leading-tight">ബാക്കപ്പ് & റീസ്റ്റോർ</div>
+              <div className="text-[9px] text-purple-300/80 font-mono font-normal">BILLS BACKUP</div>
+            </div>
+          </button>
+
           <button
             onClick={() => setIsCreateModalOpen(true)}
             className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 via-pink-500 to-purple-600 hover:from-amber-400 hover:to-purple-500 text-white font-black text-xs shadow-lg shadow-purple-500/30 hover:scale-[1.02] transition-all cursor-pointer border border-amber-400/40"

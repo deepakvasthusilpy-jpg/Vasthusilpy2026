@@ -66,6 +66,7 @@ import {
 import { safeDeleteEstimate, getDeletedEstimateIds, safeSetDoc, shouldPurgeClient, shouldRenameClient, addDeletedEstimateId } from "./utils/storageManager";
 import { convertEstimateToCrmProject, convertEstimateToInvoice } from "./utils/estimateConverter";
 import { initializeAutoSyncService } from "./utils/webDataSyncManager";
+import { checkAndRunDailyAutoSnapshot } from "./utils/dailySnapshotManager";
 import { db } from "./lib/firebase";
 import { collection, onSnapshot, setDoc, doc, deleteDoc } from "firebase/firestore";
 
@@ -253,17 +254,35 @@ export default function App() {
     // Initialize Online Auto Sync Background Service
     const cleanupAutoSync = initializeAutoSyncService();
 
+    // Automated Daily Snapshot Engine for all 7 ERP modules
+    const dailyTimer = setTimeout(() => {
+      checkAndRunDailyAutoSnapshot();
+    }, 2500);
+
+    const handleWindowFocusOrVisibility = () => {
+      if (document.visibilityState === "visible") {
+        checkAndRunDailyAutoSnapshot();
+      }
+    };
+    window.addEventListener("visibilitychange", handleWindowFocusOrVisibility);
+    window.addEventListener("focus", handleWindowFocusOrVisibility);
+
     const handleStorageUpdate = () => {
       const reloaded = loadSavedEstimates();
       setEstimateProjects(reloaded);
     };
     window.addEventListener("vasthusilpy_storage_update", handleStorageUpdate);
+    window.addEventListener("vasthusilpy_backup_restored", handleStorageUpdate);
 
     return () => {
       isMounted = false;
       unsubEstimates();
       cleanupAutoSync();
+      clearTimeout(dailyTimer);
+      window.removeEventListener("visibilitychange", handleWindowFocusOrVisibility);
+      window.removeEventListener("focus", handleWindowFocusOrVisibility);
       window.removeEventListener("vasthusilpy_storage_update", handleStorageUpdate);
+      window.removeEventListener("vasthusilpy_backup_restored", handleStorageUpdate);
     };
   }, []);
 

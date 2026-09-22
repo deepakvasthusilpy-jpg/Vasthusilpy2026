@@ -27,7 +27,7 @@ export function mapToVaultCategory(cat?: string): VaultStandardCategory {
   return "PLAN";
 }
 
-export type CADFileType = "DWG" | "DXF" | "PDF" | "IMAGE" | "DOC" | "CAD_VECTOR" | "OTHER";
+export type CADFileType = "DWG" | "DXF" | "PDF" | "IMAGE" | "DOC" | "EXCEL" | "CAD_VECTOR" | "OTHER";
 
 export interface CADFolder {
   id: string; // e.g. "folder-vishnu", "folder-deepak", "folder-dibin" or uuid

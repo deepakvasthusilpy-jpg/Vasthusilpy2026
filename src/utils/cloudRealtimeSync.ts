@@ -96,6 +96,46 @@ function writeLocalList(key: string, list: any[]) {
     const existing = localStorage.getItem(key);
     if (existing === serialized) return false; // No changes
     localStorage.setItem(key, serialized);
+
+    // If CAD files are updated, regenerate and store metadata index immediately
+    if (key === SYNC_KEYS.CAD_FILES && Array.isArray(list)) {
+      try {
+        const metadataIndex = list.map((file: any) => ({
+          id: file.id,
+          name: file.name || "Untitled_File",
+          title: file.title || file.name || "Untitled File",
+          folderId: file.folderId || "folder-deepak",
+          folderPath: file.folderPath || "/DEEPAK",
+          projectCode: file.projectCode || "",
+          projectName: file.projectName || file.ownerName || "",
+          ownerName: file.ownerName || file.clientName || "",
+          clientName: file.ownerName || file.clientName || "",
+          mobileNo: file.mobileNo || file.clientPhone || "",
+          clientPhone: file.mobileNo || file.clientPhone || "",
+          facing: file.facing || "",
+          bedrooms: file.bedrooms || "",
+          floors: file.floors || "",
+          vasthuChuttu: file.vasthuChuttu || "",
+          category: file.category || "PLAN",
+          fileType: file.fileType || "DWG",
+          fileSize: file.fileSize || 0,
+          keywords: file.keywords || [],
+          attachmentCount: file.attachments?.length || 0,
+          hasDwgAttachment: (file.attachments || []).some((a: any) => a.isDwgOrDxf || (a.name && a.name.toLowerCase().endsWith(".dwg"))),
+          hasPdfAttachment: (file.attachments || []).some((a: any) => a.isPdf || (a.name && a.name.toLowerCase().endsWith(".pdf"))),
+          hasImageAttachment: (file.attachments || []).some((a: any) => a.isImage || (a.name && /\.(png|jpe?g|webp|svg)$/i.test(a.name))),
+          hasCadVector: Boolean(file.drawingData && file.drawingData.entities && file.drawingData.entities.length > 0),
+          isStarred: Boolean(file.isStarred),
+          isShared: Boolean(file.shareSettings?.isShared),
+          googleDriveSyncedAt: file.googleDriveSyncedAt,
+          createdAt: file.createdAt || new Date().toISOString(),
+          updatedAt: file.updatedAt || new Date().toISOString()
+        }));
+        localStorage.setItem("vasthusilpy_cad_metadata_index_v3", JSON.stringify(metadataIndex));
+      } catch (idxErr) {
+        console.warn("[CloudSync] Error generating metadata index:", idxErr);
+      }
+    }
     return true;
   } catch (e) {
     console.warn(`[CloudSync] Error writing local key ${key}:`, e);

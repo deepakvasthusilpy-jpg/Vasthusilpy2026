@@ -107,9 +107,16 @@ export function getStoredCADFolders(): CADFolder[] {
 export function saveStoredCADFolders(folders: CADFolder[]): void {
   try {
     localStorage.setItem(CAD_FOLDERS_STORAGE_KEY, JSON.stringify(folders));
+    window.dispatchEvent(new CustomEvent("vasthusilpy_cad_vault_update", { detail: { foldersCount: folders.length } }));
+    window.dispatchEvent(new CustomEvent("vasthusilpy_storage_update", { detail: { key: CAD_FOLDERS_STORAGE_KEY } }));
     broadcastMessage({ type: "CAD_FOLDERS_UPDATED", data: { count: folders.length } });
-    // Instant real-time Cloud Sync
+    // Instant real-time Cloud & Server Sync
     cloudSyncBatch("cad_folders", folders).catch(() => {});
+    fetch("/api/cloud-sync/push", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ collection: "cad_folders", records: folders })
+    }).catch(() => {});
   } catch (e) {
     console.error("Error saving CAD folders:", e);
   }
@@ -245,12 +252,23 @@ export function saveAllCADFiles(files: CADDrawingRecord[], skipBroadcast = false
     const index = generateCADMetadataIndex(files);
     localStorage.setItem(CAD_METADATA_INDEX_KEY, JSON.stringify(index));
 
+    // Dispatch DOM events for instant UI reactivity in the current window/tab!
+    window.dispatchEvent(new CustomEvent("vasthusilpy_cad_vault_update", { detail: { count: files.length } }));
+    window.dispatchEvent(new CustomEvent("vasthusilpy_storage_update", { detail: { key: CAD_VAULT_STORAGE_KEY } }));
+
     if (!skipBroadcast) {
       broadcastMessage({ type: "CAD_FILES_UPDATED", data: { count: files.length } });
     }
 
     // Instant real-time Cloud Sync
     cloudSyncBatch("cad_files", files).catch(() => {});
+    
+    // Push batch to server
+    fetch("/api/cloud-sync/push", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ collection: "cad_files", records: files })
+    }).catch(() => {});
   } catch (e) {
     console.error("Error saving all CAD files:", e);
   }
@@ -283,6 +301,14 @@ export function saveCADDrawingRecord(record: CADDrawingRecord, skipBroadcast = f
   }
 
   saveAllCADFiles(updatedFiles, skipBroadcast);
+
+  // Single-item instant push to server
+  fetch("/api/web-data/cad-file", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(updatedRecord)
+  }).catch(() => {});
+
   return updatedRecord;
 }
 
@@ -429,6 +455,55 @@ export function deleteCADDrawingRecord(id: string): void {
   const files = getStoredCADFiles();
   const remaining = files.filter((f) => f.id !== id);
   saveAllCADFiles(remaining);
+
+  // Instant server delete
+  fetch(`/api/web-data/cad-file/${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => {});
+  fetch("/api/cloud-sync/push", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ collection: "cad_files", deletedId: id })
+  }).catch(() => {});
+}
+
+/**
+ * Universal Download Helper for all file formats (CAD, PDF, Image, Word, Excel, CSV, ZIP, etc.)
+ */
+export function downloadRecordFile(item: CADDrawingRecord | CADMetadataIndexItem): boolean {
+  try {
+    const fullRecord = "attachments" in item ? item : getCADDrawingRecordById(item.id);
+    const fileName = item.name || "Vasthusilpy_File";
+
+    // 1. Check attachments first
+    if (fullRecord?.attachments && fullRecord.attachments.length > 0) {
+      const primary = fullRecord.attachments[0];
+      const targetUrl = primary.dataUrl || primary.downloadUrl;
+      if (targetUrl) {
+        const link = document.createElement("a");
+        link.href = targetUrl;
+        link.download = primary.name || fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        return true;
+      }
+    }
+
+    // 2. Synthesize downloadable payload if only metadata or text exists
+    const metaBlob = JSON.stringify(fullRecord || item, null, 2);
+    const blob = new Blob([metaBlob], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName.endsWith(".json") ? fileName : `${fileName}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    return true;
+  } catch (err) {
+    console.error("Error downloading file:", err);
+    return false;
+  }
 }
 
 export function deleteAllCADFiles(folderId?: string): void {

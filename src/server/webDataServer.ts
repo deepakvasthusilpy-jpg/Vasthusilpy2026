@@ -1,6 +1,7 @@
 import { Express, Request, Response } from "express";
 import fs from "fs";
 import path from "path";
+import { broadcastSSE } from "./realtimeSyncServer.ts";
 
 const WEB_DATA_DIR = path.join(process.cwd(), "data", "web_data");
 
@@ -383,6 +384,81 @@ export function registerWebDataRoutes(app: Express) {
           applicationEntries
         }
       });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // -------------------------------------------------------------
+  // DEDICATED DATA VAULT FILE & FOLDER INSTANT SYNC ENDPOINTS
+  // -------------------------------------------------------------
+  app.post("/api/web-data/cad-file", (req: Request, res: Response) => {
+    try {
+      const file = req.body;
+      if (!file || !file.id) {
+        return res.status(400).json({ success: false, error: "File record with ID is required" });
+      }
+      const files = readJsonFile<any[]>("cad_files.json", []);
+      const idx = files.findIndex((f) => f.id === file.id);
+      if (idx >= 0) {
+        files[idx] = { ...files[idx], ...file, updatedAt: new Date().toISOString() };
+      } else {
+        files.unshift({ ...file, updatedAt: new Date().toISOString() });
+      }
+      writeJsonFile("cad_files.json", files);
+      broadcastSSE("sync_update", { collection: "cad_files", records: files, item: file });
+      return res.json({ success: true, file });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.delete("/api/web-data/cad-file/:id", (req: Request, res: Response) => {
+    try {
+      const id = req.params.id;
+      if (!id) return res.status(400).json({ success: false, error: "File ID is required" });
+      const files = readJsonFile<any[]>("cad_files.json", []);
+      const filtered = files.filter((f) => f.id !== id);
+      writeJsonFile("cad_files.json", filtered);
+      broadcastSSE("record_deleted", { collection: "cad_files", id });
+      broadcastSSE("sync_update", { collection: "cad_files", records: filtered });
+      return res.json({ success: true, deletedId: id });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post("/api/web-data/cad-folder", (req: Request, res: Response) => {
+    try {
+      const folder = req.body;
+      if (!folder || !folder.id) {
+        return res.status(400).json({ success: false, error: "Folder record with ID is required" });
+      }
+      const folders = readJsonFile<any[]>("cad_folders.json", []);
+      const idx = folders.findIndex((f) => f.id === folder.id);
+      if (idx >= 0) {
+        folders[idx] = { ...folders[idx], ...folder, updatedAt: new Date().toISOString() };
+      } else {
+        folders.push({ ...folder, updatedAt: new Date().toISOString() });
+      }
+      writeJsonFile("cad_folders.json", folders);
+      broadcastSSE("sync_update", { collection: "cad_folders", records: folders, item: folder });
+      return res.json({ success: true, folder });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.delete("/api/web-data/cad-folder/:id", (req: Request, res: Response) => {
+    try {
+      const id = req.params.id;
+      if (!id) return res.status(400).json({ success: false, error: "Folder ID is required" });
+      const folders = readJsonFile<any[]>("cad_folders.json", []);
+      const filtered = folders.filter((f) => f.id !== id);
+      writeJsonFile("cad_folders.json", filtered);
+      broadcastSSE("record_deleted", { collection: "cad_folders", id });
+      broadcastSSE("sync_update", { collection: "cad_folders", records: filtered });
+      return res.json({ success: true, deletedId: id });
     } catch (err: any) {
       return res.status(500).json({ success: false, error: err.message });
     }

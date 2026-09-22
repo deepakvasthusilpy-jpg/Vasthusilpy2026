@@ -509,6 +509,10 @@ export interface CrmProject {
   activities: ProjectActivity[];
   invoiceId?: string; // Linked invoice ID
   estimatedAmount?: number;
+  advancePayment?: number; // Advance payment amount received (₹)
+  advancePaymentDate?: string; // Date advance was received
+  advancePaymentMode?: string; // e.g. "CASH" | "UPI / GPAY" | "BANK_TRANSFER" | "CHEQUE"
+  advancePaymentRef?: string; // Transaction reference or notes for advance
   createdAt: string;
   workReceiptGeneratedAt?: string;
   lastEmailedTo?: string;
@@ -609,6 +613,10 @@ export interface Invoice {
   payments: PaymentRecord[];
   totalPaid: number;
   balanceDue: number;
+  advancePayment?: number; // Advance payment amount received (₹)
+  advancePaymentDate?: string; // Date advance was received
+  advancePaymentMode?: string; // e.g. "CASH" | "UPI / GPAY" | "BANK_TRANSFER" | "CHEQUE"
+  advancePaymentRef?: string; // Transaction reference or notes for advance
   paymentStatus: "UNPAID" | "PARTIALLY PAID" | "PAID";
   // Notes & UPI
   upiId?: string; // e.g. "7012383137@okbizaxis"

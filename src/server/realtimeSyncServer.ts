@@ -262,7 +262,9 @@ export function registerRealtimeSyncRoutes(app: Express) {
       "rate_items",
       "customers",
       "valuations",
-      "quotations"
+      "quotations",
+      "cad_folders",
+      "cad_files"
     ];
 
     const result: Record<string, any[]> = {};
@@ -272,29 +274,47 @@ export function registerRealtimeSyncRoutes(app: Express) {
     });
 
     result["deleted_records"] = Array.from(deletedIds);
-    res.json({ success: true, data: result });
+    res.json({ success: true, data: result, store: result });
   });
 
   app.post("/api/cloud-sync/push", (req: Request, res: Response) => {
     try {
-      const { collection: col, records, deletedId } = req.body || {};
+      const { collection: col, records, items, item, id, data: singleData, deleted, deletedId } = req.body || {};
       if (!col) return res.status(400).json({ error: "Missing collection" });
 
-      if (deletedId) {
-        saveDeletedRecord(deletedId, col);
+      const delId = deletedId || (deleted ? id : null);
+      if (delId) {
+        saveDeletedRecord(delId, col);
         const current = readCollection(col);
-        const filtered = current.filter((r: any) => r && r.id !== deletedId);
+        const filtered = current.filter((r: any) => r && r.id !== delId);
         writeCollection(col, filtered);
-        broadcastSSE("record_deleted", { collection: col, id: deletedId });
-        return res.json({ success: true, deletedId });
+        broadcastSSE("record_deleted", { collection: col, id: delId });
+        broadcastSSE("sync_update", { collection: col, records: filtered });
+        return res.json({ success: true, deletedId: delId });
       }
 
-      if (Array.isArray(records)) {
+      const listToSave = Array.isArray(records) ? records : Array.isArray(items) ? items : null;
+      if (listToSave) {
         const deletedIds = getDeletedRecordsMap();
-        const filtered = records.filter((r: any) => r && r.id && !deletedIds.has(r.id));
+        const filtered = listToSave.filter((r: any) => r && r.id && !deletedIds.has(r.id));
         writeCollection(col, filtered);
-        broadcastSSE("sync_update", { collection: col, records: filtered });
+        broadcastSSE("sync_update", { collection: col, records: filtered, items: filtered });
         return res.json({ success: true, count: filtered.length });
+      }
+
+      const singleDoc = singleData || item;
+      if (singleDoc && (singleDoc.id || id)) {
+        const docToSave = { ...singleDoc, id: singleDoc.id || id };
+        const deletedIds = getDeletedRecordsMap();
+        if (deletedIds.has(docToSave.id)) {
+          return res.json({ success: true, ignored: true });
+        }
+        const current = readCollection(col);
+        const filtered = current.filter((r: any) => r && r.id !== docToSave.id);
+        filtered.unshift(docToSave);
+        writeCollection(col, filtered);
+        broadcastSSE("sync_update", { collection: col, records: filtered, item: docToSave });
+        return res.json({ success: true, item: docToSave });
       }
 
       res.status(400).json({ error: "Invalid payload" });

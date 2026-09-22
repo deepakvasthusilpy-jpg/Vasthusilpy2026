@@ -23,7 +23,8 @@ import {
   Receipt,
   Sparkles,
   Upload,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Database
 } from "lucide-react";
 import { VerificationQRModal } from "./modals/VerificationQRModal";
 import { AttachmentsModal } from "./modals/AttachmentsModal";
@@ -227,6 +228,15 @@ export const EstimateDashboard: React.FC<EstimateDashboardProps> = ({
             >
               <ShieldCheck className="w-4 h-4 text-amber-400" />
               <span>Engineer & Seals</span>
+            </button>
+
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent("vasthusilpy_open_backup_modal", { detail: { tab: "backup" } }))}
+              className="bg-gradient-to-r from-purple-950 to-slate-900 hover:from-purple-900 hover:to-slate-800 text-purple-200 hover:text-white border border-purple-600/40 px-3.5 py-2 rounded-xl text-xs font-mono font-bold flex items-center gap-2 transition-colors cursor-pointer shadow-sm"
+              title="Backup & Restore Estimates & All Office Modules"
+            >
+              <Database className="w-4 h-4 text-purple-400" />
+              <span>ബാക്കപ്പ് & റീസ്റ്റോർ</span>
             </button>
 
 

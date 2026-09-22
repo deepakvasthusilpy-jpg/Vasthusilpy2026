@@ -141,6 +141,15 @@ export const NewEditInvoiceModal: React.FC<NewEditInvoiceModalProps> = ({
   );
 
   const [discount, setDiscount] = useState<number>(invoiceToEdit?.discount || 0);
+  const [advancePayment, setAdvancePayment] = useState<number>(invoiceToEdit?.advancePayment || 0);
+  const [advancePaymentDate, setAdvancePaymentDate] = useState<string>(
+    invoiceToEdit?.advancePaymentDate || new Date().toISOString().split("T")[0]
+  );
+  const [advancePaymentMode, setAdvancePaymentMode] = useState<"CASH" | "UPI" | "BANK_TRANSFER" | "CHEQUE">(
+    invoiceToEdit?.advancePaymentMode || "UPI"
+  );
+  const [advancePaymentRef, setAdvancePaymentRef] = useState<string>(invoiceToEdit?.advancePaymentRef || "");
+
   const [notes, setNotes] = useState<string>(
     invoiceToEdit?.notes ||
       `NAME : DEEPAK C\nACCOUNT NO : 1062 5047 526\nIFSC CODE : SBIN0007624\nBANK : SBI , KERALASSERY\nUPI PAYMENT :\n9567627277@naviaxis\n7012383137@naviaxis`
@@ -187,6 +196,10 @@ export const NewEditInvoiceModal: React.FC<NewEditInvoiceModalProps> = ({
         );
         setDiscount(invoiceToEdit.discount ?? 0);
         if (invoiceToEdit.discount && invoiceToEdit.discount > 0) setShowDiscount(true);
+        setAdvancePayment(invoiceToEdit.advancePayment ?? 0);
+        setAdvancePaymentDate(invoiceToEdit.advancePaymentDate || new Date().toISOString().split("T")[0]);
+        setAdvancePaymentMode(invoiceToEdit.advancePaymentMode || "UPI");
+        setAdvancePaymentRef(invoiceToEdit.advancePaymentRef || "");
         setNotes(
           invoiceToEdit.notes ||
             `NAME : DEEPAK C\nACCOUNT NO : 1062 5047 526\nIFSC CODE : SBIN0007624\nBANK : SBI , KERALASSERY\nUPI PAYMENT :\n9567627277@naviaxis\n7012383137@naviaxis`
@@ -204,6 +217,12 @@ export const NewEditInvoiceModal: React.FC<NewEditInvoiceModalProps> = ({
             setApplicantMobile(matchedProj.clientPhone);
             if (matchedProj.clientEmail) setApplicantEmail(matchedProj.clientEmail);
             setApplicantAddress(matchedProj.location);
+            if (matchedProj.advancePayment && matchedProj.advancePayment > 0) {
+              setAdvancePayment(matchedProj.advancePayment);
+              if (matchedProj.advancePaymentDate) setAdvancePaymentDate(matchedProj.advancePaymentDate);
+              if (matchedProj.advancePaymentMode) setAdvancePaymentMode(matchedProj.advancePaymentMode);
+              if (matchedProj.advancePaymentRef) setAdvancePaymentRef(matchedProj.advancePaymentRef);
+            }
           }
         }
       }
@@ -220,6 +239,12 @@ export const NewEditInvoiceModal: React.FC<NewEditInvoiceModalProps> = ({
       if (!applicantMobile || applicantMobile.trim() === "") setApplicantMobile(matched.clientPhone);
       if (matched.clientEmail && (!applicantEmail || applicantEmail.trim() === "")) setApplicantEmail(matched.clientEmail);
       if (!applicantAddress || applicantAddress.trim() === "") setApplicantAddress(matched.location);
+      if (matched.advancePayment && matched.advancePayment > 0 && advancePayment === 0) {
+        setAdvancePayment(matched.advancePayment);
+        if (matched.advancePaymentDate) setAdvancePaymentDate(matched.advancePaymentDate);
+        if (matched.advancePaymentMode) setAdvancePaymentMode(matched.advancePaymentMode);
+        if (matched.advancePaymentRef) setAdvancePaymentRef(matched.advancePaymentRef);
+      }
     }
   };
 
@@ -408,7 +433,9 @@ export const NewEditInvoiceModal: React.FC<NewEditInvoiceModalProps> = ({
     }
 
     const currentPayments = invoiceToEdit?.payments || [];
-    const totalPaid = currentPayments.reduce((acc, p) => acc + p.amount, 0);
+    const directPaymentsTotal = currentPayments.reduce((acc, p) => acc + p.amount, 0);
+    const numAdvance = Number(advancePayment) || 0;
+    const totalPaid = directPaymentsTotal + (currentPayments.length === 0 ? numAdvance : 0);
     const balanceDue = Math.max(0, grandTotal - totalPaid);
 
     let paymentStatus: "UNPAID" | "PARTIALLY PAID" | "PAID" = "UNPAID";
@@ -443,6 +470,10 @@ export const NewEditInvoiceModal: React.FC<NewEditInvoiceModalProps> = ({
       taxAmount: 0,
       discount: Number(discount) || 0,
       grandTotal,
+      advancePayment: numAdvance > 0 ? numAdvance : undefined,
+      advancePaymentDate: numAdvance > 0 ? advancePaymentDate : undefined,
+      advancePaymentMode: numAdvance > 0 ? advancePaymentMode : undefined,
+      advancePaymentRef: numAdvance > 0 && advancePaymentRef.trim() ? advancePaymentRef.trim() : undefined,
       payments: currentPayments,
       totalPaid,
       balanceDue,
@@ -664,10 +695,32 @@ export const NewEditInvoiceModal: React.FC<NewEditInvoiceModalProps> = ({
                         </div>
                       </div>
 
+                      {/* Advance Payment row */}
+                      <div className="flex items-center justify-between text-emerald-300">
+                        <span>Advance Paid:</span>
+                        <div className="flex items-center gap-1">
+                          <span className="font-bold">₹</span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={advancePayment}
+                            onChange={(e) => setAdvancePayment(Number(e.target.value) || 0)}
+                            className="w-24 bg-slate-800/90 border border-emerald-700/80 rounded-lg px-2 py-1 text-xs text-right font-bold text-emerald-300 focus:outline-none focus:border-emerald-400"
+                          />
+                        </div>
+                      </div>
+
                       <div className="pt-2.5 border-t border-slate-800 flex justify-between items-baseline">
                         <span className="text-xs font-bold text-slate-300 uppercase tracking-wide">Grand Total:</span>
                         <span className="text-2xl font-black text-cyan-400">
                           ₹{grandTotal.toLocaleString("en-IN")}
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between items-baseline text-amber-300 pt-0.5">
+                        <span className="text-xs font-bold uppercase tracking-wide">Balance Due:</span>
+                        <span className="text-base font-black font-mono">
+                          ₹{Math.max(0, grandTotal - (Number(advancePayment) || 0)).toLocaleString("en-IN")}
                         </span>
                       </div>
                     </div>
@@ -1015,6 +1068,95 @@ export const NewEditInvoiceModal: React.FC<NewEditInvoiceModalProps> = ({
                   className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none"
                 />
               </div>
+            </div>
+
+            {/* Advance Payment / Deposit Received Details */}
+            <div className="border border-emerald-200 bg-emerald-50/40 rounded-2xl p-4 space-y-3">
+              <div className="flex items-center justify-between border-b border-emerald-200/80 pb-2">
+                <div className="flex items-center gap-2">
+                  <Receipt className="w-4 h-4 text-emerald-600" />
+                  <span className="text-xs font-bold text-emerald-950 uppercase tracking-wider font-sans">
+                    Advance Payment / Deposit Received
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-300">
+                  {Number(advancePayment) > 0 ? `₹${Number(advancePayment).toLocaleString("en-IN")} Received` : "No Advance"}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                <div>
+                  <label className="block text-[11px] font-bold text-emerald-900 mb-1">
+                    Advance Amount (₹)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-2.5 top-2 text-slate-400 font-mono text-xs">₹</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={advancePayment}
+                      onChange={(e) => setAdvancePayment(Number(e.target.value) || 0)}
+                      placeholder="0"
+                      className="w-full bg-white border border-emerald-300 rounded-xl pl-6 pr-2 py-2 text-xs font-mono font-bold text-emerald-950 focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                    Advance Date
+                  </label>
+                  <input
+                    type="date"
+                    value={advancePaymentDate}
+                    onChange={(e) => setAdvancePaymentDate(e.target.value)}
+                    className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono text-slate-800 focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                    Payment Mode
+                  </label>
+                  <select
+                    value={advancePaymentMode}
+                    onChange={(e) => setAdvancePaymentMode(e.target.value as any)}
+                    className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:border-emerald-500"
+                  >
+                    <option value="UPI">UPI (GPay / PhonePe)</option>
+                    <option value="CASH">Cash</option>
+                    <option value="BANK_TRANSFER">Bank Transfer</option>
+                    <option value="CHEQUE">Cheque / DD</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                    Transaction Ref / Note
+                  </label>
+                  <input
+                    type="text"
+                    value={advancePaymentRef}
+                    onChange={(e) => setAdvancePaymentRef(e.target.value)}
+                    placeholder="e.g. UPI Ref #423589"
+                    className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+
+              {Number(advancePayment) > 0 && (
+                <div className="pt-2 border-t border-emerald-200/80 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+                  <span className="text-slate-600">
+                    Grand Total: <strong className="text-slate-900">₹{grandTotal.toLocaleString("en-IN")}</strong>
+                  </span>
+                  <span className="text-emerald-700 font-bold">
+                    Advance Deducted: ₹{Number(advancePayment).toLocaleString("en-IN")}
+                  </span>
+                  <span className="text-amber-800 font-black">
+                    Balance Due: ₹{Math.max(0, grandTotal - Number(advancePayment)).toLocaleString("en-IN")}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Line Items Table with Quick Catalog Picker */}

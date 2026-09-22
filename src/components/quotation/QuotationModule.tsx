@@ -31,7 +31,8 @@ import {
   FileText,
   Layers,
   Users,
-  ShieldCheck
+  ShieldCheck,
+  Database
 } from "lucide-react";
 
 interface QuotationModuleProps {
@@ -259,6 +260,17 @@ export const QuotationModule: React.FC<QuotationModuleProps> = ({
             </button>
           );
         })}
+
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent("vasthusilpy_open_backup_modal", { detail: { tab: "backup" } }))}
+            className="px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 text-purple-200 hover:text-white bg-purple-950/70 hover:bg-purple-900 border border-purple-600/40 transition cursor-pointer shadow-sm"
+            title="Backup & Restore Quotation Data & ERP"
+          >
+            <Database className="w-3.5 h-3.5 text-purple-400" />
+            <span className="hidden sm:inline">ബാക്കപ്പ് & റീസ്റ്റോർ</span>
+          </button>
+        </div>
       </div>
 
       {/* Screen 1: Dashboard */}

@@ -40,7 +40,8 @@ import {
   Tag,
   ListTodo,
   AlertCircle,
-  Mail
+  Mail,
+  IndianRupee
 } from "lucide-react";
 import { triggerAppNotification } from "../../../context/NotificationContext";
 import { sendWorkReceiptEmail } from "../../../utils/workReceiptPdfGenerator";
@@ -75,6 +76,13 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
   const [status, setStatus] = useState<ProjectStatus>("PENDING");
   const [dueDate, setDueDate] = useState("2026-08-30");
   const [description, setDescription] = useState("");
+
+  // Financial & Advance Payment Tracking
+  const [estimatedAmount, setEstimatedAmount] = useState<number | string>(20000);
+  const [advancePayment, setAdvancePayment] = useState<number | string>(5000);
+  const [advancePaymentDate, setAdvancePaymentDate] = useState<string>(() => new Date().toISOString().split("T")[0]);
+  const [advancePaymentMode, setAdvancePaymentMode] = useState<"CASH" | "UPI" | "BANK_TRANSFER" | "CHEQUE">("UPI");
+  const [advancePaymentRef, setAdvancePaymentRef] = useState<string>("");
 
   // Customer Autocomplete / Selection
   const [savedCustomers, setSavedCustomers] = useState<Customer[]>(() => loadCustomers());
@@ -428,6 +436,9 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
       });
     }
 
+    const numEstimated = Number(estimatedAmount) || 0;
+    const numAdvance = Number(advancePayment) || 0;
+
     // Construct CRM Project
     const newProj: CrmProject = {
       id: projectId,
@@ -440,6 +451,11 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
       status,
       dueDate,
       description: description.trim() || "Vasthusilpy Engineering Project",
+      estimatedAmount: numEstimated,
+      advancePayment: numAdvance,
+      advancePaymentDate: numAdvance > 0 ? advancePaymentDate : undefined,
+      advancePaymentMode: numAdvance > 0 ? advancePaymentMode : undefined,
+      advancePaymentRef: numAdvance > 0 && advancePaymentRef.trim() ? advancePaymentRef.trim() : undefined,
       subTasks,
       attachments,
       comments,
@@ -856,6 +872,103 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
                     placeholder="Provide brief details about drawings, survey, estimate, valuation or permit requirements..."
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white text-xs focus:outline-none focus:border-emerald-500 transition-colors"
                   />
+                </div>
+
+                {/* Financial Terms & Advance Payment Received Card */}
+                <div className="bg-slate-900/90 border border-emerald-500/40 rounded-2xl p-4 sm:p-5 space-y-4">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                    <div className="flex items-center gap-2 text-emerald-400 font-bold font-mono text-xs uppercase">
+                      <IndianRupee className="w-4 h-4" />
+                      <span>Financial Terms & Advance Payment Received</span>
+                    </div>
+                    <span className="text-[10px] font-mono font-bold text-emerald-300 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800">
+                      PRINTED ON RECEIPT
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+                    <div>
+                      <label className="text-slate-300 text-[11px] block mb-1 font-bold">
+                        Total Project Estimate / Bill (₹)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={estimatedAmount}
+                        onChange={(e) => setEstimatedAmount(e.target.value)}
+                        placeholder="e.g. 20000"
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-emerald-500 font-bold"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-emerald-400 text-[11px] block mb-1 font-bold">
+                        Advance Payment Received (₹)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={advancePayment}
+                        onChange={(e) => setAdvancePayment(e.target.value)}
+                        placeholder="e.g. 5000"
+                        className="w-full bg-slate-950 border border-emerald-500/60 rounded-xl px-3 py-2 text-emerald-300 font-mono text-xs focus:outline-none focus:border-emerald-400 font-bold"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-slate-300 text-[11px] block mb-1 font-bold">
+                        Advance Received Date
+                      </label>
+                      <input
+                        type="date"
+                        value={advancePaymentDate}
+                        onChange={(e) => setAdvancePaymentDate(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-slate-300 text-[11px] block mb-1 font-bold">
+                        Payment Mode
+                      </label>
+                      <select
+                        value={advancePaymentMode}
+                        onChange={(e) => setAdvancePaymentMode(e.target.value as any)}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
+                      >
+                        <option value="UPI">UPI / GPay / PhonePe (9567627277)</option>
+                        <option value="CASH">Cash Payment</option>
+                        <option value="BANK_TRANSFER">Bank Transfer (NEFT/IMPS)</option>
+                        <option value="CHEQUE">Cheque / DD</option>
+                      </select>
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="text-slate-300 text-[11px] block mb-1 font-bold">
+                        Payment Reference / Transaction ID / Notes
+                      </label>
+                      <input
+                        type="text"
+                        value={advancePaymentRef}
+                        onChange={(e) => setAdvancePaymentRef(e.target.value)}
+                        placeholder="e.g. UPI Ref #4235897210 / GPay Receipt"
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Financial Summary Preview */}
+                  <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+                    <div className="text-slate-400">
+                      Total Bill: <span className="text-white font-bold">₹{Number(estimatedAmount || 0).toLocaleString("en-IN")}</span>
+                    </div>
+                    <div className="text-emerald-400">
+                      Advance Paid: <span className="font-bold">₹{Number(advancePayment || 0).toLocaleString("en-IN")}</span>
+                    </div>
+                    <div className="text-amber-400 font-bold">
+                      Balance Due: ₹{Math.max(0, Number(estimatedAmount || 0) - Number(advancePayment || 0)).toLocaleString("en-IN")}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

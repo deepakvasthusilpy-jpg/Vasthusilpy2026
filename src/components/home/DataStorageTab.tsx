@@ -7,6 +7,7 @@ import {
   CADFolder
 } from "../../types/dataStorageTypes";
 import { TabType, DataStorageVaultTabType } from "../../types";
+import { getBroadcastChannel } from "../../utils/broadcastSync";
 import {
   getStoredCADFolders,
   getCADMetadataIndex,
@@ -17,10 +18,9 @@ import {
   resetAndWipeCadStorage,
   formatBytes,
   downloadAttachment,
-  triggerDxfDownload
+  downloadRecordFile
 } from "../../utils/dataStorageManager";
 import { CadFileEditModal } from "./dataStorage/CadFileEditModal";
-import { CadViewerEditorModal } from "./dataStorage/CadViewerEditorModal";
 import { PdfViewerModal } from "./dataStorage/PdfViewerModal";
 import { CadFileShareModal } from "./dataStorage/CadFileShareModal";
 import { FolderManageModal } from "./dataStorage/FolderManageModal";
@@ -70,7 +70,8 @@ import {
   Info,
   Check,
   CheckSquare,
-  Square
+  Square,
+  Upload
 } from "lucide-react";
 
 interface DataStorageTabProps {
@@ -255,9 +256,6 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
   const [editingFile, setEditingFile] = useState<CADDrawingRecord | null>(null);
   const [uploadDefaultCategory, setUploadDefaultCategory] = useState<CADCategory>("PLAN");
 
-  const [isViewerModalOpen, setIsViewerModalOpen] = useState(false);
-  const [viewingFile, setViewingFile] = useState<CADDrawingRecord | null>(null);
-
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
   const [pdfViewingFile, setPdfViewingFile] = useState<CADDrawingRecord | null>(null);
 
@@ -291,6 +289,61 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
 
   useEffect(() => {
     reloadData();
+
+    // Instant local/cloud update listeners
+    const handleInstantUpdate = () => {
+      reloadData();
+    };
+
+    window.addEventListener("vasthusilpy_cad_vault_update", handleInstantUpdate);
+    window.addEventListener("vasthusilpy_storage_update", handleInstantUpdate);
+    window.addEventListener("vasthusilpy_realtime_cloud_sync", handleInstantUpdate);
+    window.addEventListener("vasthusilpy_backup_restored", handleInstantUpdate);
+    window.addEventListener("storage", handleInstantUpdate);
+    window.addEventListener("focus", handleInstantUpdate);
+
+    // Cross-tab BroadcastChannel listener for instant zero-latency sync
+    const bc = getBroadcastChannel();
+    const handleBroadcast = (event: MessageEvent) => {
+      if (
+        event.data?.type === "CAD_FILES_UPDATED" ||
+        event.data?.type === "CAD_FOLDERS_UPDATED" ||
+        event.data?.type === "CLOUD_AUTOSYNC_APPLIED" ||
+        event.data?.type === "STORAGE_SYNC"
+      ) {
+        reloadData();
+      }
+    };
+    if (bc) {
+      bc.addEventListener("message", handleBroadcast);
+    }
+
+    // Also connect to WebData SSE if available
+    let es: EventSource | null = null;
+    try {
+      es = new EventSource("/api/web-data/sse");
+      es.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === "CAD_FILES_UPDATED" || msg.type === "CAD_FOLDERS_UPDATED" || msg.type === "INIT") {
+            reloadData();
+          }
+        } catch (e) {}
+      };
+    } catch (e) {}
+
+    return () => {
+      window.removeEventListener("vasthusilpy_cad_vault_update", handleInstantUpdate);
+      window.removeEventListener("vasthusilpy_storage_update", handleInstantUpdate);
+      window.removeEventListener("vasthusilpy_realtime_cloud_sync", handleInstantUpdate);
+      window.removeEventListener("vasthusilpy_backup_restored", handleInstantUpdate);
+      window.removeEventListener("storage", handleInstantUpdate);
+      window.removeEventListener("focus", handleInstantUpdate);
+      if (bc) {
+        bc.removeEventListener("message", handleBroadcast);
+      }
+      if (es) es.close();
+    };
   }, []);
 
   // Compute Folder stats
@@ -457,14 +510,8 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
   const handleOpenFile = (item: CADMetadataIndexItem) => {
     const fullRecord = getCADDrawingRecordById(item.id);
     if (!fullRecord) return;
-
-    if (item.fileType === "PDF" || (!fullRecord.drawingData && fullRecord.attachments?.some((a) => a.isPdf))) {
-      setPdfViewingFile(fullRecord);
-      setIsPdfModalOpen(true);
-    } else {
-      setViewingFile(fullRecord);
-      setIsViewerModalOpen(true);
-    }
+    setPdfViewingFile(fullRecord);
+    setIsPdfModalOpen(true);
   };
 
   const handleOpenPdfViewer = (item: CADMetadataIndexItem) => {
@@ -552,26 +599,44 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
 
   const handleQuickDownload = (item: CADMetadataIndexItem, e: React.MouseEvent) => {
     e.stopPropagation();
-    const fullRecord = getCADDrawingRecordById(item.id);
-    if (!fullRecord) return;
+    downloadRecordFile(item);
+  };
 
-    if (fullRecord.attachments && fullRecord.attachments.length > 0) {
-      downloadAttachment(fullRecord.attachments[0], fullRecord.attachments[0].name || item.name);
-    } else if (fullRecord.drawingData) {
-      triggerDxfDownload(fullRecord.drawingData, `${item.name.replace(/\.[^/.]+$/, "")}.dxf`);
-    } else {
-      const blob = new Blob([`Vasthusilpy CAD Data: ${item.name}`], { type: "text/plain" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = item.name;
-      a.click();
-      URL.revokeObjectURL(url);
+  // Vault Drag and Drop state
+  const [isVaultDragActive, setIsVaultDragActive] = useState(false);
+  const [droppedUploadFiles, setDroppedUploadFiles] = useState<File[] | null>(null);
+
+  const handleVaultDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isVaultDragActive) {
+      setIsVaultDragActive(true);
+    }
+  };
+
+  const handleVaultDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+    setIsVaultDragActive(false);
+  };
+
+  const handleVaultDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsVaultDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const filesArray = Array.from(e.dataTransfer.files);
+      setDroppedUploadFiles(filesArray);
+      setEditingFile(null);
+      setUploadDefaultCategory(activeCategoryForTab || "PLAN");
+      setIsEditModalOpen(true);
     }
   };
 
   // Open upload modal pre-selected to specific category
   const handleOpenUpload = (cat?: CADCategory) => {
+    setDroppedUploadFiles(null);
     setEditingFile(null);
     setUploadDefaultCategory(cat || activeCategoryForTab || "PLAN");
     setIsEditModalOpen(true);
@@ -592,7 +657,25 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
   }, [activeCategoryForTab]);
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-200">
+    <div
+      onDragOver={handleVaultDragOver}
+      onDragLeave={handleVaultDragLeave}
+      onDrop={handleVaultDrop}
+      className="space-y-6 animate-in fade-in duration-200 relative"
+    >
+      {/* Full-Vault Drag & Drop Overlay */}
+      {isVaultDragActive && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center border-4 border-dashed border-cyan-400 pointer-events-none animate-in fade-in duration-150">
+          <div className="p-8 rounded-3xl bg-slate-900 border border-cyan-500 shadow-2xl flex flex-col items-center text-center space-y-3 max-w-md">
+            <Upload className="w-14 h-14 text-cyan-400 animate-bounce" />
+            <div className="text-lg font-bold text-white font-mono">Drop file(s) here to upload to Vault</div>
+            <p className="text-xs text-slate-300 font-mono">
+              Files will be imported cleanly with no unwanted default values
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* 1. Header Toolbar */}
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
@@ -645,6 +728,15 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
             >
               <Cloud className="w-4 h-4 text-cyan-400 animate-pulse" />
               <span className="hidden sm:inline">Drive Sync</span>
+            </button>
+
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent("vasthusilpy_open_backup_modal", { detail: { tab: "backup" } }))}
+              title="Backup & Restore Data Storage Vault and all Office Data"
+              className="px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-purple-950 to-slate-900 hover:from-purple-900 hover:to-slate-800 text-purple-200 hover:text-white text-xs font-mono font-bold flex items-center gap-2 border border-purple-600/50 cursor-pointer transition-colors shadow-sm"
+            >
+              <Database className="w-4 h-4 text-purple-400" />
+              <span className="hidden sm:inline">Vault Backup</span>
             </button>
           </div>
         </div>
@@ -759,6 +851,47 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
             CONFIG
           </span>
         </button>
+      </div>
+
+      {/* Drag & Drop Quick Dropzone Banner */}
+      <div
+        onClick={() => handleOpenUpload()}
+        onDragOver={handleVaultDragOver}
+        onDrop={handleVaultDrop}
+        className={`border-2 border-dashed rounded-2xl p-3.5 sm:p-4 text-center cursor-pointer transition-all ${
+          isVaultDragActive
+            ? "border-cyan-400 bg-cyan-950/60 shadow-xl shadow-cyan-950/50 scale-[1.008]"
+            : "border-slate-800 hover:border-cyan-500/60 bg-slate-900/40 hover:bg-slate-900/70"
+        }`}
+      >
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-2">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-cyan-950/80 border border-cyan-700/60 flex items-center justify-center text-cyan-400 shrink-0">
+              <Upload className={`w-4 h-4 ${isVaultDragActive ? "animate-bounce text-cyan-300" : ""}`} />
+            </div>
+            <div className="text-left">
+              <div className="text-xs font-mono font-bold text-white flex items-center gap-2">
+                <span>{isVaultDragActive ? "Release to drop file(s) into Vault" : "Drag & Drop files anywhere on Vault to upload"}</span>
+                <span className="px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 text-[10px] font-mono border border-cyan-800/60 font-normal">
+                  No default values added
+                </span>
+              </div>
+              <div className="text-[11px] font-mono text-slate-400 mt-0.5">
+                Supports AutoCAD (.dwg, .dxf), Drawings (.pdf), 3D Renderings (.png, .jpg), and Docs — all fields remain empty unless you specify them
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleOpenUpload();
+            }}
+            className="px-3 py-1.5 rounded-xl bg-cyan-600/20 hover:bg-cyan-600 text-cyan-300 hover:text-white border border-cyan-500/40 text-xs font-mono font-bold whitespace-nowrap transition-colors"
+          >
+            Browse / Upload
+          </button>
+        </div>
       </div>
 
       {/* =========================================================================
@@ -1265,11 +1398,12 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
                   className="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-300 focus:outline-none focus:border-cyan-500"
                 >
                   <option value="ALL">All Formats</option>
-                  <option value="DWG">AutoCAD DWG</option>
                   <option value="PDF">Architectural PDF</option>
+                  <option value="IMAGE">Images & 3D Renderings</option>
+                  <option value="DWG">AutoCAD DWG</option>
                   <option value="DXF">AutoCAD DXF</option>
-                  <option value="IMAGE">3D / Images</option>
-                  <option value="CAD_VECTOR">2D CAD Canvas</option>
+                  <option value="DOC">Word & Text Documents</option>
+                  <option value="EXCEL">Excel & BOQ Sheets</option>
                 </select>
 
                 <button
@@ -2243,39 +2377,28 @@ export const DataStorageTab: React.FC<DataStorageTabProps> = ({
           file={editingFile}
           defaultFolderId={activeFolderId}
           defaultCategory={uploadDefaultCategory}
+          initialFiles={droppedUploadFiles}
           isOpen={isEditModalOpen}
-          onClose={() => setIsEditModalOpen(false)}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setDroppedUploadFiles(null);
+          }}
           onSaved={() => {
             reloadData();
             setIsEditModalOpen(false);
+            setDroppedUploadFiles(null);
           }}
           onDelete={(fileId) => {
             deleteCADDrawingRecord(fileId);
             reloadData();
             setIsEditModalOpen(false);
+            setDroppedUploadFiles(null);
           }}
           userEmail={userEmail}
         />
       )}
 
-      {/* CAD 2D Vector & Canvas Viewer Modal */}
-      {isViewerModalOpen && viewingFile && (
-        <CadViewerEditorModal
-          file={viewingFile}
-          isOpen={isViewerModalOpen}
-          onClose={() => setIsViewerModalOpen(false)}
-          onSave={() => {
-            reloadData();
-          }}
-          onDelete={(fileId) => {
-            deleteCADDrawingRecord(fileId);
-            reloadData();
-            setIsViewerModalOpen(false);
-          }}
-        />
-      )}
-
-      {/* PDF Document Viewer Modal */}
+      {/* Document, PDF & Image Viewer Modal (No 2D CAD Canvas) */}
       {isPdfModalOpen && pdfViewingFile && (
         <PdfViewerModal
           file={pdfViewingFile}
