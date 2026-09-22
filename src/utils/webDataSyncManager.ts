@@ -2,6 +2,7 @@ import { broadcastMessage } from "./broadcastSync";
 import { db } from "../lib/firebase";
 import { collection, getDocs, setDoc, doc } from "firebase/firestore";
 import { emailToDocId } from "../lib/firebase";
+import { filterOutDeletedRecords, isRecordDeleted, getGlobalDeletedIds } from "./deletionRegistry";
 
 export interface WebDataSyncStatus {
   isSyncing: boolean;
@@ -67,13 +68,13 @@ function readLocalJson<T>(key: string, fallback: T): T {
  * Gathers all web application data from local storage
  */
 export function collectLocalWebData() {
-  const projects = readLocalJson("vasthusilpy_crm_projects", []);
-  const invoices = readLocalJson("vasthusilpy_invoices", []);
-  const estimates = readLocalJson("vasthusilpy_estimates", []);
-  const customers = readLocalJson("vasthusilpy_customers", []);
-  const rateItems = readLocalJson("vasthusilpy_rate_items", []);
-  const cadFolders = readLocalJson("vasthusilpy_cad_folders_v3", []);
-  const cadFiles = readLocalJson("vasthusilpy_cad_files_vault_v3", []);
+  const projects = filterOutDeletedRecords(readLocalJson("vasthusilpy_crm_projects", []));
+  const invoices = filterOutDeletedRecords(readLocalJson("vasthusilpy_invoices", []));
+  const estimates = filterOutDeletedRecords(readLocalJson("vasthusilpy_estimates", []));
+  const customers = filterOutDeletedRecords(readLocalJson("vasthusilpy_customers", []));
+  const rateItems = filterOutDeletedRecords(readLocalJson("vasthusilpy_rate_items", []));
+  const cadFolders = filterOutDeletedRecords(readLocalJson("vasthusilpy_cad_folders_v3", []));
+  const cadFiles = filterOutDeletedRecords(readLocalJson("vasthusilpy_cad_files_vault_v3", []));
   
   // Unify subscription requests from both primary and secondary keys
   const subsMain = readLocalJson<any[]>("vasthusilpy_subscription_requests", []);
@@ -83,7 +84,7 @@ export function collectLocalWebData() {
   subsMain.forEach((s) => s?.id && subMap.set(s.id, s));
   const subscriptionRequests = Array.from(subMap.values());
 
-  const applicationEntries = readLocalJson("vasthusilpy_application_entries", []);
+  const applicationEntries = filterOutDeletedRecords(readLocalJson("vasthusilpy_application_entries", []));
 
   let currentUserProfile = null;
   const emailUserRaw = localStorage.getItem("vasthusilpy_email_user");
@@ -402,25 +403,33 @@ export async function pullAndHydrateWebDataFromServer(accountIdentifier?: string
     const d = result.data;
     const syncedAt = result.syncedAt || new Date().toISOString();
 
-    // Helper to merge arrays preserving unique records by id (server authoritative)
+    // Helper to merge arrays preserving unique records by id (server authoritative, tombstone protected)
     const mergeById = (localKey: string, serverItems: any[]): any[] => {
+      const deletedIds = getGlobalDeletedIds();
+      const local = readLocalJson<any[]>(localKey, []).filter(
+        (item) => item?.id && !deletedIds.includes(item.id) && !isRecordDeleted(item.id)
+      );
+
       if (!Array.isArray(serverItems) || serverItems.length === 0) {
-        return readLocalJson(localKey, []);
+        return local;
       }
-      const local = readLocalJson<any[]>(localKey, []);
+
       const map = new Map<string, any>();
       // First populate with local items
       local.forEach((item) => {
         if (item?.id) map.set(item.id, item);
       });
-      // Then OVERWRITE with authoritative server items
+
+      // Then merge authoritative server items only if NOT deleted
       serverItems.forEach((item) => {
-        if (item?.id) {
+        if (item?.id && !deletedIds.includes(item.id) && !isRecordDeleted(item.id)) {
           const prev = map.get(item.id);
           map.set(item.id, prev ? { ...prev, ...item } : item);
         }
       });
-      const merged = Array.from(map.values());
+      const merged = Array.from(map.values()).filter(
+        (item) => item?.id && !deletedIds.includes(item.id) && !isRecordDeleted(item.id)
+      );
       try {
         localStorage.setItem(localKey, JSON.stringify(merged));
       } catch (e) {

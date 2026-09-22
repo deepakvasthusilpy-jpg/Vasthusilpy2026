@@ -37,8 +37,10 @@ import {
   Eye,
   Edit3,
   CreditCard,
-  Receipt
+  Receipt,
+  Mail
 } from "lucide-react";
+import { WorkReceiptModal } from "./WorkReceiptModal";
 
 interface ProjectDetailModalProps {
   isOpen: boolean;
@@ -89,6 +91,7 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
   const [newAttachmentUrl, setNewAttachmentUrl] = useState("");
   const [pastedStatus, setPastedStatus] = useState<string | null>(null);
   const [previewAttachmentUrl, setPreviewAttachmentUrl] = useState<{ url: string; name: string } | null>(null);
+  const [showWorkReceiptModal, setShowWorkReceiptModal] = useState(false);
 
   if (!isOpen) return null;
 
@@ -372,6 +375,16 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowWorkReceiptModal(true)}
+              className="px-3.5 py-2 bg-emerald-950/90 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/40 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
+              title="Generate Official Work Receipt, Status QR Code & Email to Client"
+            >
+              <FileText className="w-4 h-4 text-emerald-400" />
+              <span>WORK RECEIPT & QR</span>
+            </button>
+
             {onShareProject && (
               <button
                 type="button"
@@ -648,6 +661,35 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                         </a>
                       )}
                     </div>
+
+                    {project.clientEmail ? (
+                      <div className="flex items-center justify-between text-slate-300 font-mono pt-2 text-xs border-t border-slate-800/80">
+                        <span className="flex items-center gap-1.5 text-sky-400 font-bold truncate">
+                          <Mail className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                          <span className="truncate">{project.clientEmail}</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setShowWorkReceiptModal(true)}
+                          className="text-[10px] text-sky-400 hover:text-sky-300 underline font-mono shrink-0 cursor-pointer"
+                        >
+                          Email Receipt & QR
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between text-slate-400 font-mono pt-2 text-[10px] border-t border-slate-800/80">
+                        <span>No Email ID Added</span>
+                        {onEditProject && (
+                          <button
+                            type="button"
+                            onClick={() => onEditProject(project)}
+                            className="text-emerald-400 hover:underline cursor-pointer"
+                          >
+                            + Add Email ID
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* ZERO-LOGIN SHARE & QR CODE CLIENT ACCESS CARD */}
@@ -689,6 +731,15 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                         {(project.attachments || []).length} Document(s)
                       </span>
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowWorkReceiptModal(true)}
+                      className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black rounded-xl text-xs font-mono flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 transition-all cursor-pointer"
+                    >
+                      <FileText className="w-4 h-4" />
+                      <span>WORK RECEIPT & CLIENT STATUS QR (PDF + EMAIL)</span>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1326,6 +1377,23 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Work Receipt PDF & Live Status QR Code Modal */}
+      {showWorkReceiptModal && (
+        <WorkReceiptModal
+          project={project}
+          invoice={invoices.find(
+            (inv) =>
+              inv.projectId === project.id ||
+              (project.invoiceId && inv.id === project.invoiceId)
+          )}
+          isOpen={showWorkReceiptModal}
+          onClose={() => setShowWorkReceiptModal(false)}
+          onUpdateProject={(updated) => {
+            onUpdateProject(updated);
+          }}
+        />
+      )}
     </div>
   );
 };

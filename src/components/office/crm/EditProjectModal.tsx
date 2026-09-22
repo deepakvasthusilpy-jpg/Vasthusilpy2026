@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { CrmProject, StaffName, ProjectStatus } from "../../../types";
-import { X, Edit3, Building2, User, Phone, MapPin, Calendar, Trash2 } from "lucide-react";
+import { X, Edit3, Building2, User, Phone, MapPin, Calendar, Trash2, Mail } from "lucide-react";
 
 interface EditProjectModalProps {
   isOpen: boolean;
@@ -20,6 +20,7 @@ export const EditProjectModal: React.FC<EditProjectModalProps> = ({
   const [title, setTitle] = useState("");
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
   const [location, setLocation] = useState("");
   const [assignee, setAssignee] = useState<StaffName>("DIBIN");
   const [status, setStatus] = useState<ProjectStatus>("PENDING");
@@ -33,6 +34,7 @@ export const EditProjectModal: React.FC<EditProjectModalProps> = ({
       setTitle(project.title || "");
       setClientName(project.clientName || "");
       setClientPhone(project.clientPhone || "");
+      setClientEmail(project.clientEmail || "");
       setLocation(project.location || "");
       setAssignee(project.assignee || "DIBIN");
       setStatus(project.status || "PENDING");
@@ -58,6 +60,7 @@ export const EditProjectModal: React.FC<EditProjectModalProps> = ({
       title: title.trim(),
       clientName: clientName.trim(),
       clientPhone: clientPhone.trim() || "9747995961",
+      clientEmail: clientEmail.trim() || undefined,
       location: location.trim() || "Keralassery, Palakkad",
       assignee,
       status,
@@ -150,6 +153,20 @@ export const EditProjectModal: React.FC<EditProjectModalProps> = ({
                 value={clientPhone}
                 onChange={(e) => setClientPhone(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            <div>
+              <label className="text-slate-400 font-mono text-[11px] block mb-1 flex items-center justify-between">
+                <span>Client Email ID (ക്ലയന്റ് ഇമെയിൽ)</span>
+                <span className="text-[10px] text-sky-400">PDF രസീത് & QR അയക്കാൻ</span>
+              </label>
+              <input
+                type="email"
+                value={clientEmail}
+                onChange={(e) => setClientEmail(e.target.value)}
+                placeholder="client@gmail.com"
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-sky-400"
               />
             </div>
           </div>

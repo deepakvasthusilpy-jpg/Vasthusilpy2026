@@ -202,6 +202,7 @@ export const NewEditInvoiceModal: React.FC<NewEditInvoiceModalProps> = ({
           if (matchedProj) {
             setApplicantName(matchedProj.clientName);
             setApplicantMobile(matchedProj.clientPhone);
+            if (matchedProj.clientEmail) setApplicantEmail(matchedProj.clientEmail);
             setApplicantAddress(matchedProj.location);
           }
         }
@@ -217,6 +218,7 @@ export const NewEditInvoiceModal: React.FC<NewEditInvoiceModalProps> = ({
     if (matched) {
       if (!applicantName || applicantName.trim() === "") setApplicantName(matched.clientName);
       if (!applicantMobile || applicantMobile.trim() === "") setApplicantMobile(matched.clientPhone);
+      if (matched.clientEmail && (!applicantEmail || applicantEmail.trim() === "")) setApplicantEmail(matched.clientEmail);
       if (!applicantAddress || applicantAddress.trim() === "") setApplicantAddress(matched.location);
     }
   };

@@ -4,6 +4,8 @@ import { EstimateProject, INITIAL_ESTIMATES_LIST, normalizeProjectBlocks } from 
 import { db } from "../lib/firebase";
 import { doc, deleteDoc, setDoc } from "firebase/firestore";
 import { broadcastMessage } from "./broadcastSync";
+import { recordGlobalDeletion, filterOutDeletedRecords } from "./deletionRegistry";
+import { deleteCloudRecord, pushCloudSync } from "./cloudRealtimeClient";
 
 /**
  * Recursively removes all `undefined` fields from an object or array before sending to Firestore,
@@ -299,6 +301,7 @@ export function getDeletedProjectIds(): string[] {
 }
 
 export function addDeletedProjectId(id: string): void {
+  recordGlobalDeletion(id, "crm_projects");
   try {
     const current = getDeletedProjectIds();
     if (!current.includes(id)) {
@@ -326,6 +329,7 @@ export function getDeletedInvoiceIds(): string[] {
 }
 
 export function addDeletedInvoiceId(id: string): void {
+  recordGlobalDeletion(id, "crm_invoices");
   try {
     const current = getDeletedInvoiceIds();
     if (!current.includes(id)) {
@@ -351,6 +355,7 @@ export function getDeletedEstimateIds(): string[] {
 }
 
 export function addDeletedEstimateId(id: string): void {
+  recordGlobalDeletion(id, "estimates");
   try {
     const current = getDeletedEstimateIds();
     if (!current.includes(id)) {
@@ -376,6 +381,7 @@ export function getDeletedRateItemIds(): string[] {
 }
 
 export function addDeletedRateItemId(id: string): void {
+  recordGlobalDeletion(id, "rate_items");
   try {
     const current = getDeletedRateItemIds();
     if (!current.includes(id)) {
@@ -403,6 +409,7 @@ export function getDeletedCustomerIds(): string[] {
 }
 
 export function addDeletedCustomerId(id: string): void {
+  recordGlobalDeletion(id, "customers");
   try {
     const current = getDeletedCustomerIds();
     if (!current.includes(id)) {
@@ -521,6 +528,8 @@ export function saveCrmProjects(projects: CrmProject[], dispatchEvents = true): 
       window.dispatchEvent(new Event("vasthusilpy_storage_update"));
       broadcastMessage({ type: "SYNC_PROJECTS", data: filtered });
     }
+    // Realtime Cloud push (broadcasts via SSE to all open tabs and devices instantly)
+    pushCloudSync("crm_projects", filtered);
     // Background durable sync to server
     syncCrmProjectsWithServer(filtered).catch(() => {});
   } catch (e) {
@@ -642,6 +651,8 @@ export function saveInvoices(invoices: Invoice[], dispatchEvents = true): void {
       window.dispatchEvent(new Event("vasthusilpy_invoices_updated"));
       broadcastMessage({ type: "SYNC_INVOICES", data: filtered });
     }
+    // Realtime Cloud push
+    pushCloudSync("crm_invoices", filtered);
     // Background durable sync to server
     syncInvoicesWithServer(filtered).catch(() => {});
   } catch (e) {
@@ -712,6 +723,8 @@ export function saveEstimatesList(projects: EstimateProject[], dispatchEvents = 
     if (dispatchEvents) {
       window.dispatchEvent(new Event("vasthusilpy_storage_update"));
     }
+    // Realtime Cloud push
+    pushCloudSync("estimates", filtered);
   } catch (e) {
     console.error("Failed to save estimates", e);
   }
@@ -755,6 +768,8 @@ export function saveRateItems(items: RateItem[], dispatchEvents = true): void {
       window.dispatchEvent(new Event("vasthusilpy_storage_update"));
       window.dispatchEvent(new Event("vasthusilpy_rate_items_updated"));
     }
+    // Realtime Cloud push
+    pushCloudSync("rate_items", filtered);
   } catch (e) {
     console.error("Failed to save rate items", e);
   }
@@ -832,6 +847,8 @@ export function saveCustomers(customers: Customer[], dispatchEvents = true): voi
       window.dispatchEvent(new Event("vasthusilpy_storage_update"));
       window.dispatchEvent(new Event("vasthusilpy_customers_updated"));
     }
+    // Realtime Cloud push
+    pushCloudSync("customers", filtered);
   } catch (e) {
     console.error("Failed to save customers", e);
   }
@@ -874,8 +891,9 @@ export function addOrUpdateCustomer(customerData: Omit<Customer, "id"> & { id?: 
 // UNIFIED SAFE DELETION HANDLERS
 // -------------------------------------------------------------
 export function safeDeleteProject(projectId: string): { remainingProjects: CrmProject[]; remainingInvoices: Invoice[] } {
-  // 1. Mark project ID as deleted permanently
+  // 1. Mark project ID as deleted permanently in local and cloud registry
   addDeletedProjectId(projectId);
+  deleteCloudRecord("crm_projects", projectId);
 
   // 2. Remove from CRM Projects list
   const currentProjects = loadCrmProjects();
@@ -920,8 +938,9 @@ export function safeDeleteProject(projectId: string): { remainingProjects: CrmPr
 }
 
 export function safeDeleteInvoice(invoiceId: string): { remainingInvoices: Invoice[]; remainingProjects: CrmProject[] } {
-  // 1. Mark invoice ID as deleted permanently
+  // 1. Mark invoice ID as deleted permanently in local and cloud registry
   addDeletedInvoiceId(invoiceId);
+  deleteCloudRecord("crm_invoices", invoiceId);
 
   // 2. Remove from Invoices list
   const currentInvoices = loadInvoices();
@@ -956,6 +975,7 @@ export function safeDeleteInvoice(invoiceId: string): { remainingInvoices: Invoi
 
 export function safeDeleteEstimate(estimateId: string): EstimateProject[] {
   addDeletedEstimateId(estimateId);
+  deleteCloudRecord("estimates", estimateId);
   const current = loadEstimatesList();
   const remaining = current.filter((p) => p.id !== estimateId);
   saveEstimatesList(remaining, true);
@@ -967,6 +987,7 @@ export function safeDeleteEstimate(estimateId: string): EstimateProject[] {
 
 export function safeDeleteRateItem(rateItemId: string): RateItem[] {
   addDeletedRateItemId(rateItemId);
+  deleteCloudRecord("rate_items", rateItemId);
   const current = loadRateItems();
   const remaining = current.filter((item) => item.id !== rateItemId);
   saveRateItems(remaining, true);
@@ -976,6 +997,7 @@ export function safeDeleteRateItem(rateItemId: string): RateItem[] {
 
 export function safeDeleteCustomer(customerId: string): Customer[] {
   addDeletedCustomerId(customerId);
+  deleteCloudRecord("customers", customerId);
   const current = loadCustomers();
   const remaining = current.filter((cust) => cust.id !== customerId);
   saveCustomers(remaining, true);

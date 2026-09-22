@@ -39,9 +39,12 @@ import {
   Link as LinkIcon,
   Tag,
   ListTodo,
-  AlertCircle
+  AlertCircle,
+  Mail
 } from "lucide-react";
 import { triggerAppNotification } from "../../../context/NotificationContext";
+import { sendWorkReceiptEmail } from "../../../utils/workReceiptPdfGenerator";
+import { getOrAssignReceiptNumber } from "../../../utils/receiptNumberManager";
 
 interface NewProjectModalProps {
   isOpen: boolean;
@@ -64,6 +67,8 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
   // Core Project Details - CLIENT NAME MOST PRIORITY, PROJECT TITLE NEXT
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
+  const [autoSendReceiptEmail, setAutoSendReceiptEmail] = useState(true);
   const [title, setTitle] = useState("");
   const [location, setLocation] = useState("");
   const [assignee, setAssignee] = useState<StaffName>("DIBIN");
@@ -354,6 +359,7 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
   const handleSelectCustomer = (customer: Customer) => {
     setClientName(customer.name);
     if (customer.phone) setClientPhone(customer.phone);
+    if (customer.email) setClientEmail(customer.email);
     if (customer.addressLine || customer.villagePanchayat || customer.district) {
       const parts = [customer.houseName, customer.addressLine, customer.villagePanchayat, customer.district].filter(Boolean);
       setLocation(parts.join(", "));
@@ -422,12 +428,13 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
       });
     }
 
-    // Construct CRM Project (No Invoice Sync)
+    // Construct CRM Project
     const newProj: CrmProject = {
       id: projectId,
       title: title.trim(),
       clientName: clientName.trim(),
       clientPhone: clientPhone.trim() || "9747995961",
+      clientEmail: clientEmail.trim() || undefined,
       location: location.trim() || "Keralassery, Palakkad",
       assignee,
       status,
@@ -440,7 +447,27 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
       createdAt: new Date().toISOString().split("T")[0]
     };
 
+    // Assign sequential receipt number starting from VS000001
+    newProj.receiptNumber = getOrAssignReceiptNumber(newProj);
+
     onCreateProject(newProj);
+
+    // Auto-dispatch Work Receipt PDF & Live Status QR Code via Email if checked & email provided
+    if (autoSendReceiptEmail && clientEmail.trim() && clientEmail.includes("@")) {
+      sendWorkReceiptEmail({
+        project: newProj,
+        recipientEmail: clientEmail.trim()
+      }).then(() => {
+        triggerAppNotification(
+          "PROJECT_STATUS",
+          "Work Receipt Dispatched",
+          `Official Work Receipt & Live Status QR Code emailed to ${clientEmail.trim()}`,
+          { projectId: newProj.id }
+        );
+      }).catch((err) => {
+        console.warn("Could not dispatch automated work receipt email:", err);
+      });
+    }
 
     triggerAppNotification(
       "PROJECT_STATUS",
@@ -703,6 +730,38 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
                         />
                       </div>
                     </div>
+
+                    <div>
+                      <label className="text-slate-200 font-mono text-[11px] block mb-1.5 font-bold flex items-center justify-between">
+                        <span>Client Email ID (ക്ലയന്റ് ഇമെയിൽ)</span>
+                        <span className="text-[10px] text-sky-400 font-normal">PDF വർക്ക് രസീത് & QR കോഡ് അയക്കാൻ</span>
+                      </label>
+                      <div className="relative">
+                        <Mail className="w-4 h-4 absolute left-3 top-3 text-sky-400" />
+                        <input
+                          type="email"
+                          value={clientEmail}
+                          onChange={(e) => setClientEmail(e.target.value)}
+                          placeholder="client@gmail.com"
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-9 pr-3 py-2.5 text-white font-mono text-xs focus:outline-none focus:border-sky-400 transition-colors"
+                        />
+                      </div>
+                    </div>
+
+                    {clientEmail && (
+                      <div className="col-span-full p-2.5 rounded-xl bg-sky-950/40 border border-sky-500/30 flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="autoSendReceipt"
+                          checked={autoSendReceiptEmail}
+                          onChange={(e) => setAutoSendReceiptEmail(e.target.checked)}
+                          className="w-4 h-4 rounded text-sky-500 focus:ring-sky-400 cursor-pointer"
+                        />
+                        <label htmlFor="autoSendReceipt" className="text-xs text-slate-200 cursor-pointer select-none">
+                          വർക്ക് എന്റർ ചെയ്ത ഉടൻ ഔദ്യോഗിക <strong>PDF വർക്ക് രസീതും ലൈവ് സ്റ്റാറ്റസ് QR കോഡും</strong> ഇമെയിൽ ചെയ്യുക (Auto-dispatch PDF Receipt & QR)
+                        </label>
+                      </div>
+                    )}
                   </div>
                 </div>
 

@@ -71,5 +71,48 @@ service cloud.firestore {
       allow read: if true;
       allow write: if true;
     }
+
+    // Online Applications Collection (Real-time sync across all logins)
+    match /online_applications/{appId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Deleted Records Tombstones (Instantaneous deletion sync across all devices)
+    match /deleted_records/{recordId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Rate Items, Customers, and Supporting Data
+    match /rate_items/{itemId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /customers/{customerId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /cad_folders/{folderId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /cad_files/{fileId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /subscription_requests/{subId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /application_entries/{entryId} {
+      allow read: if true;
+      allow write: if true;
+    }
   }
 }

@@ -6,7 +6,11 @@ import { ThemeProvider } from './context/ThemeContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { ViewModeProvider } from './context/ViewModeContext';
+import { initCloudRealtimeSync } from './utils/cloudRealtimeClient';
 import './index.css';
+
+// Initialize Instantaneous Universal Cloud Realtime Sync & Deletion Registry
+initCloudRealtimeSync();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

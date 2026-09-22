@@ -33,7 +33,9 @@ import {
   getAdminTotpDaysRemaining,
   getLastAdminTotpVerified,
   recordAdminTotpVerified,
-  ADMIN_TOTP_RECURRING_WINDOW_MS
+  ADMIN_TOTP_RECURRING_WINDOW_MS,
+  isSubscriberDailyTotpRequired,
+  recordSubscriberDailyTotpVerified
 } from "../utils/totp";
 import {
   SubscriptionRequest,
@@ -143,7 +145,7 @@ interface AuthContextType {
     otp?: string;
   }) => Promise<boolean>;
   loginWithPassword: (userIdInput: string, passwordInput: string) => Promise<boolean>;
-  loginWithSubscription: (emailOrPhoneInput: string, passwordInput: string) => Promise<boolean>;
+  loginWithSubscription: (emailOrPhoneInput: string, passwordInput: string, totpCode?: string) => Promise<boolean>;
   submitSubscriptionRequest: (details: {
     fullName: string;
     email: string;
@@ -1369,6 +1371,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.removeItem("vasthusilpy_authenticator_login");
     }
 
+    // Record daily TOTP verification so subscriber login doesn't ask again today
+    recordSubscriberDailyTotpVerified(cleanEmail);
+    if (phone) {
+      recordSubscriberDailyTotpVerified(phone);
+    }
+
     setEmailUser(sessionUser);
     setUser(null);
     setAuthorized(true);
@@ -1490,7 +1498,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Login for Subscribed Users via Email / Mobile Number and Password
-  const loginWithSubscription = async (emailOrPhoneInput?: string, passwordInput?: string): Promise<boolean> => {
+  const loginWithSubscription = async (
+    emailOrPhoneInput?: string,
+    passwordInput?: string,
+    totpCode?: string
+  ): Promise<boolean> => {
     setAuthError(null);
     setLoading(true);
 
@@ -1754,6 +1766,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const hasExpired = foundSub.status === "expired" || isSubscriptionExpired(foundSub);
+
+    // Daily TOTP Enforcement: "totp must ask for every day starting once on subscriber login"
+    const subIdentifier = foundSub.email || foundSub.phone || cleanInput;
+    const isDailyTotpNeeded = isSubscriberDailyTotpRequired(subIdentifier);
+
+    if (isDailyTotpNeeded) {
+      if (totpCode && totpCode.trim().length === 6) {
+        const userEmail = foundSub.email || (cleanInput.includes("@") ? cleanInput : `${cleanPhoneDigits}@vasthusilpy.local`);
+        const secret = getOrCreateTotpSecret(userEmail);
+        const verification = await verifyTotpCode(secret, totpCode.trim(), 1);
+        if (!verification.valid) {
+          setLoading(false);
+          throw new Error("നൽകിയ 6 അക്ക Google Authenticator കോഡ് തെറ്റാണ് അല്ലെങ്കിൽ കാലഹരണപ്പെട്ടു (Invalid or expired Authenticator code).");
+        }
+        recordSubscriberDailyTotpVerified(foundSub.email);
+        if (foundSub.phone) recordSubscriberDailyTotpVerified(foundSub.phone);
+        if (cleanInput) recordSubscriberDailyTotpVerified(cleanInput);
+      } else {
+        setLoading(false);
+        const err: any = new Error("SUBSCRIBER_DAILY_TOTP_REQUIRED");
+        err.code = "SUBSCRIBER_DAILY_TOTP_REQUIRED";
+        err.subscriberEmail = foundSub.email || (cleanInput.includes("@") ? cleanInput : `${cleanPhoneDigits}@vasthusilpy.local`);
+        err.subscriberPhone = foundSub.phone || cleanPhoneDigits;
+        err.displayName = foundSub.fullName || cleanInput;
+        throw err;
+      }
+    } else {
+      recordSubscriberDailyTotpVerified(foundSub.email);
+      if (foundSub.phone) recordSubscriberDailyTotpVerified(foundSub.phone);
+    }
 
     // Instant session construction
     const displayName = foundSub.fullName || (foundSub.email.includes("@") ? foundSub.email.split("@")[0] : "Subscriber");

@@ -4,6 +4,7 @@ import { db } from "../lib/firebase";
 import { collection, onSnapshot, doc, deleteDoc, getDocs } from "firebase/firestore";
 import { safeSetDoc, sanitizeForFirestore } from "./storageManager";
 import { broadcastMessage } from "./broadcastSync";
+import { cloudSyncBatch, cloudDeleteRecord } from "./cloudRealtimeSync";
 
 export const SITES_STORAGE_KEYS = {
   IMPORTANT_SITES: "vasthusilpy_important_sites_v1",
@@ -120,6 +121,10 @@ export function saveImportantSites(sites: ImportantSite[], syncToCloud = true): 
         }
       });
     }
+
+    if (syncToCloud) {
+      cloudSyncBatch("important_sites", cleanSites).catch(() => {});
+    }
   } catch (e) {
     console.error("Failed to save important sites", e);
   }
@@ -139,6 +144,7 @@ export function deleteImportantSite(idToDelete: string): ImportantSite[] {
       console.warn("Firestore deleteDoc error on site:", err);
     });
   }
+  cloudDeleteRecord("important_sites", idToDelete).catch(() => {});
 
   return remaining;
 }

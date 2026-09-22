@@ -43,6 +43,7 @@ import {
   formatSyncTimestamp,
   pullAndHydrateWebDataFromServer
 } from "../utils/webDataSyncManager";
+import { pullFullCloudDatabaseState } from "../utils/cloudRealtimeSync";
 
 interface HeaderProps {
   activeSection?: MainSectionType;
@@ -93,8 +94,11 @@ export const Header: React.FC<HeaderProps> = ({
       if (activeEmail || activePhone) {
         await pullAndHydrateWebDataFromServer(activeEmail || activePhone);
       }
-      const res = await performFullWebDataSync();
-      setLastSyncStr(formatSyncTimestamp(res.syncedAt));
+      await Promise.allSettled([
+        performFullWebDataSync(),
+        pullFullCloudDatabaseState()
+      ]);
+      setLastSyncStr(formatSyncTimestamp(new Date().toISOString()));
       setSyncFeedback("Synced Online!");
       setTimeout(() => setSyncFeedback(null), 3500);
     } catch (e) {

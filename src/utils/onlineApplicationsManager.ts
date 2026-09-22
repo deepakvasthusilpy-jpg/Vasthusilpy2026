@@ -1,9 +1,15 @@
 import { OnlineApplicantRecord, ApplicationDetailItem } from "../types";
-import { INITIAL_ONLINE_APPLICANTS } from "../data/onlineApplicationsData";
 import { db } from "../lib/firebase";
-import { collection, onSnapshot, doc, deleteDoc, getDocs } from "firebase/firestore";
+import { collection, onSnapshot, doc, deleteDoc } from "firebase/firestore";
 import { safeSetDoc } from "./storageManager";
-import { broadcastMessage } from "./broadcastSync";
+import { broadcastMessage, getBroadcastChannel } from "./broadcastSync";
+import {
+  filterOutDeletedRecords,
+  isRecordDeleted,
+  recordGlobalDeletion,
+  getGlobalDeletedIds,
+  PERMANENT_DEMO_TOMBSTONES
+} from "./deletionRegistry";
 
 export const ONLINE_APP_STORAGE_KEYS = {
   APPLICANTS: "vasthusilpy_online_applications_v1",
@@ -24,10 +30,9 @@ export const DEFAULT_PORTAL_OPTIONS: StoredPortalOption[] = [
 
 export function loadStoredPortals(): StoredPortalOption[] {
   try {
-    const raw = localStorage.getItem(ONLINE_APP_STORAGE_KEYS.PORTAL_TYPES);
+    const raw = typeof localStorage !== "undefined" ? localStorage.getItem(ONLINE_APP_STORAGE_KEYS.PORTAL_TYPES) : null;
     let list: StoredPortalOption[] = raw ? JSON.parse(raw) : [];
 
-    // Ensure all default portals exist
     const map = new Map<string, StoredPortalOption>();
     DEFAULT_PORTAL_OPTIONS.forEach((p) => map.set(p.name.toLowerCase().trim(), p));
     if (Array.isArray(list)) {
@@ -36,7 +41,6 @@ export function loadStoredPortals(): StoredPortalOption[] {
       });
     }
 
-    // Also harvest any portal names from existing applicants
     const applicants = loadOnlineApplicants();
     applicants.forEach((applicant) => {
       (applicant.applications || []).forEach((app) => {
@@ -49,8 +53,7 @@ export function loadStoredPortals(): StoredPortalOption[] {
       });
     });
 
-    const result = Array.from(map.values());
-    return result;
+    return Array.from(map.values());
   } catch (e) {
     console.warn("Failed reading stored portals", e);
     return DEFAULT_PORTAL_OPTIONS;
@@ -59,7 +62,9 @@ export function loadStoredPortals(): StoredPortalOption[] {
 
 export function saveStoredPortals(portals: StoredPortalOption[]): void {
   try {
-    localStorage.setItem(ONLINE_APP_STORAGE_KEYS.PORTAL_TYPES, JSON.stringify(portals));
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(ONLINE_APP_STORAGE_KEYS.PORTAL_TYPES, JSON.stringify(portals));
+    }
   } catch (e) {
     console.warn("Failed saving stored portals", e);
   }
@@ -98,91 +103,89 @@ export const DEFAULT_RECEIVER_UPI = "9567627277@SLC";
 export const DEFAULT_BENEFICIARY_NAME = "VASTHUSILPY ARCHITECTURAL & ENGINEERING CONSULTANTS";
 
 export function getDeletedOnlineAppIds(): string[] {
-  try {
-    const raw = localStorage.getItem(ONLINE_APP_STORAGE_KEYS.DELETED_IDS);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed;
-    }
-  } catch (e) {
-    console.warn("Failed reading deleted applicant IDs", e);
-  }
-  return [];
+  return getGlobalDeletedIds();
 }
 
 export function addDeletedOnlineAppId(id: string): void {
-  try {
-    const current = getDeletedOnlineAppIds();
-    if (!current.includes(id)) {
-      localStorage.setItem(ONLINE_APP_STORAGE_KEYS.DELETED_IDS, JSON.stringify([...current, id]));
-    }
-  } catch (e) {
-    console.warn("Failed recording deleted applicant ID", e);
-  }
+  recordGlobalDeletion(id, "online_applications");
 }
 
-export const DEMO_APPLICANT_IDS = [
-  "app_ramachandran_01",
-  "app_asharaf_02",
-  "app_sunitha_03",
-  "app_george_04",
-  "app_anoop_05"
-];
+export const DEMO_APPLICANT_IDS = PERMANENT_DEMO_TOMBSTONES;
 
 /**
- * Load online applicants from localStorage or fallback to defaults
+ * Load online applicants from localStorage, strictly filtering out any deleted records
  */
 export function loadOnlineApplicants(): OnlineApplicantRecord[] {
   try {
-    const deletedIds = getDeletedOnlineAppIds();
-    const raw = localStorage.getItem(ONLINE_APP_STORAGE_KEYS.APPLICANTS);
-
+    const raw = typeof localStorage !== "undefined" ? localStorage.getItem(ONLINE_APP_STORAGE_KEYS.APPLICANTS) : null;
     if (raw) {
-      const parsed: OnlineApplicantRecord[] = JSON.parse(raw);
+      const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        const cleaned = parsed.filter(
-          (item) => item && item.id && !deletedIds.includes(item.id) && !DEMO_APPLICANT_IDS.includes(item.id)
-        );
-        if (cleaned.length !== parsed.length) {
+        const cleaned = filterOutDeletedRecords(parsed) as OnlineApplicantRecord[];
+        if (cleaned.length !== parsed.length && typeof localStorage !== "undefined") {
           localStorage.setItem(ONLINE_APP_STORAGE_KEYS.APPLICANTS, JSON.stringify(cleaned));
         }
         return cleaned;
       }
     }
-
-    localStorage.setItem(ONLINE_APP_STORAGE_KEYS.APPLICANTS, JSON.stringify([]));
-    localStorage.setItem(ONLINE_APP_STORAGE_KEYS.INITIALIZED, "true");
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(ONLINE_APP_STORAGE_KEYS.APPLICANTS, JSON.stringify([]));
+      localStorage.setItem(ONLINE_APP_STORAGE_KEYS.INITIALIZED, "true");
+    }
     return [];
   } catch (e) {
     console.error("Failed loading online applicants from storage", e);
+    return [];
   }
-  return [];
 }
 
 /**
- * Save online applicants to localStorage and optional Cloud Firestore
+ * Save online applicants to localStorage, Firestore, and backend API with real-time broadcast
  */
 export function saveOnlineApplicants(records: OnlineApplicantRecord[], syncToCloud = true): void {
   try {
-    const deletedIds = getDeletedOnlineAppIds();
-    const cleanRecords = (records || []).filter((r) => r && r.id && !deletedIds.includes(r.id));
+    const cleanRecords = filterOutDeletedRecords(records || []) as OnlineApplicantRecord[];
 
-    localStorage.setItem(ONLINE_APP_STORAGE_KEYS.APPLICANTS, JSON.stringify(cleanRecords));
-    localStorage.setItem(ONLINE_APP_STORAGE_KEYS.INITIALIZED, "true");
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(ONLINE_APP_STORAGE_KEYS.APPLICANTS, JSON.stringify(cleanRecords));
+      localStorage.setItem(ONLINE_APP_STORAGE_KEYS.INITIALIZED, "true");
+    }
 
+    // 1. In-tab reactive event
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("vasthusilpy_online_applications_updated", { detail: cleanRecords })
+      );
+      window.dispatchEvent(new Event("vasthusilpy_storage_update"));
+    }
+
+    // 2. Cross-tab BroadcastChannel
     broadcastMessage({
       type: "SYNC_ONLINE_APPLICATIONS",
       data: cleanRecords
     });
 
-    if (syncToCloud && db) {
-      cleanRecords.forEach((record) => {
-        if (record && record.id) {
-          safeSetDoc(doc(db, "online_applications", record.id), record, { merge: true }).catch((err) => {
-            console.warn("Firestore online_applications save error:", err);
-          });
-        }
-      });
+    // 3. Online Cloud sync: Server API + Firestore
+    if (syncToCloud) {
+      // Server API sync (for multi-browser and non-Firebase logins)
+      if (typeof fetch !== "undefined") {
+        fetch("/api/online-applications", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ records: cleanRecords })
+        }).catch(() => {});
+      }
+
+      // Firestore Cloud sync
+      if (db) {
+        cleanRecords.forEach((record) => {
+          if (record && record.id && !isRecordDeleted(record.id)) {
+            safeSetDoc(doc(db, "online_applications", record.id), record, { merge: true }).catch((err) => {
+              console.warn("Firestore online_applications save error:", err);
+            });
+          }
+        });
+      }
     }
   } catch (e) {
     console.error("Failed saving online applicants", e);
@@ -193,6 +196,8 @@ export function saveOnlineApplicants(records: OnlineApplicantRecord[], syncToClo
  * Add or update an online applicant
  */
 export function upsertOnlineApplicant(record: OnlineApplicantRecord): OnlineApplicantRecord[] {
+  if (isRecordDeleted(record.id)) return loadOnlineApplicants();
+
   const current = loadOnlineApplicants();
   const existingIdx = current.findIndex((r) => r.id === record.id);
   let updated: OnlineApplicantRecord[];
@@ -216,19 +221,36 @@ export function upsertOnlineApplicant(record: OnlineApplicantRecord): OnlineAppl
 }
 
 /**
- * Delete an applicant record
+ * Permanently delete an applicant record across all tabs, logins, and databases
  */
 export function deleteOnlineApplicant(idToDelete: string): OnlineApplicantRecord[] {
-  addDeletedOnlineAppId(idToDelete);
+  recordGlobalDeletion(idToDelete, "online_applications");
+
   const current = loadOnlineApplicants();
   const updated = current.filter((r) => r.id !== idToDelete);
+
+  // Save updated state without syncing deleted doc
   saveOnlineApplicants(updated, false);
 
+  // Explicitly delete from server backend
+  if (typeof fetch !== "undefined") {
+    fetch(`/api/online-applications/${encodeURIComponent(idToDelete)}`, {
+      method: "DELETE"
+    }).catch(() => {});
+  }
+
+  // Explicitly delete from Firestore
   if (db) {
     deleteDoc(doc(db, "online_applications", idToDelete)).catch((err) => {
       console.warn("Firestore delete online_applications error:", err);
     });
   }
+
+  // Broadcast deletion to all open tabs
+  broadcastMessage({
+    type: "ONLINE_APPLICANT_DELETED",
+    data: { id: idToDelete }
+  });
 
   return updated;
 }
@@ -351,7 +373,6 @@ export function recordApplicationPayment(
     };
   });
 
-  // Calculate totals from individual applications if present
   let totalBill = 0;
   let totalPaid = 0;
   updatedApps.forEach((a) => {
@@ -359,13 +380,10 @@ export function recordApplicationPayment(
     totalPaid += a.paidAmount || 0;
   });
 
-  // Fallback to applicant bill if no app bills are defined
   if (totalBill === 0 && target.billAmount > 0) {
     totalBill = target.billAmount;
     totalPaid = Math.max(0, (target.paidAmount || 0) + amountReceived);
   }
-
-  const isFullyPaid = totalBill > 0 && totalPaid >= totalBill;
 
   const updatedTarget: OnlineApplicantRecord = {
     ...target,
@@ -393,7 +411,6 @@ export function recordApplicantPayment(
   if (!target) return current;
 
   const newPaidAmount = Math.max(0, (target.paidAmount || 0) + amountReceived);
-  const isFullyPaid = target.billAmount > 0 && newPaidAmount >= target.billAmount;
 
   const updatedTarget: OnlineApplicantRecord = {
     ...target,
@@ -411,7 +428,6 @@ export function recordApplicantPayment(
  */
 export function isApplicantPaymentCompleted(applicant: OnlineApplicantRecord): boolean {
   if (!applicant) return false;
-  // If applications exist with bill amounts, verify them
   if (applicant.applications && applicant.applications.length > 0) {
     const hasAppBills = applicant.applications.some((a) => (a.billAmount || 0) > 0);
     if (hasAppBills) {
@@ -422,7 +438,6 @@ export function isApplicantPaymentCompleted(applicant: OnlineApplicantRecord): b
     }
   }
 
-  // Fallback to top-level bill and paid amounts
   if (applicant.billAmount > 0 && applicant.paidAmount >= applicant.billAmount) {
     return true;
   }
@@ -484,50 +499,153 @@ export function generateApplicantUpiUrl(
 }
 
 /**
- * Real-time listener for Firestore collection
+ * Universal Real-time subscriber for Online Applications:
+ * Instantaneous sync across tabs (BroadcastChannel), windows (Events),
+ * browsers & devices (SSE stream + Firestore real-time onSnapshot)
  */
 export function subscribeToOnlineApplicants(
   onUpdate: (applicants: OnlineApplicantRecord[]) => void
 ): () => void {
-  if (!db) {
-    onUpdate(loadOnlineApplicants());
-    return () => {};
+  // Immediately supply current state
+  onUpdate(loadOnlineApplicants());
+
+  // 1. Cross-tab BroadcastChannel listener (0ms latency between tabs on same device)
+  const bc = getBroadcastChannel();
+  const handleBroadcast = (event: MessageEvent) => {
+    if (event?.data?.type === "SYNC_ONLINE_APPLICATIONS" && Array.isArray(event.data.data)) {
+      const clean = filterOutDeletedRecords(event.data.data) as OnlineApplicantRecord[];
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem(ONLINE_APP_STORAGE_KEYS.APPLICANTS, JSON.stringify(clean));
+      }
+      onUpdate(clean);
+    } else if (event?.data?.type === "ONLINE_APPLICANT_DELETED" && event.data.data?.id) {
+      const deletedId = event.data.data.id;
+      const current = loadOnlineApplicants();
+      const filtered = current.filter((a) => a.id !== deletedId);
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem(ONLINE_APP_STORAGE_KEYS.APPLICANTS, JSON.stringify(filtered));
+      }
+      onUpdate(filtered);
+    } else if (event?.data?.type === "RECORD_DELETED") {
+      const deletedId = event.data.data?.id;
+      if (deletedId) {
+        const current = loadOnlineApplicants();
+        const filtered = current.filter((a) => a.id !== deletedId);
+        onUpdate(filtered);
+      }
+    }
+  };
+
+  if (bc) {
+    bc.addEventListener("message", handleBroadcast);
   }
 
-  try {
-    const q = collection(db, "online_applications");
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        if (!snapshot.empty) {
-          const deletedIds = getDeletedOnlineAppIds();
+  // 2. In-window custom event listener
+  const handleLocalUpdate = (e: Event) => {
+    const custom = e as CustomEvent;
+    if (Array.isArray(custom?.detail)) {
+      onUpdate(custom.detail);
+    } else {
+      onUpdate(loadOnlineApplicants());
+    }
+  };
+
+  // 3. Storage event listener (when another tab updates localStorage)
+  const handleStorageEvent = (e: StorageEvent) => {
+    if (e.key === ONLINE_APP_STORAGE_KEYS.APPLICANTS) {
+      onUpdate(loadOnlineApplicants());
+    }
+  };
+
+  if (typeof window !== "undefined") {
+    window.addEventListener("vasthusilpy_online_applications_updated", handleLocalUpdate);
+    window.addEventListener("storage", handleStorageEvent);
+  }
+
+  // 4. Server-Sent Events (SSE) listener for instantaneous sync across different browsers / computers
+  let eventSource: EventSource | null = null;
+  if (typeof window !== "undefined" && typeof EventSource !== "undefined") {
+    try {
+      eventSource = new EventSource("/api/sync/events");
+      eventSource.addEventListener("sync_update", (e: MessageEvent) => {
+        try {
+          const payload = JSON.parse(e.data);
+          if (payload && (payload.collection === "online_applications" || payload.type === "FULL_SYNC")) {
+            if (Array.isArray(payload.records)) {
+              const clean = filterOutDeletedRecords(payload.records) as OnlineApplicantRecord[];
+              if (typeof localStorage !== "undefined") {
+                localStorage.setItem(ONLINE_APP_STORAGE_KEYS.APPLICANTS, JSON.stringify(clean));
+              }
+              onUpdate(clean);
+            } else {
+              onUpdate(loadOnlineApplicants());
+            }
+          }
+        } catch {}
+      });
+      eventSource.addEventListener("record_deleted", (e: MessageEvent) => {
+        try {
+          const payload = JSON.parse(e.data);
+          if (payload?.id) {
+            recordGlobalDeletion(payload.id, payload.collection);
+            const current = loadOnlineApplicants();
+            const filtered = current.filter((a) => a.id !== payload.id);
+            onUpdate(filtered);
+          }
+        } catch {}
+      });
+    } catch (e) {
+      console.warn("SSE connection for online applications failed:", e);
+    }
+  }
+
+  // 5. Firestore real-time onSnapshot listener
+  let unsubFirestore = () => {};
+  if (db) {
+    try {
+      const q = collection(db, "online_applications");
+      unsubFirestore = onSnapshot(
+        q,
+        (snapshot) => {
           const cloudApplicants: OnlineApplicantRecord[] = [];
           snapshot.forEach((docSnap) => {
             const data = docSnap.data() as OnlineApplicantRecord;
-            if (data && data.id && !deletedIds.includes(data.id)) {
+            if (data && data.id && !isRecordDeleted(data.id)) {
               cloudApplicants.push(data);
             }
           });
 
-          if (cloudApplicants.length > 0) {
-            cloudApplicants.sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime());
-            localStorage.setItem(ONLINE_APP_STORAGE_KEYS.APPLICANTS, JSON.stringify(cloudApplicants));
-            onUpdate(cloudApplicants);
-            return;
-          }
-        }
-        onUpdate(loadOnlineApplicants());
-      },
-      (error) => {
-        console.warn("Firestore snapshot error for online_applications:", error);
-        onUpdate(loadOnlineApplicants());
-      }
-    );
+          cloudApplicants.sort(
+            (a, b) =>
+              new Date(b.updatedAt || b.createdAt).getTime() -
+              new Date(a.updatedAt || a.createdAt).getTime()
+          );
 
-    return unsubscribe;
-  } catch (err) {
-    console.warn("Failed subscribing to online_applications:", err);
-    onUpdate(loadOnlineApplicants());
-    return () => {};
+          if (typeof localStorage !== "undefined") {
+            localStorage.setItem(ONLINE_APP_STORAGE_KEYS.APPLICANTS, JSON.stringify(cloudApplicants));
+          }
+          onUpdate(cloudApplicants);
+        },
+        (error) => {
+          console.warn("Firestore snapshot notice for online_applications:", error);
+        }
+      );
+    } catch (err) {
+      console.warn("Failed subscribing to Firestore online_applications:", err);
+    }
   }
+
+  return () => {
+    if (bc) {
+      bc.removeEventListener("message", handleBroadcast);
+    }
+    if (typeof window !== "undefined") {
+      window.removeEventListener("vasthusilpy_online_applications_updated", handleLocalUpdate);
+      window.removeEventListener("storage", handleStorageEvent);
+    }
+    if (eventSource) {
+      eventSource.close();
+    }
+    unsubFirestore();
+  };
 }

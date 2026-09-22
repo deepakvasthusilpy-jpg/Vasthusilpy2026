@@ -2,7 +2,12 @@ import React, { useState, useRef, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { PRIMARY_ADMIN_EMAILS } from "../../lib/firebase";
 import { VasthusilpyLogo } from "../common/VasthusilpyLogo";
-import { getTotpRemainingSeconds } from "../../utils/totp";
+import {
+  getTotpRemainingSeconds,
+  generateTotpQrCode,
+  getOrCreateTotpSecret,
+  formatSecretFormatted
+} from "../../utils/totp";
 import {
   UPI_ID,
   UPI_PAYEE_NAME,
@@ -173,6 +178,28 @@ export const LoginPage: React.FC = () => {
   // Effective Email for TOTP
   const effectiveEmail = isCustomEmail ? customEmail.trim().toLowerCase() : selectedEmail;
 
+  // TOTP Setup QR Code Modal State for Subscriber / User
+  const [showTotpSetupModal, setShowTotpSetupModal] = useState<boolean>(false);
+  const [totpQrUrl, setTotpQrUrl] = useState<string>("");
+  const [totpSecretFormatted, setTotpSecretFormatted] = useState<string>("");
+  const [loadingTotpQr, setLoadingTotpQr] = useState<boolean>(false);
+  const [copiedTotpSecret, setCopiedTotpSecret] = useState<boolean>(false);
+
+  const handleOpenTotpSetup = async () => {
+    try {
+      setLoadingTotpQr(true);
+      const secret = getOrCreateTotpSecret(effectiveEmail);
+      const qr = await generateTotpQrCode(effectiveEmail, secret, "Vasthusilpy");
+      setTotpQrUrl(qr);
+      setTotpSecretFormatted(formatSecretFormatted(secret));
+      setShowTotpSetupModal(true);
+    } catch (e) {
+      console.error("Failed to generate TOTP setup QR:", e);
+    } finally {
+      setLoadingTotpQr(false);
+    }
+  };
+
   // Selected payment amount
   const effectiveAmount = isCustomAmount
     ? parseInt(customAmountInput, 10) || 0
@@ -298,6 +325,17 @@ export const LoginPage: React.FC = () => {
     try {
       await loginWithSubscription(cleanId, cleanPass);
     } catch (err: any) {
+      if (err?.code === "SUBSCRIBER_DAILY_TOTP_REQUIRED" || err?.message?.includes("SUBSCRIBER_DAILY_TOTP_REQUIRED")) {
+        const subEmail = err.subscriberEmail || (cleanId.includes("@") ? cleanId : `${cleanId}@vasthusilpy.local`);
+        setSelectedEmail(subEmail);
+        setCustomEmail(subEmail);
+        setIsCustomEmail(true);
+        setLoginMode("authenticator");
+        setLocalSuccess(
+          "പാസ്‌വേഡ് സ്ഥിരീകരിച്ചു! ഇന്നത്തെ ആദ്യ ലോഗിൻ ആയതിനാൽ Google Authenticator-ലെ 6 അക്ക കോഡ് നൽകുക (Daily Security Check)."
+        );
+        return;
+      }
       if (err?.code === "ADMIN_TOTP_REQUIRED" || err?.message?.includes("ADMIN_TOTP_REQUIRED")) {
         setLoginMode("authenticator");
         if (err.adminEmail) {
@@ -970,47 +1008,75 @@ export const LoginPage: React.FC = () => {
           {loginMode === "authenticator" && (
             <div className="space-y-4">
               
-              {/* 30-Day Recurring TOTP Badge */}
+              {/* Daily Security Verification or Admin Recurring Badge */}
               <div className="p-2.5 rounded-xl bg-purple-900/40 border border-purple-400/30 text-[11px] text-pink-200 flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   <ShieldCheck className="w-4 h-4 text-pink-300 shrink-0" />
-                  <span>30-Day Recurring Admin Security</span>
+                  <span>
+                    {isCustomEmail
+                      ? "Daily Security Verification (Once per Day)"
+                      : "30-Day Recurring Admin Security"}
+                  </span>
                 </div>
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                  isAdminTotpDue 
+                  isAdminTotpDue || isCustomEmail
                     ? "bg-rose-500/30 text-rose-200 border border-rose-400/40"
                     : "bg-emerald-500/30 text-emerald-200 border border-emerald-400/40"
                 }`}>
-                  {isAdminTotpDue ? "Verification Due" : `${adminTotpDaysRemaining}d remaining`}
+                  {isCustomEmail ? "Daily Check" : isAdminTotpDue ? "Verification Due" : `${adminTotpDaysRemaining}d remaining`}
                 </span>
               </div>
 
-              {/* Account Selection */}
+              {/* Account Selection / Display */}
               <div className="space-y-1.5">
-                <span className="text-[11px] text-white/70 font-mono">Select Admin Account:</span>
-                <div className="grid grid-cols-1 gap-1.5">
-                  {PRIMARY_ADMIN_EMAILS.map((email) => {
-                    const isSelected = !isCustomEmail && selectedEmail === email;
-                    return (
-                      <button
-                        key={email}
-                        type="button"
-                        onClick={() => {
-                          setIsCustomEmail(false);
-                          setSelectedEmail(email);
-                        }}
-                        className={`p-2.5 rounded-xl border text-left flex items-center justify-between text-xs font-mono transition-all cursor-pointer ${
-                          isSelected
-                            ? "bg-white/25 border-white text-white font-bold shadow-md"
-                            : "bg-white/5 border-white/15 text-white/70 hover:bg-white/10 hover:text-white"
-                        }`}
-                      >
-                        <span className="truncate">{email}</span>
-                        {isSelected && <Check className="w-3.5 h-3.5 text-white shrink-0" />}
-                      </button>
-                    );
-                  })}
+                <div className="flex items-center justify-between text-[11px] text-white/70 font-mono">
+                  <span>{isCustomEmail ? "Verifying Account:" : "Select Admin Account:"}</span>
+                  {isCustomEmail && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomEmail(false);
+                        setSelectedEmail(PRIMARY_ADMIN_EMAILS[0]);
+                      }}
+                      className="text-[10px] text-pink-300 hover:text-white underline cursor-pointer"
+                    >
+                      Admin Accounts
+                    </button>
+                  )}
                 </div>
+
+                {isCustomEmail ? (
+                  <div className="p-2.5 rounded-xl border bg-white/20 border-white text-white flex items-center justify-between text-xs font-mono">
+                    <span className="truncate font-bold">{effectiveEmail}</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/30 border border-emerald-400/40 text-emerald-200 font-sans">
+                      Password OK ✓
+                    </span>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-1.5">
+                    {PRIMARY_ADMIN_EMAILS.map((email) => {
+                      const isSelected = !isCustomEmail && selectedEmail === email;
+                      return (
+                        <button
+                          key={email}
+                          type="button"
+                          onClick={() => {
+                            setIsCustomEmail(false);
+                            setSelectedEmail(email);
+                          }}
+                          className={`p-2.5 rounded-xl border text-left flex items-center justify-between text-xs font-mono transition-all cursor-pointer ${
+                            isSelected
+                              ? "bg-white/25 border-white text-white font-bold shadow-md"
+                              : "bg-white/5 border-white/15 text-white/70 hover:bg-white/10 hover:text-white"
+                          }`}
+                        >
+                          <span className="truncate">{email}</span>
+                          {isSelected && <Check className="w-3.5 h-3.5 text-white shrink-0" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* 6 Digit TOTP Inputs */}
@@ -1057,7 +1123,18 @@ export const LoginPage: React.FC = () => {
                 </button>
               </div>
 
-              <div className="text-center pt-1">
+              {/* Setup QR Code Helper Button */}
+              <div className="flex items-center justify-between pt-1">
+                <button
+                  type="button"
+                  onClick={handleOpenTotpSetup}
+                  disabled={loadingTotpQr}
+                  className="text-xs text-pink-200 hover:text-white font-mono flex items-center gap-1.5 cursor-pointer"
+                >
+                  <QrCode className="w-3.5 h-3.5" />
+                  <span>{loadingTotpQr ? "Loading QR..." : "Setup QR / Secret Key"}</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => {
@@ -1066,7 +1143,7 @@ export const LoginPage: React.FC = () => {
                   }}
                   className="text-xs text-white/80 hover:text-white font-mono underline cursor-pointer"
                 >
-                  ← Back to Email / Password Login
+                  ← Back to Login
                 </button>
               </div>
             </div>
@@ -1168,6 +1245,81 @@ export const LoginPage: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 4.1 GOOGLE AUTHENTICATOR SETUP QR MODAL */}
+      {showTotpSetupModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-purple-950/90 border border-white/25 rounded-3xl p-5 sm:p-6 shadow-2xl backdrop-blur-2xl text-white space-y-4">
+            <div className="flex items-center justify-between border-b border-white/15 pb-3">
+              <div className="flex items-center gap-2 font-bold text-sm">
+                <ShieldCheck className="w-4 h-4 text-pink-300" />
+                <span>Google Authenticator Setup</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowTotpSetupModal(false)}
+                className="p-1 rounded-full text-white/60 hover:text-white hover:bg-white/10 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="text-center space-y-3">
+              <p className="text-[11px] text-white/80 leading-relaxed">
+                Google Authenticator ആപ്പ് തുറന്ന് '+' ക്ലിക്ക് ചെയ്ത് താഴെ കാണുന്ന QR കോഡ് സ്കാൻ ചെയ്യുക:
+              </p>
+
+              {/* QR Code Container */}
+              <div className="p-3 bg-white rounded-2xl inline-block shadow-xl">
+                {totpQrUrl ? (
+                  <img
+                    src={totpQrUrl}
+                    alt="Google Authenticator QR"
+                    className="w-44 h-44 object-contain"
+                  />
+                ) : (
+                  <div className="w-44 h-44 flex items-center justify-center text-slate-500 text-xs">
+                    Loading QR...
+                  </div>
+                )}
+              </div>
+
+              {/* Account details & manual key */}
+              <div className="p-2.5 rounded-xl bg-black/40 border border-white/10 text-left space-y-1.5 font-mono text-[10px]">
+                <div className="text-white/60">Account: <span className="text-white font-bold">{effectiveEmail}</span></div>
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-pink-300 font-bold tracking-wider truncate">
+                    {totpSecretFormatted || "SECRET"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (totpSecretFormatted) {
+                        navigator.clipboard.writeText(totpSecretFormatted.replace(/\s+/g, ""));
+                        setCopiedTotpSecret(true);
+                        setTimeout(() => setCopiedTotpSecret(false), 2000);
+                      }
+                    }}
+                    className="px-2 py-0.5 rounded bg-white/20 hover:bg-white/30 text-white font-bold cursor-pointer shrink-0"
+                  >
+                    {copiedTotpSecret ? "Copied!" : "Copy Key"}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => setShowTotpSetupModal(false)}
+                className="w-full py-2.5 rounded-full bg-white hover:bg-white/90 text-slate-950 font-bold text-xs uppercase tracking-wider shadow-lg transition-all cursor-pointer"
+              >
+                I Have Scanned QR • Enter 6-Digit Code
+              </button>
+            </div>
           </div>
         </div>
       )}

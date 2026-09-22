@@ -524,6 +524,18 @@ export default function App() {
     );
   }
 
+  // 5. CRM Project Status & Work Pipeline Share Portal (Zero Login Client QR Code Tracking)
+  if (crmProjectShareId) {
+    return (
+      <PublicProjectSharePortal
+        projectId={crmProjectShareId}
+        onGoToApp={() => {
+          window.location.href = window.location.origin;
+        }}
+      />
+    );
+  }
+
   // Auth Guard: Show Login Page if not signed in or not authorized
   if (!isAuthenticated) {
     return <LoginPage />;

@@ -112,5 +112,131 @@
       }
     ],
     "activities": []
+  },
+  {
+    "id": "crm_proj_1789980101993",
+    "dueDate": "2026-08-30",
+    "createdAt": "2026-09-21",
+    "clientPhone": "9747995961",
+    "activities": [
+      {
+        "actor": "DIBIN",
+        "action": "Created new project entry: H Residence Plan for HI",
+        "timestamp": "9/21/2026, 2:11:41 PM",
+        "id": "act_create_1789980101993"
+      }
+    ],
+    "description": "Vasthusilpy Engineering Project",
+    "location": "Keralassery, Palakkad",
+    "attachments": [],
+    "status": "PENDING",
+    "title": "H Residence Plan",
+    "subTasks": [],
+    "comments": [
+      {
+        "id": "c_1_1789980090210",
+        "author": "DIBIN",
+        "timestamp": "9/21/2026, 2:11:30 PM",
+        "text": "Project created and initiated in Vasthusilpy CRM."
+      }
+    ],
+    "assignee": "DIBIN",
+    "clientName": "HI"
+  },
+  {
+    "attachments": [],
+    "subTasks": [],
+    "id": "crm_proj_1789985187932",
+    "activities": [
+      {
+        "id": "act_create_1789985187932",
+        "timestamp": "9/21/2026, 3:36:27 PM",
+        "action": "Created new project entry: e Residence Plan for ew",
+        "actor": "DIBIN"
+      }
+    ],
+    "clientPhone": "9747995961",
+    "description": "house renovation",
+    "dueDate": "2026-08-30",
+    "assignee": "DIBIN",
+    "status": "PENDING",
+    "location": "Keralassery, Palakkad",
+    "clientName": "ew",
+    "title": "e Residence Plan",
+    "comments": [
+      {
+        "timestamp": "9/21/2026, 3:36:15 PM",
+        "author": "DIBIN",
+        "id": "c_1_1789985175048",
+        "text": "Project created and initiated in Vasthusilpy CRM."
+      }
+    ],
+    "createdAt": "2026-09-21"
+  },
+  {
+    "clientPhone": "9747995961",
+    "activities": [
+      {
+        "id": "act_1789985956181",
+        "action": "Swapped assignee to DEEPAK",
+        "actor": "DEEPAK",
+        "timestamp": "9/21/2026, 3:49:16 PM"
+      },
+      {
+        "action": "Created new project entry: v Residence Plan for vadsvv",
+        "timestamp": "9/21/2026, 3:36:48 PM",
+        "id": "act_create_1789985208436",
+        "actor": "DIBIN"
+      }
+    ],
+    "assignee": "DEEPAK",
+    "attachments": [],
+    "title": "v Residence Plan",
+    "description": "Vasthusilpy Engineering Project",
+    "subTasks": [],
+    "id": "crm_proj_1789985208436",
+    "status": "PENDING",
+    "dueDate": "2026-08-30",
+    "createdAt": "2026-09-21",
+    "comments": [
+      {
+        "timestamp": "9/21/2026, 3:36:19 PM",
+        "author": "DIBIN",
+        "id": "c_1_1789985179015",
+        "text": "Project created and initiated in Vasthusilpy CRM."
+      }
+    ],
+    "location": "Keralassery, Palakkad",
+    "clientName": "vadsvv"
+  },
+  {
+    "activities": [
+      {
+        "timestamp": "9/21/2026, 3:37:09 PM",
+        "actor": "DIBIN",
+        "action": "Created new project entry: e Residence Plan for scs",
+        "id": "act_create_1789985229811"
+      }
+    ],
+    "comments": [
+      {
+        "author": "DIBIN",
+        "text": "Project created and initiated in Vasthusilpy CRM.",
+        "timestamp": "9/21/2026, 3:36:15 PM",
+        "id": "c_1_1789985175048"
+      }
+    ],
+    "createdAt": "2026-09-21",
+    "location": "Keralassery, Palakkad",
+    "title": "e Residence Plan",
+    "id": "crm_proj_1789985229811",
+    "description": "Vasthusilpy Engineering Project",
+    "assignee": "DIBIN",
+    "status": "PENDING",
+    "dueDate": "2026-08-30",
+    "clientPhone": "9747995961",
+    "subTasks": [],
+    "clientName": "scs",
+    "attachments": []
   }
 ]

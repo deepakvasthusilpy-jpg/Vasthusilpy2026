@@ -95,6 +95,31 @@
         "status": { "type": "string" }
       },
       "required": ["id", "token"]
+    },
+    "online_applications": {
+      "title": "Online Applications",
+      "description": "Public portal and online service applications with real-time multi-device sync",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "applicantName": { "type": "string" },
+        "phone": { "type": "string" },
+        "status": { "type": "string" },
+        "billAmount": { "type": "number" },
+        "paidAmount": { "type": "number" }
+      },
+      "required": ["id", "applicantName"]
+    },
+    "deleted_records": {
+      "title": "Deleted Records Tombstones",
+      "description": "Synchronized tombstones of permanently deleted records to prevent resurrection across browsers and logins",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "deletedAt": { "type": "string" },
+        "collection": { "type": "string" }
+      },
+      "required": ["id"]
     }
   },
   "firestore": {
@@ -129,6 +154,14 @@
     "client_share_records/{recordDoc}": {
       "schema": { "$ref": "#/entities/client_share_records" },
       "description": "Client share links by id"
+    },
+    "online_applications/{appId}": {
+      "schema": { "$ref": "#/entities/online_applications" },
+      "description": "Online applications collection synced in real-time"
+    },
+    "deleted_records/{id}": {
+      "schema": { "$ref": "#/entities/deleted_records" },
+      "description": "Permanently deleted IDs registry"
     }
   }
 }

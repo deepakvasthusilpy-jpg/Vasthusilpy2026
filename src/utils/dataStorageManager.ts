@@ -8,6 +8,7 @@ import {
   CADFolder
 } from "../types/dataStorageTypes";
 import { broadcastMessage } from "./broadcastSync";
+import { cloudSyncBatch } from "./cloudRealtimeSync";
 
 export const CAD_VAULT_STORAGE_KEY = "vasthusilpy_cad_files_vault_v3";
 export const CAD_METADATA_INDEX_KEY = "vasthusilpy_cad_metadata_index_v3";
@@ -107,6 +108,8 @@ export function saveStoredCADFolders(folders: CADFolder[]): void {
   try {
     localStorage.setItem(CAD_FOLDERS_STORAGE_KEY, JSON.stringify(folders));
     broadcastMessage({ type: "CAD_FOLDERS_UPDATED", data: { count: folders.length } });
+    // Instant real-time Cloud Sync
+    cloudSyncBatch("cad_folders", folders).catch(() => {});
   } catch (e) {
     console.error("Error saving CAD folders:", e);
   }
@@ -245,6 +248,9 @@ export function saveAllCADFiles(files: CADDrawingRecord[], skipBroadcast = false
     if (!skipBroadcast) {
       broadcastMessage({ type: "CAD_FILES_UPDATED", data: { count: files.length } });
     }
+
+    // Instant real-time Cloud Sync
+    cloudSyncBatch("cad_files", files).catch(() => {});
   } catch (e) {
     console.error("Error saving all CAD files:", e);
   }

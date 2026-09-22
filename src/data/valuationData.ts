@@ -228,124 +228,34 @@ export function createNewBlankValuation(existingCount = 0): ValuationCertificate
   });
 }
 
-export const INITIAL_SAMPLE_VALUATIONS: ValuationCertificate[] = [
-  calculateValuationDetails({
-    id: "VAL-2026-003",
-    certificateNo: "VC-2026/003",
-    sectionType: "28C",
-    valuerName: "Pradeep ck",
-    valuerAddress: "Kanjirani (H), Parakkad, Kalladikode -678596",
-    designation: "Licenced Building Engineer –A",
-    regNo: "E-2050/08/12212/KKD/197/2018/EA",
-    subRegistryOffice: "Kadambazhipuram",
-    inspectionDate: "2026-09-02",
-    ownerName: "Ussainar",
-    ownerAddress: "Nellikkunnu\nMucheeri po, Kongad",
-    propertyAddress: "Nellikkunnu, Mucheeri po, Kongad",
-    doorNo: "9/703(Kongad Grama Panchayth)",
-    villagePanchayat: "Kongad Grama Panchayth",
-    yearOfConstruction: 2023,
-    areaSqM: 271.74,
-    areaSqFt: 2925.0,
-    cpwdRatePerSqM: 20750,
-    costIndex: 1.36,
-    costIndexName: "DPAR 2025 / Cost Index 136 For Palakkad",
-    ratePerSqFtBase: 1928.43,
-    ratePerSqFtAdjusted: 2622.66,
-    grandTotalValuation: 5200000,
-    netStructureValue: 5200000,
-    place: "Kalladikode",
-    certificateDate: "2026-09-02",
-    buildingDescription: "RCC roof building\nDifference in main door\nDifference in windows\nDifference in electrical work\nDifference in plumbing work\nDifference in floor",
-    status: "FINAL"
-  }),
-  calculateValuationDetails({
-    id: "VAL-2026-001",
-    certificateNo: "VC-2026/001",
-    sectionType: "28B",
-    valuerName: "",
-    valuerAddress: "",
-    designation: "Licensed Building Valuer & Supervisor",
-    regNo: "",
-    subRegistryOffice: "Alappuzha",
-    inspectionDate: "2026-08-20",
-    ownerName: "Adv. Thomas Mathew & Anitha Thomas",
-    ownerAddress: "Flat 4B, Palm Breeze Apartments, Boat Jetty Road, Alappuzha",
-    propertyAddress: "Flat No. 4B, 4th Floor, Palm Breeze Apartments, Ward 14, Alappuzha Municipality",
-    doorNo: "14/412-B",
-    syNo: "248/12",
-    blockNo: "4",
-    wardNo: "14",
-    villagePanchayat: "Alappuzha West Village",
-    districtPincode: "Alappuzha - 688001",
-    yearOfConstruction: 2000,
-    areaSqM: 92.9,
-    areaSqFt: 1000.0,
-    cpwdRatePerSqM: 24500,
-    costIndex: 1.33,
-    costIndexName: "Alappuzha Cost Index (1.33)",
-    ratePerSqFtAdjusted: 3027.25,
-    place: "Alappuzha",
-    certificateDate: "2026-08-20",
-    buildingDescription: "Multi-storeyed RCC framed apartment building with vitrified tile flooring, hardwood joinery, concealed copper wiring, granite kitchen counter and standard quality sanitary fittings. Structure is structurally sound and well maintained.",
-    status: "FINAL"
-  }),
-  calculateValuationDetails({
-    id: "VAL-2026-002",
-    certificateNo: "VC-2026/002",
-    sectionType: "28C",
-    valuerName: "",
-    valuerAddress: "",
-    designation: "Licensed Building Valuer & Engineer",
-    regNo: "",
-    subRegistryOffice: "Parli",
-    inspectionDate: "2026-08-18",
-    ownerName: "Unnikrishnan K. & Geetha Unnikrishnan",
-    ownerAddress: "Sreerangam, Keralassery P.O, Palakkad - 678641",
-    propertyAddress: "Residential Building 'Sreerangam', Ward 06, Keralassery Grama Panchayat",
-    doorNo: "6/289",
-    syNo: "112/4",
-    blockNo: "2",
-    wardNo: "06",
-    villagePanchayat: "Keralassery Grama Panchayat",
-    districtPincode: "Palakkad - 678641",
-    yearOfConstruction: 2012,
-    areaSqM: 148.64,
-    areaSqFt: 1600.0,
-    cpwdRatePerSqM: 24500,
-    costIndex: 1.30,
-    costIndexName: "Palakkad Cost Index (1.30)",
-    place: "Palakkad",
-    certificateDate: "2026-08-18",
-    buildingDescription: "Two-storied RCC framed residential building with solid concrete block walls, vitrified tile flooring, teak wood main door, CP fittings and superior electrical installations.",
-    status: "FINAL"
-  })
-];
+import {
+  filterOutDeletedRecords,
+  isRecordDeleted,
+  recordGlobalDeletion,
+  getGlobalDeletedIds
+} from "../utils/deletionRegistry";
+
+export const INITIAL_SAMPLE_VALUATIONS: ValuationCertificate[] = [];
 
 export const LOCAL_STORAGE_VALUATIONS_KEY = "vasthusilpy_valuation_certificates_v1";
 
 /**
- * Loads valuation certificates from localStorage with fallback to initial sample data
+ * Loads valuation certificates from localStorage with permanent deletion protection
  */
 export function loadSavedValuations(): ValuationCertificate[] {
   try {
-    const raw = localStorage.getItem(LOCAL_STORAGE_VALUATIONS_KEY);
+    const raw = typeof localStorage !== "undefined" ? localStorage.getItem(LOCAL_STORAGE_VALUATIONS_KEY) : null;
     if (raw !== null) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        const hasAttachmentCert = parsed.some((p: ValuationCertificate) => p.id === "VAL-2026-003" || p.ownerName === "Ussainar");
-        const list = !hasAttachmentCert && INITIAL_SAMPLE_VALUATIONS.length > 0
-          ? [INITIAL_SAMPLE_VALUATIONS[0], ...parsed]
-          : parsed;
+        const list = filterOutDeletedRecords(parsed);
         return list.map((item) => calculateValuationDetails(item));
       }
     }
-    // First time init: save sample valuations
-    localStorage.setItem(LOCAL_STORAGE_VALUATIONS_KEY, JSON.stringify(INITIAL_SAMPLE_VALUATIONS));
-    return INITIAL_SAMPLE_VALUATIONS;
+    return [];
   } catch (e) {
     console.warn("Error loading valuation certificates from localStorage:", e);
-    return INITIAL_SAMPLE_VALUATIONS;
+    return [];
   }
 }
 
@@ -354,10 +264,26 @@ export function loadSavedValuations(): ValuationCertificate[] {
  */
 export function saveValuations(list: ValuationCertificate[]): void {
   try {
-    localStorage.setItem(LOCAL_STORAGE_VALUATIONS_KEY, JSON.stringify(list));
-    window.dispatchEvent(new Event("vasthusilpy_valuations_updated"));
+    const filtered = filterOutDeletedRecords(list);
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(LOCAL_STORAGE_VALUATIONS_KEY, JSON.stringify(filtered));
+      window.dispatchEvent(new Event("vasthusilpy_valuations_updated"));
+    }
   } catch (e) {
     console.error("Failed to save valuation certificates to localStorage:", e);
+  }
+}
+
+/**
+ * Permanently delete valuation certificate
+ */
+export function deleteValuation(id: string): void {
+  recordGlobalDeletion(id, "valuations");
+  const current = loadSavedValuations();
+  const remaining = current.filter((v) => v.id !== id);
+  saveValuations(remaining);
+  if (db) {
+    deleteDoc(doc(db, "valuations", id)).catch(() => {});
   }
 }
 

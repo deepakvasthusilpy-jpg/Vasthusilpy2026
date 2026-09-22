@@ -37,9 +37,11 @@ import {
   Copy,
   X,
   ListTodo,
-  Paperclip
+  Paperclip,
+  Mail
 } from "lucide-react";
 import { OnlineApplicationsTab } from "./OnlineApplicationsTab";
+import { WorkReceiptModal } from "./WorkReceiptModal";
 
 interface ProjectsListViewProps {
   projects: CrmProject[];
@@ -87,6 +89,7 @@ export const ProjectsListView: React.FC<ProjectsListViewProps> = ({
   const [addingTaskForProjectId, setAddingTaskForProjectId] = useState<string | null>(null);
   const [quickTaskTitle, setQuickTaskTitle] = useState<string>("");
   const [quickTaskAssignee, setQuickTaskAssignee] = useState<StaffName>("DEEPAK");
+  const [workReceiptProject, setWorkReceiptProject] = useState<CrmProject | null>(null);
 
   const staffList: StaffName[] = ["DEEPAK", "VISHNU", "DIBIN"];
   const statuses: ProjectStatus[] = [
@@ -1020,6 +1023,19 @@ export const ProjectsListView: React.FC<ProjectsListViewProps> = ({
                         </button>
                       )}
 
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setWorkReceiptProject(proj);
+                        }}
+                        className="px-2.5 py-1.5 bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-800/80 rounded-xl text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                        title="Generate Official PDF Work Receipt, Status QR Code & Send Email to Client"
+                      >
+                        <FileText className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Receipt & QR</span>
+                      </button>
+
                       {onEditProject && (
                         <button
                           onClick={(e) => {
@@ -1569,6 +1585,17 @@ export const ProjectsListView: React.FC<ProjectsListViewProps> = ({
                           </button>
                         )}
 
+                        {/* 3.5. WORK RECEIPT & STATUS QR BUTTON */}
+                        <button
+                          type="button"
+                          onClick={() => setWorkReceiptProject(proj)}
+                          className="w-full py-1.5 px-3 bg-emerald-950/70 hover:bg-emerald-900 text-emerald-300 border border-emerald-800/80 hover:border-emerald-500 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                          title="Generate Official PDF Work Receipt, Status QR Code & Send Email to Client"
+                        >
+                          <FileText className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>RECEIPT & QR</span>
+                        </button>
+
                         {/* 4. EDIT BUTTON */}
                         {onEditProject && (
                           <button
@@ -1604,6 +1631,24 @@ export const ProjectsListView: React.FC<ProjectsListViewProps> = ({
         </div>
       )}
       </>
+      )}
+
+      {/* Work Receipt PDF & Live Status QR Code Modal */}
+      {workReceiptProject && (
+        <WorkReceiptModal
+          project={workReceiptProject}
+          invoice={invoices.find(
+            (inv) =>
+              inv.projectId === workReceiptProject.id ||
+              (workReceiptProject.invoiceId && inv.id === workReceiptProject.invoiceId)
+          )}
+          isOpen={!!workReceiptProject}
+          onClose={() => setWorkReceiptProject(null)}
+          onUpdateProject={(updated) => {
+            onUpdateProject(updated);
+            setWorkReceiptProject(updated);
+          }}
+        />
       )}
     </div>
   );

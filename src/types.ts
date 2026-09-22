@@ -454,7 +454,8 @@ export type EstimateTabType =
   | "estimate_sheet"
   | "stage_completion_certificate"
   | "items_of_work"
-  | "engineer_seals";
+  | "engineer_seals"
+  | "valuation";
 
 export type StaffName = "DEEPAK" | "VISHNU" | "DIBIN";
 
@@ -492,9 +493,11 @@ export interface ProjectActivity {
 
 export interface CrmProject {
   id: string;
+  receiptNumber?: string; // Sequential receipt number with prefix VS (e.g. VS000001, VS000002)
   title: string;
   clientName: string;
   clientPhone: string;
+  clientEmail?: string; // Client / Property Owner Email ID for automated work receipts and live status notifications
   location: string;
   assignee: StaffName;
   status: ProjectStatus;
@@ -507,6 +510,10 @@ export interface CrmProject {
   invoiceId?: string; // Linked invoice ID
   estimatedAmount?: number;
   createdAt: string;
+  workReceiptGeneratedAt?: string;
+  lastEmailedTo?: string;
+  lastEmailedAt?: string;
+  clientPortalToken?: string;
 }
 
 export interface RateItem {

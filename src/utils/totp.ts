@@ -214,13 +214,93 @@ export function getTotpRemainingSeconds(): number {
   return 30 - (nowSec % 30);
 }
 
-// 30 Days in Milliseconds: 30 * 24 * 60 * 60 * 1000 = 2,592,000,000 ms
-export const ADMIN_TOTP_RECURRING_DAYS = 30;
-export const ADMIN_TOTP_RECURRING_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+// 1 Day in Milliseconds (Daily TOTP requirement for subscribers and administrators)
+export const ADMIN_TOTP_RECURRING_DAYS = 1;
+export const ADMIN_TOTP_RECURRING_WINDOW_MS = 1 * 24 * 60 * 60 * 1000;
+
+/**
+ * Returns today's calendar date in YYYY-MM-DD format (local timezone)
+ */
+export function getTodayDateKey(): string {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Checks whether TOTP is required for the subscriber on today's calendar date.
+ * Strictly enforces: "totp must ask for every day starting once on subscriber login."
+ * Once verified on the current calendar day, subsequent logins on the same day pass without asking.
+ * On the next day, it will ask again on the first login.
+ */
+export function isSubscriberDailyTotpRequired(emailOrPhone?: string | null): boolean {
+  if (!emailOrPhone) return true;
+  const clean = emailOrPhone.trim().toLowerCase();
+  const today = getTodayDateKey();
+  
+  // Check identity-specific key
+  const specificKey = `vasthusilpy_sub_totp_verified_day_${clean}`;
+  const storedDay = localStorage.getItem(specificKey);
+  if (storedDay === today) {
+    return false; // Already verified today!
+  }
+
+  // Check general key fallback
+  const generalKey = localStorage.getItem("vasthusilpy_last_totp_verified_day");
+  if (generalKey === today) {
+    const verifiedUser = localStorage.getItem("vasthusilpy_last_totp_verified_user");
+    if (verifiedUser && verifiedUser.toLowerCase() === clean) {
+      return false;
+    }
+  }
+
+  return true; // Not yet verified today -> must ask for TOTP
+}
+
+/**
+ * Records successful daily TOTP verification for the subscriber for today's calendar date.
+ */
+export function recordSubscriberDailyTotpVerified(emailOrPhone?: string | null): void {
+  if (!emailOrPhone) return;
+  const clean = emailOrPhone.trim().toLowerCase();
+  const today = getTodayDateKey();
+  const now = Date.now();
+
+  try {
+    localStorage.setItem(`vasthusilpy_sub_totp_verified_day_${clean}`, today);
+    localStorage.setItem(`vasthusilpy_sub_totp_verified_at_${clean}`, now.toString());
+    localStorage.setItem("vasthusilpy_last_totp_verified_day", today);
+    localStorage.setItem("vasthusilpy_last_totp_verified_at", now.toString());
+    localStorage.setItem("vasthusilpy_last_totp_verified_user", clean);
+  } catch (e) {
+    console.error("Failed to record subscriber daily TOTP verification:", e);
+  }
+}
+
+/**
+ * Gets the last date (YYYY-MM-DD) on which the subscriber completed daily TOTP verification.
+ */
+export function getLastSubscriberTotpVerifiedDay(emailOrPhone?: string | null): string | null {
+  if (!emailOrPhone) return null;
+  const clean = emailOrPhone.trim().toLowerCase();
+  return localStorage.getItem(`vasthusilpy_sub_totp_verified_day_${clean}`);
+}
+
+/**
+ * Clears subscriber daily TOTP verification (useful for logout or testing)
+ */
+export function clearSubscriberDailyTotp(emailOrPhone?: string | null): void {
+  if (!emailOrPhone) return;
+  const clean = emailOrPhone.trim().toLowerCase();
+  localStorage.removeItem(`vasthusilpy_sub_totp_verified_day_${clean}`);
+  localStorage.removeItem(`vasthusilpy_sub_totp_verified_at_${clean}`);
+}
 
 /**
  * Checks whether Admin TOTP 2FA verification is currently required.
- * Admin TOTP is required for every login recurring with a gap of 30 days.
+ * Admin TOTP is required for every login recurring with a daily gap.
  */
 export function isAdminTotpRequired(
   isAdmin: boolean,
@@ -235,7 +315,7 @@ export function isAdminTotpRequired(
 }
 
 /**
- * Returns number of days remaining until the next 30-day Admin TOTP requirement
+ * Returns number of days remaining until the next Admin TOTP requirement
  */
 export function getAdminTotpDaysRemaining(lastVerifiedTimestamp?: number | null): number {
   if (!lastVerifiedTimestamp || typeof lastVerifiedTimestamp !== "number" || isNaN(lastVerifiedTimestamp)) {

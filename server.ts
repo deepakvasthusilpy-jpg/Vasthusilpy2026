@@ -3117,9 +3117,251 @@ app.post("/api/invoices/send-receipt-email", async (req, res) => {
   }
 });
 
+// Helper to send Work Receipt & Status QR Code Email to Client
+async function sendWorkReceiptEmailToClient({
+  project,
+  invoice,
+  recipientEmail,
+  pdfBase64,
+  customNotes,
+  portalUrl
+}: {
+  project: any;
+  invoice?: any;
+  recipientEmail: string;
+  pdfBase64?: string;
+  customNotes?: string;
+  portalUrl?: string;
+}): Promise<{ success: boolean; senderEmail?: string; error?: string }> {
+  const pass = process.env.GMAIL_APP_PASSWORD || process.env.EMAIL_PASSWORD || "rkvn nfgd yqck hyth";
+  const candidateUsers = [
+    process.env.GMAIL_USER || "deepak.vasthusilpy@gmail.com",
+    "vasthusilpy@gmail.com",
+    "dibindeepak1@gmail.com"
+  ].filter(Boolean);
+
+  const receiptNo = `WR-${project.id || "ORD"}`;
+  const clientUrl = portalUrl || `https://vasthusilpyai.netlify.app/?project=${encodeURIComponent(project.id)}`;
+  const completedTasks = Array.isArray(project.subTasks) ? project.subTasks.filter((s: any) => s.completed).length : 0;
+  const totalTasks = Array.isArray(project.subTasks) ? project.subTasks.length : 0;
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Work Receipt & Live Status - Vasthusilpy</title>
+    </head>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 24px; color: #1e293b;">
+      <div style="max-width: 620px; margin: 0 auto; background-color: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); border: 1px solid #e2e8f0;">
+        
+        <!-- Header Banner -->
+        <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #ffffff; padding: 28px 24px; text-align: center; border-bottom: 3px solid #0ea5e9;">
+          <h1 style="margin: 0 0 6px 0; font-size: 20px; font-weight: 800; letter-spacing: 0.5px; color: #f8fafc;">
+            VASTHUSILPY ARCHITECTURAL & ENGINEERING CONSULTANTS
+          </h1>
+          <p style="margin: 0; font-size: 12px; color: #38bdf8; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">
+            Official Work Order & Client Status Receipt
+          </p>
+          <p style="margin: 4px 0 0 0; font-size: 11px; color: #94a3b8;">
+            Keralassery, Palakkad, Kerala • Ph: +91 9747995961 / +91 7012383137
+          </p>
+        </div>
+
+        <div style="padding: 24px;">
+          <!-- Salutation -->
+          <p style="font-size: 15px; margin: 0 0 16px 0; color: #0f172a;">
+            Dear <strong>${project.clientName || "Valued Client"}</strong>,
+          </p>
+          <p style="font-size: 13px; line-height: 1.6; color: #475569; margin: 0 0 20px 0;">
+            We have registered and updated your work details in the Vasthusilpy digital engineering system. Below is the official summary of your work order. You can track live progress and download drawings without login using the link or attached PDF receipt.
+          </p>
+
+          <!-- Work Order Particulars Box -->
+          <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 14px; padding: 18px; margin-bottom: 20px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <tr>
+                <td style="padding: 5px 0; color: #64748b; width: 38%;">Work Receipt / ID:</td>
+                <td style="padding: 5px 0; font-weight: 800; color: #0f172a; font-family: monospace;">#${project.id}</td>
+              </tr>
+              <tr>
+                <td style="padding: 5px 0; color: #64748b;">Project Title:</td>
+                <td style="padding: 5px 0; font-weight: 700; color: #0f172a;">${project.title}</td>
+              </tr>
+              <tr>
+                <td style="padding: 5px 0; color: #64748b;">Work Status:</td>
+                <td style="padding: 5px 0; font-weight: 800; color: #0ea5e9;">${project.status || "IN PROGRESS"}</td>
+              </tr>
+              <tr>
+                <td style="padding: 5px 0; color: #64748b;">Assigned Consultant:</td>
+                <td style="padding: 5px 0; font-weight: 600; color: #0f172a;">${project.assignee || "Deepak V (Vasthusilpy)"}</td>
+              </tr>
+              <tr>
+                <td style="padding: 5px 0; color: #64748b;">Site Location:</td>
+                <td style="padding: 5px 0; color: #0f172a;">${project.location || "Keralassery, Palakkad"}</td>
+              </tr>
+              <tr>
+                <td style="padding: 5px 0; color: #64748b;">Target Due Date:</td>
+                <td style="padding: 5px 0; color: #0f172a;">${project.dueDate || "As Scheduled"}</td>
+              </tr>
+              ${totalTasks > 0 ? `
+              <tr>
+                <td style="padding: 5px 0; color: #64748b;">Stage Milestones:</td>
+                <td style="padding: 5px 0; font-weight: 700; color: #10b981;">${completedTasks} of ${totalTasks} stages completed</td>
+              </tr>` : ''}
+              ${project.estimatedAmount ? `
+              <tr>
+                <td style="padding: 5px 0; color: #64748b;">Estimated Budget:</td>
+                <td style="padding: 5px 0; font-weight: 800; color: #0f172a;">₹${Number(project.estimatedAmount).toLocaleString("en-IN")}</td>
+              </tr>` : ''}
+            </table>
+          </div>
+
+          <!-- ZERO-LOGIN CLIENT STATUS & QR CODE ACCESS BUTTON -->
+          <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 2px solid #0284c7; border-radius: 16px; padding: 22px; text-align: center; margin-bottom: 22px;">
+            <p style="margin: 0 0 6px 0; font-size: 14px; font-weight: 800; color: #0369a1; text-transform: uppercase; letter-spacing: 0.5px;">
+              📲 LIVE CLIENT STATUS (ZERO LOGIN REQUIRED)
+            </p>
+            <p style="margin: 0 0 16px 0; font-size: 12px; color: #475569; line-height: 1.5;">
+              You can view real-time progress, download blueprints, and view inspection reports anytime without entering any password or credentials.
+            </p>
+            <a href="${clientUrl}" target="_blank" style="display: inline-block; background-color: #0284c7; color: #ffffff; text-decoration: none; font-weight: 800; font-size: 14px; padding: 14px 28px; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(2, 132, 199, 0.4); text-transform: uppercase; letter-spacing: 0.5px;">
+              🔍 Open Live Work Status & Blueprints →
+            </a>
+            <p style="margin: 14px 0 0 0; font-size: 11px; color: #64748b;">
+              Or scan the <strong>Status QR Code</strong> inside the attached PDF document using your phone's camera.
+            </p>
+          </div>
+
+          ${customNotes ? `
+          <div style="background-color: #fefce8; border: 1px solid #fef08a; border-radius: 10px; padding: 12px; font-size: 12px; color: #713f12; margin-bottom: 20px;">
+            <strong>Note from Consultant:</strong> ${customNotes}
+          </div>` : ''}
+
+          <!-- PDF Attachment Notice -->
+          <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; font-size: 12px; color: #475569; margin-bottom: 20px;">
+            📎 <strong>Official Work Receipt Attached:</strong> The complete printable Work Receipt (<strong>Work_Receipt_${project.id}.pdf</strong>) with high-resolution status QR code is attached to this email.
+          </div>
+
+          <!-- Footer -->
+          <div style="border-top: 1px solid #e2e8f0; padding-top: 16px; font-size: 11px; color: #94a3b8; line-height: 1.6; text-align: center;">
+            <p style="margin: 0 0 4px 0;">Vasthusilpy Architectural & Engineering Consultants • Keralassery, Palakkad, Kerala</p>
+            <p style="margin: 0;">For any questions, reply directly to this email or call <strong>+91 9747995961</strong> / <strong>+91 7012383137</strong>.</p>
+          </div>
+
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  let lastError: any = null;
+
+  for (const senderUser of candidateUsers) {
+    const configsToTry = [
+      {
+        host: "smtp.gmail.com",
+        port: 465,
+        secure: true,
+        auth: { user: senderUser, pass },
+      },
+      {
+        host: "smtp.gmail.com",
+        port: 587,
+        secure: false,
+        requireTLS: true,
+        auth: { user: senderUser, pass },
+      },
+      {
+        service: "gmail",
+        auth: { user: senderUser, pass },
+      }
+    ];
+
+    for (const config of configsToTry) {
+      try {
+        const transporter = nodemailer.createTransport(config);
+
+        const attachments: any[] = [];
+        if (pdfBase64 && typeof pdfBase64 === "string" && pdfBase64.length > 50) {
+          attachments.push({
+            filename: `Work_Receipt_${project.id}_Vasthusilpy.pdf`,
+            content: Buffer.from(pdfBase64, "base64"),
+            contentType: "application/pdf"
+          });
+        }
+
+        await transporter.sendMail({
+          from: `"Vasthusilpy Consultants" <${senderUser}>`,
+          to: recipientEmail,
+          subject: `🧾 Official Work Receipt #${project.id} - ${project.title} (Vasthusilpy Consultants)`,
+          text: `Dear ${project.clientName},\n\nWe have registered your work: ${project.title} (#${project.id}) at Vasthusilpy Consultants.\n\nCurrent Status: ${project.status || "In Progress"}\nLocation: ${project.location}\nAssigned Engineer: ${project.assignee || "Deepak V"}\n\nYou can track live status & download drawings without login using this link:\n${clientUrl}\n\nOfficial Work Receipt PDF is attached.\n\nVasthusilpy Architectural & Engineering Consultants\nPh: +91 9747995961, +91 7012383137`,
+          html: htmlContent,
+          attachments: attachments
+        });
+
+        console.log(`[Work Receipt Email Dispatched] Successfully sent work receipt #${project.id} to ${recipientEmail} via ${senderUser}`);
+        return { success: true, senderEmail: senderUser };
+      } catch (err: any) {
+        lastError = err;
+      }
+    }
+  }
+
+  console.error(`[Work Receipt Email Error] Failed to send work receipt email to ${recipientEmail}:`, lastError?.message || lastError);
+  return {
+    success: false,
+    error: lastError?.message || "Failed to dispatch work receipt email via Gmail service."
+  };
+}
+
+// POST /api/crm/send-work-receipt-email
+app.post("/api/crm/send-work-receipt-email", async (req, res) => {
+  try {
+    const { project, invoice, recipientEmail, pdfBase64, customNotes, portalUrl } = req.body;
+
+    if (!project || !project.id) {
+      return res.status(400).json({ error: "Project data is required." });
+    }
+
+    const cleanEmail = (recipientEmail || project.clientEmail || "").trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes("@")) {
+      return res.status(400).json({ error: "A valid recipient email address is required." });
+    }
+
+    const result = await sendWorkReceiptEmailToClient({
+      project,
+      invoice,
+      recipientEmail: cleanEmail,
+      pdfBase64,
+      customNotes,
+      portalUrl
+    });
+
+    if (result.success) {
+      return res.json({
+        success: true,
+        message: `Work receipt for Project #${project.id} (${project.title}) successfully emailed to ${cleanEmail} with attached PDF and client live status QR code.`,
+        senderEmail: result.senderEmail || "deepak.vasthusilpy@gmail.com"
+      });
+    } else {
+      return res.status(500).json({
+        error: result.error || "Failed to dispatch work receipt email."
+      });
+    }
+  } catch (error: any) {
+    console.error("Error in /api/crm/send-work-receipt-email endpoint:", error);
+    return res.status(500).json({ error: error.message || "Internal server error while sending work receipt email." });
+  }
+});
+
 import { registerApplicationFormsRoutes } from "./src/server/applicationFormsServer.ts";
 import { registerCrmRoutes } from "./src/server/crmServer.ts";
 import { registerWebDataRoutes } from "./src/server/webDataServer.ts";
+import { registerRealtimeSyncRoutes } from "./src/server/realtimeSyncServer.ts";
+
+// Register Universal Realtime Cloud Synchronization and SSE Endpoints
+registerRealtimeSyncRoutes(app);
 
 // Register Application Forms CRUD, PDF Overlay Generator, and Email Endpoints
 registerApplicationFormsRoutes(app);

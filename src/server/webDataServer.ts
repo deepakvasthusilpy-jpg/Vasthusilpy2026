@@ -109,6 +109,30 @@ function writeJsonFile<T>(filename: string, data: T): boolean {
   }
 }
 
+const HARD_CODED_DEMO_TOMBSTONES = [
+  "EST-2026-003",
+  "VAL-2026-003",
+  "qtn_2026_001",
+  "qtn_2026_002",
+  "app_demo_001",
+  "app_demo_002",
+  "app_demo_003"
+];
+
+function getDeletedIdsSet(): Set<string> {
+  const set = new Set<string>(HARD_CODED_DEMO_TOMBSTONES);
+  try {
+    const cloudDelFile = path.join(process.cwd(), "data", "cloud_store", "deleted_records.json");
+    if (fs.existsSync(cloudDelFile)) {
+      const parsed = JSON.parse(fs.readFileSync(cloudDelFile, "utf-8"));
+      if (Array.isArray(parsed)) {
+        parsed.forEach((r: any) => r?.id && set.add(r.id));
+      }
+    }
+  } catch {}
+  return set;
+}
+
 export function registerWebDataRoutes(app: Express) {
   // -------------------------------------------------------------
   // MASTER WEB DATA BIDIRECTIONAL SYNC
@@ -129,14 +153,15 @@ export function registerWebDataRoutes(app: Express) {
         currentUserProfile = null
       } = req.body;
 
+      const deletedIds = getDeletedIdsSet();
       const syncedAt = new Date().toISOString();
 
       // 1. Projects Merge
       const existingProjects = readJsonFile<any[]>("crm_projects.json", []);
       const projectMap = new Map<string, any>();
-      existingProjects.forEach((p) => p?.id && projectMap.set(p.id, p));
+      existingProjects.forEach((p) => p?.id && !deletedIds.has(p.id) && projectMap.set(p.id, p));
       (Array.isArray(projects) ? projects : []).forEach((p) => {
-        if (p?.id) {
+        if (p?.id && !deletedIds.has(p.id)) {
           const prev = projectMap.get(p.id);
           projectMap.set(p.id, prev ? { ...prev, ...p } : p);
         }
@@ -153,9 +178,9 @@ export function registerWebDataRoutes(app: Express) {
       // 2. Invoices Merge
       const existingInvoices = readJsonFile<any[]>("crm_invoices.json", []);
       const invoiceMap = new Map<string, any>();
-      existingInvoices.forEach((i) => i?.id && invoiceMap.set(i.id, i));
+      existingInvoices.forEach((i) => i?.id && !deletedIds.has(i.id) && invoiceMap.set(i.id, i));
       (Array.isArray(invoices) ? invoices : []).forEach((i) => {
-        if (i?.id) {
+        if (i?.id && !deletedIds.has(i.id)) {
           const prev = invoiceMap.get(i.id);
           invoiceMap.set(i.id, prev ? { ...prev, ...i } : i);
         }
@@ -171,9 +196,9 @@ export function registerWebDataRoutes(app: Express) {
       // 3. Estimates Merge
       const existingEstimates = readJsonFile<any[]>("estimates.json", []);
       const estimateMap = new Map<string, any>();
-      existingEstimates.forEach((e) => e?.id && estimateMap.set(e.id, e));
+      existingEstimates.forEach((e) => e?.id && !deletedIds.has(e.id) && estimateMap.set(e.id, e));
       (Array.isArray(estimates) ? estimates : []).forEach((e) => {
-        if (e?.id) {
+        if (e?.id && !deletedIds.has(e.id)) {
           const prev = estimateMap.get(e.id);
           estimateMap.set(e.id, prev ? { ...prev, ...e } : e);
         }
@@ -184,9 +209,9 @@ export function registerWebDataRoutes(app: Express) {
       // 4. Customers Merge
       const existingCustomers = readJsonFile<any[]>("customers.json", []);
       const customerMap = new Map<string, any>();
-      existingCustomers.forEach((c) => c?.id && customerMap.set(c.id, c));
+      existingCustomers.forEach((c) => c?.id && !deletedIds.has(c.id) && customerMap.set(c.id, c));
       (Array.isArray(customers) ? customers : []).forEach((c) => {
-        if (c?.id) {
+        if (c?.id && !deletedIds.has(c.id)) {
           const prev = customerMap.get(c.id);
           customerMap.set(c.id, prev ? { ...prev, ...c } : c);
         }
@@ -197,9 +222,9 @@ export function registerWebDataRoutes(app: Express) {
       // 5. Rate Items Merge
       const existingRates = readJsonFile<any[]>("rate_items.json", []);
       const rateMap = new Map<string, any>();
-      existingRates.forEach((r) => r?.id && rateMap.set(r.id, r));
+      existingRates.forEach((r) => r?.id && !deletedIds.has(r.id) && rateMap.set(r.id, r));
       (Array.isArray(rateItems) ? rateItems : []).forEach((r) => {
-        if (r?.id) {
+        if (r?.id && !deletedIds.has(r.id)) {
           const prev = rateMap.get(r.id);
           rateMap.set(r.id, prev ? { ...prev, ...r } : r);
         }
@@ -329,16 +354,17 @@ export function registerWebDataRoutes(app: Express) {
   // -------------------------------------------------------------
   app.get("/api/web-data/pull", (req: Request, res: Response) => {
     try {
-      const projects = readJsonFile<any[]>("crm_projects.json", []);
-      const invoices = readJsonFile<any[]>("crm_invoices.json", []);
-      const estimates = readJsonFile<any[]>("estimates.json", []);
-      const customers = readJsonFile<any[]>("customers.json", []);
-      const rateItems = readJsonFile<any[]>("rate_items.json", []);
-      const cadFolders = readJsonFile<any[]>("cad_folders.json", []);
-      const cadFiles = readJsonFile<any[]>("cad_files.json", []);
+      const deletedIds = getDeletedIdsSet();
+      const projects = readJsonFile<any[]>("crm_projects.json", []).filter((p) => p?.id && !deletedIds.has(p.id));
+      const invoices = readJsonFile<any[]>("crm_invoices.json", []).filter((i) => i?.id && !deletedIds.has(i.id));
+      const estimates = readJsonFile<any[]>("estimates.json", []).filter((e) => e?.id && !deletedIds.has(e.id));
+      const customers = readJsonFile<any[]>("customers.json", []).filter((c) => c?.id && !deletedIds.has(c.id));
+      const rateItems = readJsonFile<any[]>("rate_items.json", []).filter((r) => r?.id && !deletedIds.has(r.id));
+      const cadFolders = readJsonFile<any[]>("cad_folders.json", []).filter((f) => f?.id && !deletedIds.has(f.id));
+      const cadFiles = readJsonFile<any[]>("cad_files.json", []).filter((f) => f?.id && !deletedIds.has(f.id));
       const userProfiles = readJsonFile<any[]>("user_profiles.json", []);
       const subscriptionRequests = readJsonFile<any[]>("subscription_requests.json", []);
-      const applicationEntries = readJsonFile<any[]>("application_entries.json", []);
+      const applicationEntries = readJsonFile<any[]>("application_entries.json", []).filter((a) => a?.id && !deletedIds.has(a.id));
       const meta = readJsonFile<any>("last_sync_meta.json", { syncedAt: new Date().toISOString() });
 
       return res.json({

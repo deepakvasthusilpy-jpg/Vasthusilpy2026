@@ -1,6 +1,6 @@
 import { Quotation, QuotationLineItem, QuotationService, Contractor, TermsClause, QuotationStatus, CompanyDetails } from "../types";
 import { db } from "../lib/firebase";
-import { doc } from "firebase/firestore";
+import { doc, deleteDoc } from "firebase/firestore";
 import { safeSetDoc } from "./storageManager";
 
 export const QUOTATION_STORAGE_KEYS = {
@@ -415,190 +415,61 @@ export const DEFAULT_TERMS: TermsClause[] = [
   }
 ];
 
+import {
+  filterOutDeletedRecords,
+  isRecordDeleted,
+  recordGlobalDeletion,
+  getGlobalDeletedIds
+} from "./deletionRegistry";
+
 // Initial Seed Quotations
-export const INITIAL_QUOTATIONS: Quotation[] = [
-  {
-    id: "qtn_2026_001",
-    quotation_no: "QTN-2026-001",
-    status: "approved",
-    client_name: "Dr. Harikrishnan Nambiar",
-    client_phone: "+91 98471 89230",
-    client_email: "dr.hari.kerala@gmail.com",
-    site_address: "Plot 14, Haritha Valley, Keralassery, Palakkad",
-    plot_area_sqft: 2450,
-    date_issued: "2026-02-10",
-    expiry_date: "2026-03-12",
-    line_items: [
-      {
-        id: "li_1",
-        service_id: "srv_rubble_masonry",
-        description: "Rubble Soling & Basement RR Masonry in CM 1:6",
-        unit: "cum",
-        quantity: 45,
-        rate: 5200,
-        include_material: true,
-        include_labour: true,
-        material_rate: 3400,
-        labour_rate: 1800,
-        amount: 234000
-      },
-      {
-        id: "li_2",
-        service_id: "srv_rcc_roof_slab",
-        description: "RCC Roof Slab 120mm with Shuttering & Vibrator compaction",
-        unit: "sq.ft",
-        quantity: 1850,
-        rate: 330,
-        include_material: true,
-        include_labour: true,
-        material_rate: 220,
-        labour_rate: 110,
-        amount: 610500
-      },
-      {
-        id: "li_3",
-        service_id: "srv_vitrified_flooring",
-        description: "Vitrified Tile Flooring 800x800 Kajaria with adhesive",
-        unit: "sq.ft",
-        quantity: 1600,
-        rate: 120,
-        include_material: true,
-        include_labour: true,
-        material_rate: 85,
-        labour_rate: 35,
-        amount: 192000
-      },
-      {
-        id: "li_4",
-        service_id: "srv_interior_painting",
-        description: "Interior 2 coats Putty + Primer + Asian Paints Royale Emulsion",
-        unit: "sq.ft",
-        quantity: 4200,
-        rate: 42,
-        include_material: true,
-        include_labour: true,
-        material_rate: 24,
-        labour_rate: 18,
-        amount: 176400
-      }
-    ],
-    discount_type: "amount",
-    discount_value: 20000,
-    discount_amount: 20000,
-    enable_tax: false,
-    tax_rate: 0,
-    tax_amount: 0,
-    subtotal: 1212900,
-    material_subtotal: 802300,
-    labour_subtotal: 410600,
-    total: 1192900,
-    notes: "Quotation includes structural execution, premium floor finishes, and complete interior aesthetic paint as per drawing Rev 2.2.",
-    terms_clause_ids: ["term_validity", "term_payment_schedule", "term_water_electricity", "term_variations_extra", "term_defects_liability"],
-    contractor_ids: ["cntr_santhosh_masonry", "cntr_sujith_tiles", "cntr_shine_painting"],
-    created_at: "2026-02-10T10:30:00.000Z",
-    updated_at: "2026-02-12T14:15:00.000Z"
-  },
-  {
-    id: "qtn_2026_002",
-    quotation_no: "QTN-2026-002",
-    status: "pending",
-    client_name: "Adv. Sreevalsan Menon",
-    client_phone: "+91 94462 77119",
-    client_email: "sreevalsan.legal@yahoo.com",
-    site_address: "Near Sree Rama Temple, Keralassery Grama Panchayat",
-    plot_area_sqft: 1800,
-    date_issued: "2026-02-24",
-    expiry_date: "2026-03-26",
-    line_items: [
-      {
-        id: "li_21",
-        service_id: "srv_solid_block_6inch",
-        description: "Solid Concrete Block Masonry 6\" (CM 1:6) with curing",
-        unit: "sq.ft",
-        quantity: 2100,
-        rate: 150,
-        include_material: true,
-        include_labour: true,
-        material_rate: 98,
-        labour_rate: 52,
-        amount: 315000
-      },
-      {
-        id: "li_22",
-        service_id: "srv_internal_plastering",
-        description: "Internal Wall Plastering 12mm thick in CM 1:4 smooth finish",
-        unit: "sq.ft",
-        quantity: 3800,
-        rate: 54,
-        include_material: true,
-        include_labour: true,
-        material_rate: 26,
-        labour_rate: 28,
-        amount: 205200
-      },
-      {
-        id: "li_23",
-        service_id: "srv_truss_roofing",
-        description: "GI Truss Work with Kerala Clay Terracotta Tiles",
-        unit: "sq.ft",
-        quantity: 1200,
-        rate: 280,
-        include_material: true,
-        include_labour: true,
-        material_rate: 195,
-        labour_rate: 85,
-        amount: 336000
-      }
-    ],
-    discount_type: "percentage",
-    discount_value: 3,
-    discount_amount: 25686,
-    enable_tax: false,
-    tax_rate: 0,
-    tax_amount: 0,
-    subtotal: 856200,
-    material_subtotal: 538600,
-    labour_subtotal: 317600,
-    total: 830514,
-    notes: "Special sloped traditional roof truss with heritage terracotta tiles over first-floor terrace.",
-    terms_clause_ids: ["term_validity", "term_payment_schedule", "term_water_electricity", "term_variations_extra"],
-    contractor_ids: ["cntr_santhosh_masonry", "cntr_apex_fabrication"],
-    created_at: "2026-02-24T11:00:00.000Z",
-    updated_at: "2026-02-24T11:00:00.000Z"
-  }
-];
+export const INITIAL_QUOTATIONS: Quotation[] = [];
 
 // --- Persistent Storage Helpers ---
 
 export function loadQuotations(): Quotation[] {
   try {
-    const raw = localStorage.getItem(QUOTATION_STORAGE_KEYS.QUOTATIONS);
+    const raw = typeof localStorage !== "undefined" ? localStorage.getItem(QUOTATION_STORAGE_KEYS.QUOTATIONS) : null;
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+      if (Array.isArray(parsed)) {
+        return filterOutDeletedRecords(parsed);
       }
     }
   } catch (e) {
     console.warn("Failed loading quotations from storage:", e);
   }
-  // Store default seed
-  saveQuotations(INITIAL_QUOTATIONS);
-  return INITIAL_QUOTATIONS;
+  return [];
 }
 
 export function saveQuotations(list: Quotation[]): void {
   try {
-    localStorage.setItem(QUOTATION_STORAGE_KEYS.QUOTATIONS, JSON.stringify(list));
+    const cleanList = filterOutDeletedRecords(list || []);
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(QUOTATION_STORAGE_KEYS.QUOTATIONS, JSON.stringify(cleanList));
+    }
     // Optional firestore sync for each quotation if available
     if (db) {
-      list.forEach((q) => {
-        safeSetDoc(doc(db, "quotations", q.id), q, { merge: true }).catch(() => {});
+      cleanList.forEach((q) => {
+        if (q && q.id && !isRecordDeleted(q.id)) {
+          safeSetDoc(doc(db, "quotations", q.id), q, { merge: true }).catch(() => {});
+        }
       });
     }
   } catch (e) {
     console.warn("Failed saving quotations:", e);
   }
+}
+
+export function deleteQuotation(id: string): Quotation[] {
+  recordGlobalDeletion(id, "quotations");
+  const current = loadQuotations();
+  const remaining = current.filter((q) => q.id !== id);
+  saveQuotations(remaining);
+  if (db) {
+    deleteDoc(doc(db, "quotations", id)).catch(() => {});
+  }
+  return remaining;
 }
 
 export function loadQuotationServices(): QuotationService[] {

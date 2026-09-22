@@ -884,45 +884,36 @@ export const INITIAL_PRESETS_ENGINEERS = [
   }
 ];
 
+import {
+  filterOutDeletedRecords,
+  isRecordDeleted,
+  recordGlobalDeletion,
+  getGlobalDeletedIds
+} from "../utils/deletionRegistry";
+
 export const DEFAULT_ESTIMATE_PROJECT: EstimateProject = getDemoEstimateEST2026003();
 
-export const INITIAL_ESTIMATES_LIST: EstimateProject[] = [getDemoEstimateEST2026003()];
+export const INITIAL_ESTIMATES_LIST: EstimateProject[] = [];
 
 export const LOCAL_STORAGE_ESTIMATES_KEY = "vasthusilpy_estimates";
 
 /**
  * Loads saved estimate projects from localStorage, respecting deleted items.
- * Ensures EST-2026-003 is present as the default demo estimate.
+ * Once deleted, no demo data will ever be resurrected.
  */
 export function loadSavedEstimates(): EstimateProject[] {
   try {
-    const deletedRaw = localStorage.getItem("vasthusilpy_deleted_estimate_ids");
-    const deletedIds: string[] = deletedRaw ? JSON.parse(deletedRaw) : [];
-
-    const raw = localStorage.getItem(LOCAL_STORAGE_ESTIMATES_KEY);
-    const isInitialized = localStorage.getItem("vasthusilpy_estimates_initialized_v2");
+    const deletedIds = getGlobalDeletedIds();
+    const raw = typeof localStorage !== "undefined" ? localStorage.getItem(LOCAL_STORAGE_ESTIMATES_KEY) : null;
+    const isInitialized = typeof localStorage !== "undefined" ? localStorage.getItem("vasthusilpy_estimates_initialized_v2") : null;
 
     let list: EstimateProject[] = [];
 
     if (raw !== null) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        list = parsed
-          .filter((p: EstimateProject) => {
-            if (deletedIds.includes(p.id)) return false;
-            const c = (p.clientName || "").toLowerCase();
-            if (
-              c.includes("mohan kumar") ||
-              (c.includes("mohan") && c.includes("priya")) ||
-              c.includes("v. r. suresh") ||
-              c.includes("v.r. suresh") ||
-              c.includes("vr suresh") ||
-              c.includes("suresh kumar")
-            ) {
-              return false;
-            }
-            return true;
-          })
+        list = filterOutDeletedRecords(parsed)
+          .filter((p: EstimateProject) => !deletedIds.includes(p.id) && !isRecordDeleted(p.id))
           .map((p) => {
             const norm = normalizeProjectBlocks(p);
             const c = (norm.clientName || "").toLowerCase();
@@ -944,23 +935,19 @@ export function loadSavedEstimates(): EstimateProject[] {
       }
     }
 
-    // Ensure EST-2026-003 demo estimate is always included if not deleted
-    if (!deletedIds.includes("EST-2026-003") && !list.some((p) => p.id === "EST-2026-003")) {
-      list = [getDemoEstimateEST2026003(), ...list];
-    }
-
     if (!isInitialized) {
-      localStorage.setItem("vasthusilpy_estimates_initialized_v2", "true");
-      const initial: EstimateProject[] = list.length > 0 ? list : [getDemoEstimateEST2026003()];
-      localStorage.setItem(LOCAL_STORAGE_ESTIMATES_KEY, JSON.stringify(initial));
-      return initial;
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem("vasthusilpy_estimates_initialized_v2", "true");
+        localStorage.setItem(LOCAL_STORAGE_ESTIMATES_KEY, JSON.stringify(list));
+      }
+      return list;
     }
 
     return list;
   } catch (e) {
     console.warn("Could not load estimates from localStorage:", e);
   }
-  return [getDemoEstimateEST2026003()];
+  return [];
 }
 
 /**
@@ -968,13 +955,14 @@ export function loadSavedEstimates(): EstimateProject[] {
  */
 export function saveEstimates(projects: EstimateProject[]): void {
   try {
-    const deletedRaw = localStorage.getItem("vasthusilpy_deleted_estimate_ids");
-    const deletedIds: string[] = deletedRaw ? JSON.parse(deletedRaw) : [];
-    const filtered = projects.filter((p) => !deletedIds.includes(p.id));
+    const deletedIds = getGlobalDeletedIds();
+    const filtered = filterOutDeletedRecords(projects).filter((p) => !deletedIds.includes(p.id) && !isRecordDeleted(p.id));
 
-    localStorage.setItem(LOCAL_STORAGE_ESTIMATES_KEY, JSON.stringify(filtered));
-    localStorage.setItem("vasthusilpy_estimates_initialized_v2", "true");
-    window.dispatchEvent(new Event("vasthusilpy_storage_update"));
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(LOCAL_STORAGE_ESTIMATES_KEY, JSON.stringify(filtered));
+      localStorage.setItem("vasthusilpy_estimates_initialized_v2", "true");
+      window.dispatchEvent(new Event("vasthusilpy_storage_update"));
+    }
   } catch (e) {
     console.error("Failed to save estimates to localStorage:", e);
   }
