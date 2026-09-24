@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import { SiteInspection } from "../../types/siteInspection";
 import {
   downloadInspectionPdf,
   sendWhatsAppNotification,
   DEFAULT_INSPECTION_EMAIL
 } from "../../utils/siteInspectionManager";
+import { InspectionEmailModal } from "./InspectionEmailModal";
 import {
   X,
   Download,
@@ -23,7 +24,8 @@ import {
   FileText,
   Clock,
   ShieldCheck,
-  Send
+  Send,
+  Mail
 } from "lucide-react";
 
 interface InspectionDetailModalProps {
@@ -39,6 +41,8 @@ export const InspectionDetailModal: React.FC<InspectionDetailModalProps> = ({
   inspection,
   onDelete
 }) => {
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+
   if (!isOpen || !inspection) return null;
 
   return (
@@ -74,23 +78,31 @@ export const InspectionDetailModal: React.FC<InspectionDetailModalProps> = ({
           </button>
         </div>
 
-        {/* Quick Action Bar (PDF & WhatsApp) */}
+        {/* Quick Action Bar (PDF, WhatsApp & Email) */}
         <div className="p-3.5 bg-slate-950 border border-slate-800 rounded-2xl flex flex-wrap items-center justify-between gap-2.5">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={() => downloadInspectionPdf(inspection)}
-              className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-cyan-600/25 transition cursor-pointer"
+              onClick={() => setIsEmailModalOpen(true)}
+              className="px-3.5 py-2 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-red-600/25 transition cursor-pointer"
             >
-              <Download className="w-4 h-4" />
-              <span>Download A4 PDF</span>
+              <Mail className="w-4 h-4" />
+              <span>Email Report</span>
             </button>
 
             <button
               onClick={() => sendWhatsAppNotification(inspection)}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-emerald-600/25 transition cursor-pointer"
+              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-emerald-600/25 transition cursor-pointer"
             >
               <Share2 className="w-4 h-4" />
-              <span>WhatsApp to Deepak Sir (+918848241463)</span>
+              <span>WhatsApp (+918848241463)</span>
+            </button>
+
+            <button
+              onClick={() => downloadInspectionPdf(inspection)}
+              className="px-3.5 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-cyan-600/25 transition cursor-pointer"
+            >
+              <Download className="w-4 h-4" />
+              <span>Download A4 PDF</span>
             </button>
           </div>
 
@@ -150,9 +162,17 @@ export const InspectionDetailModal: React.FC<InspectionDetailModalProps> = ({
                 <ExternalLink className="w-3 h-3" />
               </a>
             </div>
-            <p className="text-[11px] text-slate-400 font-mono">
-              GPS Accuracy: ±{inspection.gps.accuracy || 0}m • Captured at {new Date(inspection.gps.fetchedAt).toLocaleString()}
-            </p>
+            <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400 font-mono">
+              <span>
+                Accuracy: <strong className={inspection.gps.accuracy && inspection.gps.accuracy <= 10 ? "text-emerald-400" : "text-amber-400"}>±{inspection.gps.accuracy || 0}m</strong>
+              </span>
+              {inspection.gps.accuracy && inspection.gps.accuracy <= 10 && (
+                <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">
+                  🎯 5–10m Precision Lock
+                </span>
+              )}
+              <span>• Captured {new Date(inspection.gps.fetchedAt).toLocaleTimeString()}</span>
+            </div>
           </div>
         )}
 
@@ -262,6 +282,13 @@ export const InspectionDetailModal: React.FC<InspectionDetailModalProps> = ({
             Close
           </button>
         </div>
+
+        {/* Email Dispatch Modal */}
+        <InspectionEmailModal
+          isOpen={isEmailModalOpen}
+          onClose={() => setIsEmailModalOpen(false)}
+          inspection={inspection}
+        />
       </div>
     </div>
   );

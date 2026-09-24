@@ -12,6 +12,8 @@ import {
   saveSiteInspections,
   loadSiteInspections,
   fetchCurrentGPSLocation,
+  fetchHighAccuracyGPSLocation,
+  GPSProgressUpdate,
   generateInspectionNumber,
   sendWhatsAppNotification,
   downloadInspectionPdf,
@@ -19,6 +21,7 @@ import {
   DEFAULT_INSPECTION_WHATSAPP
 } from "../../utils/siteInspectionManager";
 import { triggerAppNotification } from "../../context/NotificationContext";
+import { InspectionEmailModal } from "./InspectionEmailModal";
 import {
   MapPin,
   Camera,
@@ -41,12 +44,17 @@ import {
   Building,
   Layers,
   Sparkles,
+  Mail,
+
   ShieldCheck,
   Compass,
   Clock,
   HelpCircle,
   Plus,
-  MinusCircle
+  MinusCircle,
+  Radio,
+  Target,
+  Navigation
 } from "lucide-react";
 
 interface MobileInspectionFormProps {
@@ -74,10 +82,13 @@ export const MobileInspectionForm: React.FC<MobileInspectionFormProps> = ({
   // Read-only Date & Time (auto-generated upon opening)
   const [dateTime] = useState<string>(() => new Date().toISOString());
 
-  // GPS Location State
+  // GPS Location State (Targeting 5-10 Meter High Precision)
   const [gps, setGps] = useState<InspectionGPS | null>(null);
   const [isFetchingGps, setIsFetchingGps] = useState(false);
   const [gpsError, setGpsError] = useState("");
+  const [gpsProgress, setGpsProgress] = useState<GPSProgressUpdate | null>(null);
+  const [targetAccuracyMeters, setTargetAccuracyMeters] = useState<number>(10); // 5m or 10m
+  const activeGpsTaskRef = useRef<{ cancel: () => void } | null>(null);
 
   // Media (Photos & Videos)
   const [mediaList, setMediaList] = useState<InspectionMedia[]>([]);
@@ -95,6 +106,7 @@ export const MobileInspectionForm: React.FC<MobileInspectionFormProps> = ({
   // Form Submission & Success State
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedInspection, setSubmittedInspection] = useState<SiteInspection | null>(null);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -120,20 +132,66 @@ export const MobileInspectionForm: React.FC<MobileInspectionFormProps> = ({
     setAnswers(initialAnswers);
   }, [selectedTemplateId]);
 
-  // Handle GPS Fetch
-  const handleFetchGPS = async () => {
+  // Clean up GPS task on unmount
+  useEffect(() => {
+    return () => {
+      if (activeGpsTaskRef.current) {
+        activeGpsTaskRef.current.cancel();
+      }
+    };
+  }, []);
+
+  // Handle High-Precision GPS Fetch (5-10m Accuracy Target)
+  const handleFetchGPS = async (targetMeters = targetAccuracyMeters) => {
+    if (activeGpsTaskRef.current) {
+      activeGpsTaskRef.current.cancel();
+    }
     setIsFetchingGps(true);
     setGpsError("");
+    setGpsProgress({
+      currentAccuracy: null,
+      bestAccuracy: null,
+      attempts: 0,
+      message: `Calibrating GPS satellite sensor (Target: ≤${targetMeters}m precision)...`,
+      isHighPrecision: false
+    });
+
+    const task = fetchHighAccuracyGPSLocation({
+      targetAccuracyMeters: targetMeters,
+      maxWaitTimeMs: 22000,
+      onProgress: (update) => {
+        setGpsProgress(update);
+      }
+    });
+
+    activeGpsTaskRef.current = task;
+
     try {
-      const locationData = await fetchCurrentGPSLocation();
+      const locationData = await task.promise;
       setGps(locationData);
-      triggerAppNotification("📍 GPS Coordinates captured accurately!", "success");
+      setGpsProgress(null);
+      if (locationData.accuracy && locationData.accuracy <= 10) {
+        triggerAppNotification(`🎯 GPS Locked with High Precision: ±${locationData.accuracy}m`, "success");
+      } else {
+        triggerAppNotification(`📍 GPS Coordinates captured: ±${locationData.accuracy || 0}m`, "success");
+      }
     } catch (err: any) {
-      setGpsError(err.message || "Failed to fetch GPS coordinates.");
+      setGpsError(err.message || "Failed to fetch high-precision GPS coordinates.");
+      setGpsProgress(null);
       triggerAppNotification(err.message || "GPS fetch failed.", "error");
     } finally {
       setIsFetchingGps(false);
+      activeGpsTaskRef.current = null;
     }
+  };
+
+  const handleCancelGpsFetch = () => {
+    if (activeGpsTaskRef.current) {
+      activeGpsTaskRef.current.cancel();
+      activeGpsTaskRef.current = null;
+    }
+    setIsFetchingGps(false);
+    setGpsProgress(null);
   };
 
   // Compress image to Base64 for rapid offline/online storage
@@ -376,37 +434,55 @@ export const MobileInspectionForm: React.FC<MobileInspectionFormProps> = ({
               Automated Triggers & Sharing
             </h3>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               {/* WhatsApp Trigger */}
               <button
                 type="button"
                 onClick={() => sendWhatsAppNotification(submittedInspection)}
-                className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition cursor-pointer"
+                className="w-full py-3 px-3.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition cursor-pointer"
               >
                 <Share2 className="w-4 h-4" />
-                <span>Send WhatsApp to +91 8848241463</span>
+                <span>WhatsApp (+91 8848241463)</span>
+              </button>
+
+              {/* Email Trigger */}
+              <button
+                type="button"
+                onClick={() => setIsEmailModalOpen(true)}
+                className="w-full py-3 px-3.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-red-600/30 transition cursor-pointer"
+              >
+                <Mail className="w-4 h-4" />
+                <span>Send Email Report</span>
               </button>
 
               {/* Download A4 PDF */}
               <button
                 type="button"
                 onClick={() => downloadInspectionPdf(submittedInspection)}
-                className="w-full py-3 px-4 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-cyan-600/30 transition cursor-pointer"
+                className="w-full py-3 px-3.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-cyan-600/30 transition cursor-pointer"
               >
                 <Download className="w-4 h-4" />
-                <span>Download A4 PDF Report</span>
+                <span>Download A4 PDF</span>
               </button>
             </div>
 
             {/* Email Notification Status */}
-            <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl text-xs flex items-center justify-between text-slate-300">
+            <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl text-xs flex flex-wrap items-center justify-between gap-2 text-slate-300">
               <div className="flex items-center gap-2">
                 <Send className="w-4 h-4 text-emerald-400" />
-                <span>Email Summary Queued:</span>
+                <span>Email Recipient:</span>
+                <span className="font-mono text-emerald-400 font-bold text-[11px]">
+                  {DEFAULT_INSPECTION_EMAIL}
+                </span>
               </div>
-              <span className="font-mono text-emerald-400 font-bold text-[11px]">
-                {DEFAULT_INSPECTION_EMAIL}
-              </span>
+              <button
+                type="button"
+                onClick={() => setIsEmailModalOpen(true)}
+                className="text-[11px] text-indigo-400 hover:text-indigo-300 underline font-semibold flex items-center gap-1 cursor-pointer"
+              >
+                <Mail className="w-3.5 h-3.5" />
+                <span>Open Dispatch Options</span>
+              </button>
             </div>
           </div>
 
@@ -430,6 +506,13 @@ export const MobileInspectionForm: React.FC<MobileInspectionFormProps> = ({
               </button>
             )}
           </div>
+
+          {/* Email Dispatch Modal */}
+          <InspectionEmailModal
+            isOpen={isEmailModalOpen}
+            onClose={() => setIsEmailModalOpen(false)}
+            inspection={submittedInspection}
+          />
         </div>
       ) : (
         /* MAIN MOBILE DATA ENTRY FORM */
@@ -616,50 +699,154 @@ export const MobileInspectionForm: React.FC<MobileInspectionFormProps> = ({
             </div>
           </div>
 
-          {/* 3. GPS GEOLOCATION CAPTURE */}
+          {/* 3. GPS GEOLOCATION CAPTURE (5-10M HIGH ACCURACY) */}
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-4 sm:p-5 space-y-3 shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-              <h2 className="text-xs font-bold text-slate-300 uppercase font-mono tracking-wider flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-cyan-400" />
-                Live GPS Geolocation
-              </h2>
-              {gps && (
-                <span className="text-[10px] px-2 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 font-mono font-bold">
-                  LOCKED
-                </span>
-              )}
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
+              <div className="flex items-center gap-1.5">
+                <div className="p-1 rounded-lg bg-cyan-500/10 text-cyan-400">
+                  <Navigation className="w-4 h-4" />
+                </div>
+                <div>
+                  <h2 className="text-xs font-bold text-slate-200 uppercase font-mono tracking-wider flex items-center gap-1.5">
+                    Live GPS Geolocation
+                  </h2>
+                  <p className="text-[10px] text-slate-400">Accuracy Target: ≤ 5–10 Meters</p>
+                </div>
+              </div>
+
+              {/* Accuracy Target Toggles */}
+              <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setTargetAccuracyMeters(10)}
+                  className={`px-2.5 py-0.5 rounded-lg text-[10px] font-bold transition ${
+                    targetAccuracyMeters === 10
+                      ? "bg-cyan-500 text-slate-950 shadow"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  ≤ 10m Target
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTargetAccuracyMeters(5)}
+                  className={`px-2.5 py-0.5 rounded-lg text-[10px] font-bold transition ${
+                    targetAccuracyMeters === 5
+                      ? "bg-emerald-500 text-slate-950 shadow"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  ≤ 5m Target
+                </button>
+              </div>
             </div>
 
-            {gps ? (
-              <div className="p-3.5 bg-slate-950 border border-cyan-500/40 rounded-2xl space-y-2">
+            {/* GPS Fetching / Calibrating Active State */}
+            {isFetchingGps ? (
+              <div className="p-4 bg-slate-950 border border-cyan-500/40 rounded-2xl space-y-3 text-center animate-fadeIn">
+                <div className="flex items-center justify-center">
+                  <div className="relative flex items-center justify-center">
+                    <div className="w-12 h-12 rounded-full bg-cyan-500/20 animate-ping absolute" />
+                    <div className="w-10 h-10 rounded-full bg-cyan-500/30 border border-cyan-400 flex items-center justify-center relative">
+                      <Radio className="w-5 h-5 text-cyan-300 animate-pulse" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-cyan-300 font-mono">
+                    {gpsProgress?.message || `Calibrating GPS sensor for ≤${targetAccuracyMeters}m precision...`}
+                  </p>
+                  {gpsProgress?.bestAccuracy !== null && gpsProgress?.bestAccuracy !== undefined && (
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-750 text-xs font-mono">
+                      <span className="text-slate-400">Current Fix:</span>
+                      <span
+                        className={`font-bold ${
+                          gpsProgress.bestAccuracy <= targetAccuracyMeters
+                            ? "text-emerald-400"
+                            : "text-amber-400"
+                        }`}
+                      >
+                        ±{gpsProgress.bestAccuracy}m
+                      </span>
+                      <span className="text-[10px] text-slate-500">(Target ≤{targetAccuracyMeters}m)</span>
+                    </div>
+                  )}
+                  <p className="text-[11px] text-slate-400 pt-1">
+                    💡 Stand under open sky for fast 5–10 meter precision satellite lock.
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={handleCancelGpsFetch}
+                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : gps ? (
+              /* GPS Locked State */
+              <div className="p-3.5 bg-slate-950 border border-cyan-500/40 rounded-2xl space-y-2.5">
                 <div className="flex items-start justify-between gap-2">
                   <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span
+                        className={`text-[10px] px-2 py-0.5 rounded-md font-mono font-bold flex items-center gap-1 ${
+                          gps.accuracy && gps.accuracy <= 5
+                            ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                            : gps.accuracy && gps.accuracy <= 10
+                            ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                            : gps.accuracy && gps.accuracy <= 20
+                            ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
+                            : "bg-rose-500/20 text-rose-300 border border-rose-500/40"
+                        }`}
+                      >
+                        <Target className="w-3 h-3" />
+                        {gps.accuracy && gps.accuracy <= 5
+                          ? `🎯 HYPER ACCURATE (±${gps.accuracy}m)`
+                          : gps.accuracy && gps.accuracy <= 10
+                          ? `🎯 HIGH PRECISION (±${gps.accuracy}m)`
+                          : `⚠️ ACCURACY ±${gps.accuracy || 0}m`}
+                      </span>
+
+                      {gps.accuracy && gps.accuracy <= 10 && (
+                        <span className="text-[10px] text-emerald-400 font-mono font-bold">
+                          5–10m Validated ✅
+                        </span>
+                      )}
+                    </div>
+
                     <p className="text-xs font-bold text-cyan-300 font-mono">
                       📍 Lat: {gps.latitude.toFixed(6)}, Lng: {gps.longitude.toFixed(6)}
                     </p>
                     <p className="text-[11px] text-slate-400 mt-0.5">
-                      GPS Accuracy: <strong className="text-emerald-400">±{gps.accuracy || 0}m</strong>
-                      {gps.altitude && ` • Alt: ${gps.altitude}m`}
+                      Exact GPS Coordinates {gps.altitude ? `• Alt: ${gps.altitude}m` : ""}
                     </p>
                   </div>
+
                   <button
                     type="button"
-                    onClick={handleFetchGPS}
+                    onClick={() => handleFetchGPS(targetAccuracyMeters)}
                     disabled={isFetchingGps}
-                    className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer"
-                    title="Refresh GPS location"
+                    className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold flex items-center gap-1 cursor-pointer transition"
+                    title="Re-calibrate GPS (5-10m)"
                   >
-                    <RotateCw className={`w-3.5 h-3.5 ${isFetchingGps ? "animate-spin" : ""}`} />
+                    <RotateCw className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline text-[11px]">Re-Lock</span>
                   </button>
                 </div>
 
-                <div className="pt-1 flex items-center justify-between">
+                <div className="pt-1 flex items-center justify-between border-t border-slate-900">
                   <a
                     href={gps.mapUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-xs text-cyan-400 hover:text-cyan-300 underline font-mono flex items-center gap-1"
                   >
+                    <MapPin className="w-3 h-3" />
                     <span>Open in Google Maps</span>
                   </a>
                   <span className="text-[10px] text-slate-500 font-mono">
@@ -668,18 +855,25 @@ export const MobileInspectionForm: React.FC<MobileInspectionFormProps> = ({
                 </div>
               </div>
             ) : (
+              /* GPS Idle State */
               <div className="p-4 bg-slate-950 border border-dashed border-slate-750 rounded-2xl text-center space-y-3">
-                <p className="text-xs text-slate-400">
-                  Tap the button below to fetch exact GPS coordinates of the site using your smartphone GPS.
-                </p>
+                <div className="space-y-1">
+                  <p className="text-xs text-slate-300 font-medium">
+                    Fetch live high-precision satellite coordinates directly on site.
+                  </p>
+                  <p className="text-[11px] text-emerald-400 font-mono">
+                    🎯 Multi-sampling enabled for 5–10 meter accuracy.
+                  </p>
+                </div>
+
                 <button
                   type="button"
-                  onClick={handleFetchGPS}
+                  onClick={() => handleFetchGPS(targetAccuracyMeters)}
                   disabled={isFetchingGps}
                   className="w-full py-3.5 bg-cyan-600 hover:bg-cyan-500 active:scale-98 text-white rounded-2xl text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-cyan-600/30 transition cursor-pointer"
                 >
-                  <MapPin className={`w-4 h-4 ${isFetchingGps ? "animate-bounce" : ""}`} />
-                  <span>{isFetchingGps ? "Fetching GPS Location..." : "📍 Fetch Live Location"}</span>
+                  <Navigation className="w-4 h-4" />
+                  <span>📍 Fetch Live Location (5–10m Precision)</span>
                 </button>
                 {gpsError && <p className="text-xs text-rose-400">{gpsError}</p>}
               </div>

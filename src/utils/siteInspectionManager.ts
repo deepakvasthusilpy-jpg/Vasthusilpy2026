@@ -230,49 +230,147 @@ export const generateInspectionNumber = (): string => {
   return `SI-${year}-${randomSuffix}`;
 };
 
-// Fetch Device Geolocation
-export const fetchCurrentGPSLocation = (): Promise<InspectionGPS> => {
-  return new Promise((resolve, reject) => {
+export interface GPSProgressUpdate {
+  currentAccuracy: number | null;
+  bestAccuracy: number | null;
+  attempts: number;
+  message: string;
+  isHighPrecision: boolean;
+}
+
+// High Accuracy Live GPS Fetcher with continuous satellite triangulation sampling (5-10m accuracy target)
+export const fetchHighAccuracyGPSLocation = (
+  options?: {
+    targetAccuracyMeters?: number; // e.g., 5 or 10 meters
+    maxWaitTimeMs?: number;
+    onProgress?: (update: GPSProgressUpdate) => void;
+  }
+): { promise: Promise<InspectionGPS>; cancel: () => void } => {
+  let watchId: number | null = null;
+  let timer: any = null;
+  let isDone = false;
+
+  const targetAccuracy = options?.targetAccuracyMeters ?? 10;
+  const maxWait = options?.maxWaitTimeMs ?? 20000;
+  const onProgress = options?.onProgress;
+
+  let bestPosition: GeolocationPosition | null = null;
+  let attempts = 0;
+
+  const cancel = () => {
+    if (isDone) return;
+    isDone = true;
+    if (watchId !== null && navigator.geolocation) {
+      navigator.geolocation.clearWatch(watchId);
+    }
+    if (timer) clearTimeout(timer);
+  };
+
+  const promise = new Promise<InspectionGPS>((resolve, reject) => {
     if (!navigator.geolocation) {
-      reject(new Error("Geolocation is not supported by your browser or mobile device."));
+      reject(new Error("Geolocation is not supported by your mobile browser."));
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-        const accuracy = Math.round(position.coords.accuracy);
-        const altitude = position.coords.altitude ? Math.round(position.coords.altitude) : null;
-        const mapUrl = `https://maps.google.com/?q=${lat},${lng}`;
+    const finalize = (pos: GeolocationPosition) => {
+      cancel();
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      const accuracy = Math.round(pos.coords.accuracy);
+      const altitude = pos.coords.altitude ? Math.round(pos.coords.altitude) : null;
+      const mapUrl = `https://maps.google.com/?q=${lat},${lng}`;
 
-        resolve({
-          latitude: lat,
-          longitude: lng,
-          accuracy,
-          altitude,
-          mapUrl,
-          fetchedAt: new Date().toISOString()
-        });
-      },
-      (error) => {
-        let msg = "Could not retrieve GPS coordinates.";
-        if (error.code === error.PERMISSION_DENIED) {
-          msg = "Location access was denied. Please allow GPS permission in your mobile browser.";
-        } else if (error.code === error.POSITION_UNAVAILABLE) {
-          msg = "GPS location is currently unavailable. Please turn on device Location/GPS.";
-        } else if (error.code === error.TIMEOUT) {
-          msg = "GPS location request timed out. Please retry outdoors.";
+      resolve({
+        latitude: lat,
+        longitude: lng,
+        accuracy,
+        altitude,
+        mapUrl,
+        fetchedAt: new Date().toISOString()
+      });
+    };
+
+    onProgress?.({
+      currentAccuracy: null,
+      bestAccuracy: null,
+      attempts: 0,
+      message: "Calibrating GPS satellite receiver (Target: ≤5–10m)...",
+      isHighPrecision: false
+    });
+
+    try {
+      watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          attempts++;
+          const currentAcc = Math.round(position.coords.accuracy);
+
+          if (!bestPosition || position.coords.accuracy < bestPosition.coords.accuracy) {
+            bestPosition = position;
+          }
+
+          const bestAcc = Math.round(bestPosition.coords.accuracy);
+          const isHighPrecision = bestAcc <= targetAccuracy;
+
+          onProgress?.({
+            currentAccuracy: currentAcc,
+            bestAccuracy: bestAcc,
+            attempts,
+            message: isHighPrecision
+              ? `🎯 High precision fix acquired (±${bestAcc}m)! Locking coordinates...`
+              : `🛰️ Triangulating GPS satellites (Current: ±${bestAcc}m → Waiting for ≤${targetAccuracy}m)...`,
+            isHighPrecision
+          });
+
+          // Stop and resolve as soon as we achieve target accuracy (<= 5-10m)
+          if (position.coords.accuracy <= targetAccuracy) {
+            finalize(position);
+          }
+        },
+        (error) => {
+          if (bestPosition) {
+            finalize(bestPosition);
+            return;
+          }
+          let msg = "Could not retrieve GPS coordinates.";
+          if (error.code === error.PERMISSION_DENIED) {
+            msg = "Location access was denied. Please allow GPS permission in mobile settings.";
+          } else if (error.code === error.POSITION_UNAVAILABLE) {
+            msg = "GPS location unavailable. Please enable device Location/GPS.";
+          } else if (error.code === error.TIMEOUT) {
+            msg = "GPS request timed out. Please step under open sky for satellite signal.";
+          }
+          cancel();
+          reject(new Error(msg));
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 25000,
+          maximumAge: 0
         }
-        reject(new Error(msg));
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 0
-      }
-    );
+      );
+
+      // Fallback timer: resolve with the best fix obtained within maxWait
+      timer = setTimeout(() => {
+        if (bestPosition) {
+          finalize(bestPosition);
+        } else {
+          cancel();
+          reject(new Error("Could not acquire accurate GPS fix. Please verify device GPS is active and try outdoors."));
+        }
+      }, maxWait);
+    } catch (err: any) {
+      cancel();
+      reject(err);
+    }
   });
+
+  return { promise, cancel };
+};
+
+// Fetch Device Geolocation with High Accuracy target
+export const fetchCurrentGPSLocation = async (targetAccuracyMeters = 10): Promise<InspectionGPS> => {
+  const { promise } = fetchHighAccuracyGPSLocation({ targetAccuracyMeters, maxWaitTimeMs: 18000 });
+  return promise;
 };
 
 // Format WhatsApp Message
@@ -651,3 +749,149 @@ export const downloadInspectionPdf = async (inspection: SiteInspection): Promise
   const doc = await generateSiteInspectionPdf(inspection);
   doc.save(`Vasthusilpy_Site_Inspection_${inspection.inspectionNumber}.pdf`);
 };
+
+// Format Comprehensive Email Body for Site Inspection
+export const formatInspectionEmail = (
+  inspection: SiteInspection
+): { subject: string; body: string } => {
+  const dateStr = new Date(inspection.dateTime).toLocaleString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+
+  const subject = `Vasthusilpy Site Inspection Report - ${inspection.ownerName} (${inspection.inspectionNumber})`;
+
+  const lines: string[] = [
+    `VASTHUSILPY ARCHITECTURAL & ENGINEERING CONSULTANTS`,
+    `OFFICIAL SITE INSPECTION & VERIFICATION REPORT`,
+    `==================================================`,
+    ``,
+    `REFERENCE NO  : ${inspection.inspectionNumber}`,
+    `DATE & TIME   : ${dateStr}`,
+    `TEMPLATE TYPE : ${inspection.templateName || "Standard Site Verification Checklist"}`,
+    `STATUS        : ${(inspection.status || "Submitted").toUpperCase()}`,
+    ``,
+    `1. OWNER & CLIENT INFORMATION:`,
+    `--------------------------------------------------`,
+    `Owner / Client Name : ${inspection.ownerName}`,
+    `Mobile Number       : ${inspection.mobileNumber}`,
+    `Site Location / Place: ${inspection.place}`,
+    inspection.panchayathMunicipality ? `Local Authority     : ${inspection.panchayathMunicipality}` : ``,
+    inspection.surveyNumber ? `Survey Number       : ${inspection.surveyNumber}` : ``,
+    inspection.inspectorName ? `Inspected By        : ${inspection.inspectorName}` : ``,
+    inspection.inspectorPhone ? `Inspector Contact   : ${inspection.inspectorPhone}` : ``,
+    ``
+  ].filter(Boolean);
+
+  // GPS Coordinates Section
+  if (inspection.gps) {
+    lines.push(
+      `2. LIVE GPS GEOLOCATION:`,
+      `--------------------------------------------------`,
+      `Latitude   : ${inspection.gps.latitude.toFixed(6)}`,
+      `Longitude  : ${inspection.gps.longitude.toFixed(6)}`,
+      `GPS Accuracy: ±${inspection.gps.accuracy || 0} meters ${inspection.gps.accuracy && inspection.gps.accuracy <= 10 ? "(5–10m Precision Verified)" : ""}`,
+      inspection.gps.altitude ? `Elevation  : ${inspection.gps.altitude} meters` : ``,
+      `Google Maps: ${inspection.gps.mapUrl}`,
+      ``
+    );
+  }
+
+  // Checklist Observations
+  if (inspection.answers && inspection.answers.length > 0) {
+    lines.push(
+      `3. SITE OBSERVATIONS & 15-POINT CHECKLIST:`,
+      `--------------------------------------------------`
+    );
+
+    inspection.answers.forEach((ans, idx) => {
+      let displayAns = "";
+      if (typeof ans.answer === "boolean") {
+        displayAns = ans.answer ? "YES" : "NO";
+      } else if (ans.answer === "YES" || ans.answer === "NO" || ans.answer === "N/A") {
+        displayAns = ans.answer;
+      } else {
+        displayAns = `${ans.answer || "—"}`;
+      }
+
+      lines.push(`${idx + 1}. ${ans.questionText}: [${displayAns}]`);
+      if (ans.notes) {
+        lines.push(`   Remarks: ${ans.notes}`);
+      }
+    });
+    lines.push(``);
+  }
+
+  // Overall Remarks
+  if (inspection.overallRemarks) {
+    lines.push(
+      `4. ENGINEER'S SUMMARY REMARKS & RECOMMENDATIONS:`,
+      `--------------------------------------------------`,
+      `${inspection.overallRemarks}`,
+      ``
+    );
+  }
+
+  // Media Summary
+  if (inspection.media && inspection.media.length > 0) {
+    const photos = inspection.media.filter((m) => m.type === "photo");
+    const videos = inspection.media.filter((m) => m.type === "video");
+
+    lines.push(
+      `5. CAPTURED MEDIA FILES (${photos.length} Photos, ${videos.length} Videos):`,
+      `--------------------------------------------------`
+    );
+
+    inspection.media.forEach((item, index) => {
+      lines.push(
+        `• [${item.type.toUpperCase()}] ${item.name || `Media ${index + 1}`} (${item.caption || "On-site capture"})${item.size ? ` - ${(item.size / 1024).toFixed(1)} KB` : ""}`
+      );
+    });
+
+    lines.push(
+      ``,
+      `* Note: All photos are also embedded inside the official A4 PDF report generated for this inspection.`
+    );
+  }
+
+  lines.push(
+    ``,
+    `==================================================`,
+    `Vasthusilpy Architectural & Engineering Consultants`,
+    `Website: Vasthusilpy Field Services`,
+    `Sent automatically via Vasthusilpy Mobile Site Inspection System`
+  );
+
+  return {
+    subject,
+    body: lines.filter((l) => l !== undefined).join("\n")
+  };
+};
+
+// Open in Gmail Web composer directly
+export const openGmailWebCompose = (
+  inspection: SiteInspection,
+  recipient: string = DEFAULT_INSPECTION_EMAIL
+): void => {
+  const { subject, body } = formatInspectionEmail(inspection);
+  const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(
+    recipient
+  )}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.open(gmailUrl, "_blank", "noopener,noreferrer");
+};
+
+// Open in Default Mail Client (mailto:)
+export const openDefaultMailClient = (
+  inspection: SiteInspection,
+  recipient: string = DEFAULT_INSPECTION_EMAIL
+): void => {
+  const { subject, body } = formatInspectionEmail(inspection);
+  const mailtoUrl = `mailto:${encodeURIComponent(recipient)}?subject=${encodeURIComponent(
+    subject
+  )}&body=${encodeURIComponent(body)}`;
+  window.location.href = mailtoUrl;
+};
+

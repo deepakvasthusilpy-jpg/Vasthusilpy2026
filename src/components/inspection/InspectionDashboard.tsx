@@ -10,6 +10,7 @@ import {
 import { db } from "../../lib/firebase";
 import { collection, onSnapshot } from "firebase/firestore";
 import { InspectionDetailModal } from "./InspectionDetailModal";
+import { InspectionEmailModal } from "./InspectionEmailModal";
 import { triggerAppNotification } from "../../context/NotificationContext";
 import {
   Search,
@@ -30,7 +31,8 @@ import {
   ArrowUpDown,
   ExternalLink,
   ShieldCheck,
-  RefreshCw
+  RefreshCw,
+  Mail
 } from "lucide-react";
 
 interface InspectionDashboardProps {
@@ -45,6 +47,7 @@ export const InspectionDashboard: React.FC<InspectionDashboardProps> = ({
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [selectedInspection, setSelectedInspection] = useState<SiteInspection | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [emailModalInspection, setEmailModalInspection] = useState<SiteInspection | null>(null);
 
   // Sync with Firestore & localStorage events
   useEffect(() => {
@@ -298,6 +301,14 @@ export const InspectionDashboard: React.FC<InspectionDashboardProps> = ({
 
                 <div className="flex items-center gap-1.5">
                   <button
+                    onClick={() => setEmailModalInspection(item)}
+                    className="p-1.5 text-rose-400 hover:text-rose-300 hover:bg-slate-800 rounded-xl transition cursor-pointer"
+                    title="Send Email Report to Deepak Sir"
+                  >
+                    <Mail className="w-4 h-4" />
+                  </button>
+
+                  <button
                     onClick={() => downloadInspectionPdf(item)}
                     className="p-1.5 text-cyan-400 hover:text-cyan-300 hover:bg-slate-800 rounded-xl transition cursor-pointer"
                     title="Download A4 PDF Report"
@@ -340,6 +351,13 @@ export const InspectionDashboard: React.FC<InspectionDashboardProps> = ({
         }}
         inspection={selectedInspection}
         onDelete={handleDelete}
+      />
+
+      {/* Email Dispatch Modal */}
+      <InspectionEmailModal
+        isOpen={!!emailModalInspection}
+        onClose={() => setEmailModalInspection(null)}
+        inspection={emailModalInspection}
       />
     </div>
   );
