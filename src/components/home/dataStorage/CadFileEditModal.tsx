@@ -123,7 +123,7 @@ export const CadFileEditModal: React.FC<CadFileEditModalProps> = ({
   const folders = getStoredCADFolders();
 
   const [folderId, setFolderId] = useState<string>(
-    file?.folderId || defaultFolderId || "folder-deepak"
+    file?.folderId || defaultFolderId || (folders[0]?.id || "")
   );
   const [name, setName] = useState(file?.name || "");
   const [projectCode, setProjectCode] = useState(file?.projectCode || "");

@@ -5,7 +5,6 @@ import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { NotificationProvider } from './context/NotificationContext';
-import { ViewModeProvider } from './context/ViewModeContext';
 import { initCloudRealtimeSync } from './utils/cloudRealtimeClient';
 import './index.css';
 
@@ -18,9 +17,7 @@ createRoot(document.getElementById('root')!).render(
       <LanguageProvider>
         <NotificationProvider>
           <AuthProvider>
-            <ViewModeProvider>
-              <App />
-            </ViewModeProvider>
+            <App />
           </AuthProvider>
         </NotificationProvider>
       </LanguageProvider>

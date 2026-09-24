@@ -4,6 +4,9 @@ import { GoogleAuthenticatorSetupModal } from "../auth/GoogleAuthenticatorSetupM
 import { SubscriptionRequestsTab } from "./SubscriptionRequestsTab";
 import { DataStorageTab } from "./DataStorageTab";
 import { useAuth } from "../../context/AuthContext";
+import { useTheme } from "../../context/ThemeContext";
+import { TechStartupHoloRing } from "../theme/TechStartupHoloRing";
+import { CorporateExecutiveShowcase } from "../theme/CorporateExecutiveShowcase";
 import { PRIMARY_ADMIN_EMAILS } from "../../lib/firebase";
 import { getOrCreateTotpSecret } from "../../utils/totp";
 import { isOnamThemeActive, getOnamRemainingStatus } from "../../utils/onamTheme";
@@ -72,6 +75,7 @@ interface HomePageProps {
 
 export const HomePage: React.FC<HomePageProps> = ({ activeTab = "home_overview", setActiveTab, onNavigate }) => {
   const { subscriptionRequests = [], isPrimaryAdmin, isSubscriberLogin } = useAuth();
+  const { theme } = useTheme();
   const pendingRequestsCount = (subscriptionRequests || []).filter((r) => r.status === "pending").length;
 
   const [copiedUpi, setCopiedUpi] = useState(false);
@@ -240,6 +244,20 @@ export const HomePage: React.FC<HomePageProps> = ({ activeTab = "home_overview",
               onResetDefaultTheme={() => setCustomThemePreview(null)}
               isCustomPreview={!!customThemePreview}
             />
+
+            {/* Futuristic Tech Startup Interactive Holographic Visual Core */}
+            {theme === "tech_startup" && (
+              <div className="animate-in fade-in slide-in-from-top-4 duration-500">
+                <TechStartupHoloRing />
+              </div>
+            )}
+
+            {/* Corporate Executive Trust & Blueprint Showcase */}
+            {theme === "corporate" && (
+              <div className="animate-in fade-in slide-in-from-top-4 duration-500">
+                <CorporateExecutiveShowcase />
+              </div>
+            )}
 
             {/* =========================================================================
                 1. VASTHUSILPY BUSINESS PROFILE & HERO

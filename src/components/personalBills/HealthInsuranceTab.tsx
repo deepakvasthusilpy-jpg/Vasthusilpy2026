@@ -41,27 +41,24 @@ export const HealthInsuranceTab: React.FC = () => {
 
   // Form State
   const [formData, setFormData] = useState<Partial<HealthInsurancePolicy>>({
-    policyName: "Star Health Comprehensive Family Optima",
-    policyNumber: "P/161114/01/2026/004821",
-    insurerName: "Star Health and Allied Insurance Co.",
-    policyHolderName: "Deepak (Vasthusilpy)",
-    insuredMembers: [
-      { name: "Deepak", relation: "Self", age: 38 },
-      { name: "Preetha Deepak", relation: "Spouse", age: 34 }
-    ],
-    sumInsured: 1000000,
-    cumulativeBonus: 250000,
-    premiumAmount: 22400,
-    gstAmount: 4032,
-    totalPremium: 26432,
+    policyName: "",
+    policyNumber: "",
+    insurerName: "",
+    policyHolderName: "",
+    insuredMembers: [],
+    sumInsured: 0,
+    cumulativeBonus: 0,
+    premiumAmount: 0,
+    gstAmount: 0,
+    totalPremium: 0,
     paymentFrequency: "YEARLY",
-    policyStartDate: "2025-10-15",
-    policyEndDate: "2026-10-14",
-    nextRenewalDueDate: "2026-10-14",
+    policyStartDate: "",
+    policyEndDate: "",
+    nextRenewalDueDate: "",
     status: "ACTIVE",
-    tpaDetails: "In-house TPA (Star Health Direct)",
-    cashlessHelpline: "1800-425-2255 / 1800-102-4477",
-    agentContact: "Suresh Palakkad - 9846123987",
+    tpaDetails: "",
+    cashlessHelpline: "",
+    agentContact: "",
     notes: ""
   });
 

@@ -133,8 +133,64 @@ export function shouldPurgeClient(name?: string): boolean {
 }
 
 // Self-invoking database purge for Firestore and LocalStorage
+export function wipeSpecifiedTabsDataVaultAndCrmAndBills(): void {
+  try {
+    // 1. Data Storage Vault files
+    localStorage.setItem("vasthusilpy_cad_files_vault_v3", JSON.stringify([]));
+    localStorage.setItem("vasthusilpy_cad_metadata_index_v3", JSON.stringify([]));
+    localStorage.removeItem("vasthusilpy_cad_files_vault_v2");
+    window.dispatchEvent(new CustomEvent("vasthusilpy_cad_vault_update", { detail: { count: 0 } }));
+
+    // 2. CRM Projects & Online Applications
+    localStorage.setItem(STORAGE_KEYS.CRM_PROJECTS, JSON.stringify([]));
+    localStorage.setItem(STORAGE_KEYS.CRM_INITIALIZED, "true");
+    localStorage.setItem("vasthusilpy_online_applications", JSON.stringify([]));
+    localStorage.setItem("vasthusilpy_application_form_entries", JSON.stringify([]));
+    window.dispatchEvent(new Event("vasthusilpy_crm_projects_updated"));
+
+    // 3. Invoices, Payments, Customers & Rate Catalog
+    localStorage.setItem(STORAGE_KEYS.INVOICES, JSON.stringify([]));
+    localStorage.setItem(STORAGE_KEYS.INVOICES_INITIALIZED, "true");
+    localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify([]));
+    localStorage.setItem(STORAGE_KEYS.CUSTOMERS_INITIALIZED, "true");
+    localStorage.setItem(STORAGE_KEYS.RATE_ITEMS, JSON.stringify([]));
+    localStorage.setItem(STORAGE_KEYS.RATE_ITEMS_INITIALIZED, "true");
+    window.dispatchEvent(new Event("vasthusilpy_invoices_updated"));
+    window.dispatchEvent(new Event("vasthusilpy_customers_updated"));
+    window.dispatchEvent(new Event("vasthusilpy_rate_items_updated"));
+
+    // 4. Personal Bills & Payments
+    localStorage.setItem("vasthusilpy_poov_mala_rows_v2", JSON.stringify([]));
+    localStorage.setItem("vasthusilpy_kseb_bills_v1", JSON.stringify([]));
+    localStorage.setItem("vasthusilpy_health_insurance_v1", JSON.stringify([]));
+    localStorage.setItem("vasthusilpy_rd_accounts_v1", JSON.stringify([]));
+    localStorage.setItem("vasthusilpy_panchayath_bills_v1", JSON.stringify([]));
+    localStorage.setItem("vasthusilpy_personal_vendors_v1", JSON.stringify([]));
+    localStorage.setItem("vasthusilpy_personal_vendor_bills_v1", JSON.stringify([]));
+    localStorage.setItem("vasthusilpy_staff_salary_records_v1", JSON.stringify([]));
+    window.dispatchEvent(new Event("personal_bills_updated"));
+
+    // General storage reactivity
+    window.dispatchEvent(new Event("vasthusilpy_storage_update"));
+
+    // 5. Durable Server Reset
+    if (typeof fetch !== "undefined") {
+      fetch("/api/web-data/reset-tabs-storage", { method: "POST" }).catch(() => {});
+    }
+
+    localStorage.setItem("vasthusilpy_clean_reset_v2026_done", "true");
+  } catch (e) {
+    console.error("Error running wipeSpecifiedTabsDataVaultAndCrmAndBills:", e);
+  }
+}
+
 export function purgeDeletedEntitiesFromDatabase(): void {
   try {
+    // Check if clean reset needed
+    if (typeof localStorage !== "undefined" && !localStorage.getItem("vasthusilpy_clean_reset_v2026_done")) {
+      wipeSpecifiedTabsDataVaultAndCrmAndBills();
+    }
+
     // 1. Delete project docs from Firestore
     PURGED_PROJECT_IDS.forEach((id) => {
       deleteDoc(doc(db, "projects", id)).catch(() => {});

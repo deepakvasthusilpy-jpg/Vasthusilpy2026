@@ -1,90 +1,92 @@
 import React, { useState, useEffect, useRef } from "react";
-import { ImportantSite, ImportantSiteCategory } from "../../../types";
+import { ImportantSite, SiteFolder } from "../../../types";
 import {
   loadImportantSites,
   saveImportantSites,
   deleteImportantSite,
+  loadSiteFolders,
+  saveSiteFolders,
+  createSiteFolder,
+  renameSiteFolder,
+  deleteSiteFolder,
   getDeletedSiteIds,
   exportSitesVaultJson,
-  getMasterPin,
-  setMasterPin,
-  isVaultLocked,
-  setVaultLockedState,
   DEMO_SITE_IDS
 } from "../../../utils/importantSitesManager";
 import { db } from "../../../lib/firebase";
 import { collection, onSnapshot } from "firebase/firestore";
 import { NewEditSiteModal } from "./NewEditSiteModal";
-import { AutoLoginHelperModal } from "./AutoLoginHelperModal";
+import { NewEditFolderModal } from "./NewEditFolderModal";
 import { DeleteSiteModal } from "./DeleteSiteModal";
+import { DeleteFolderModal } from "./DeleteFolderModal";
+import { AutoLoginHelperModal } from "./AutoLoginHelperModal";
 import { triggerAppNotification } from "../../../context/NotificationContext";
 import {
   Globe,
   Plus,
   Search,
   ExternalLink,
-  Lock,
-  Unlock,
-  KeyRound,
   Copy,
   Check,
   Star,
-  Zap,
   Edit2,
   Trash2,
   Download,
-  Upload,
-  Shield,
+  LayoutGrid,
+  List,
+  Folder,
+  FolderPlus,
+  FolderOpen,
+  X,
+  Save,
+  ChevronRight,
+  FolderKanban,
   ShieldCheck,
   Eye,
   EyeOff,
-  LayoutGrid,
-  List,
   Sparkles,
-  HelpCircle,
-  Clock,
-  Bookmark,
-  FileText,
-  User,
-  Layers,
-  Filter
+  ArrowRight
 } from "lucide-react";
 
 export const ImportantSitesView: React.FC = () => {
   const [sites, setSites] = useState<ImportantSite[]>(() => loadImportantSites());
+  const [folders, setFolders] = useState<SiteFolder[]>(() => loadSiteFolders());
+  const [selectedFolder, setSelectedFolder] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<"ALL" | ImportantSiteCategory | "FAVORITES">("ALL");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+  const [isDirectEditMode, setIsDirectEditMode] = useState(false);
+  const [showFolderDirectory, setShowFolderDirectory] = useState(true);
 
   // Modals state
-  const [isNewEditModalOpen, setIsNewEditModalOpen] = useState(false);
+  const [isNewEditSiteModalOpen, setIsNewEditSiteModalOpen] = useState(false);
   const [editingSite, setEditingSite] = useState<ImportantSite | null>(null);
+  const [defaultModalFolder, setDefaultModalFolder] = useState<string>("VEO");
+  const [isNewEditFolderModalOpen, setIsNewEditFolderModalOpen] = useState(false);
+  const [editingFolder, setEditingFolder] = useState<SiteFolder | null>(null);
+  const [isDeleteSiteModalOpen, setIsDeleteSiteModalOpen] = useState(false);
+  const [siteToDelete, setSiteToDelete] = useState<ImportantSite | null>(null);
+  const [isDeleteFolderModalOpen, setIsDeleteFolderModalOpen] = useState(false);
+  const [folderToDelete, setFolderToDelete] = useState<SiteFolder | null>(null);
   const [isAutoLoginModalOpen, setIsAutoLoginModalOpen] = useState(false);
   const [selectedHelperSite, setSelectedHelperSite] = useState<ImportantSite | null>(null);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [siteToDelete, setSiteToDelete] = useState<ImportantSite | null>(null);
+
+  // In-line direct editing state per card
+  const [inlineEditingSiteId, setInlineEditingSiteId] = useState<string | null>(null);
+  const [inlineForm, setInlineForm] = useState<Partial<ImportantSite>>({});
 
   // Password visibility & Copy feedback states
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
   const [copiedField, setCopiedField] = useState<{ id: string; field: string } | null>(null);
-  const [launchToast, setLaunchToast] = useState<{ siteName: string; text: string } | null>(null);
 
-  // Vault PIN Lock state
-  const [isLocked, setIsLocked] = useState<boolean>(() => isVaultLocked());
-  const [showPinPrompt, setShowPinPrompt] = useState(false);
-  const [enteredPin, setEnteredPin] = useState("");
-  const [pinError, setPinError] = useState("");
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Real-Time & Storage Listener: Sync Important Sites across all devices
+  // Real-Time Sync & Storage Listeners
   useEffect(() => {
     let isMounted = true;
-    let unsub = () => {};
+    let unsubSites = () => {};
+    let unsubFolders = () => {};
 
     if (db) {
       try {
-        unsub = onSnapshot(
+        unsubSites = onSnapshot(
           collection(db, "important_sites"),
           (snapshot) => {
             if (!isMounted) return;
@@ -105,9 +107,29 @@ export const ImportantSitesView: React.FC = () => {
               saveImportantSites(remoteSites, false);
             }
           },
-          () => {
-            // Offline fallback
-          }
+          () => {}
+        );
+
+        unsubFolders = onSnapshot(
+          collection(db, "site_folders"),
+          (snapshot) => {
+            if (!isMounted) return;
+            if (!snapshot.empty) {
+              const remoteFolders: SiteFolder[] = [];
+              snapshot.forEach((d) => {
+                const data = d.data() as SiteFolder;
+                if (data && data.name) {
+                  remoteFolders.push(data);
+                }
+              });
+              setFolders((prev) => {
+                if (JSON.stringify(prev) === JSON.stringify(remoteFolders)) return prev;
+                return remoteFolders;
+              });
+              saveSiteFolders(remoteFolders, false);
+            }
+          },
+          () => {}
         );
       } catch (e) {
         // Safe offline fallback
@@ -116,21 +138,21 @@ export const ImportantSitesView: React.FC = () => {
 
     const handleStorageUpdate = () => {
       setSites(loadImportantSites());
+      setFolders(loadSiteFolders());
     };
     window.addEventListener("vasthusilpy_important_sites_updated", handleStorageUpdate);
+    window.addEventListener("vasthusilpy_site_folders_updated", handleStorageUpdate);
 
     return () => {
       isMounted = false;
-      unsub();
+      unsubSites();
+      unsubFolders();
       window.removeEventListener("vasthusilpy_important_sites_updated", handleStorageUpdate);
+      window.removeEventListener("vasthusilpy_site_folders_updated", handleStorageUpdate);
     };
   }, []);
 
   const handleTogglePassword = (id: string) => {
-    if (isLocked) {
-      setShowPinPrompt(true);
-      return;
-    }
     setVisiblePasswords((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
@@ -143,801 +165,1017 @@ export const ImportantSitesView: React.FC = () => {
     }, 2000);
   };
 
-  const handleOpenAndAutoCopy = (site: ImportantSite) => {
-    // 1. Copy password or credentials
-    if (site.password) {
-      navigator.clipboard.writeText(site.password);
-    } else if (site.username) {
-      navigator.clipboard.writeText(site.username);
-    }
-
-    // 2. Open portal URL
+  const handleOpenSite = (site: ImportantSite) => {
     const targetUrl = site.url.startsWith("http") ? site.url : `https://${site.url}`;
     window.open(targetUrl, "_blank", "noopener,noreferrer");
 
-    // 3. Update last opened timestamp
     const now = new Date().toISOString();
     const updated = sites.map((s) => (s.id === site.id ? { ...s, lastOpenedAt: now } : s));
     setSites(updated);
     saveImportantSites(updated);
-
-    // 4. Show friendly launch toast feedback
-    setLaunchToast({
-      siteName: site.name,
-      text: site.password
-        ? "Website opened in new tab! Password copied to clipboard — paste (Ctrl+V) into login form."
-        : "Website opened in new tab! Username copied to clipboard."
-    });
-    setTimeout(() => setLaunchToast(null), 5000);
-
-    triggerAppNotification(
-      "INVOICE_GENERATED" as any,
-      `Opened ${site.name}`,
-      `Website opened in new tab with auto-copy login provision.`,
-      { invoiceId: site.id }
-    );
   };
 
-  const handleToggleFavorite = (siteId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const updated = sites.map((s) => (s.id === siteId ? { ...s, isFavorite: !s.isFavorite } : s));
+  const handleToggleFavorite = (site: ImportantSite) => {
+    const updated = sites.map((s) =>
+      s.id === site.id ? { ...s, isFavorite: !s.isFavorite, updatedAt: new Date().toISOString() } : s
+    );
     setSites(updated);
     saveImportantSites(updated);
   };
 
-  const handleSaveSite = (savedSite: ImportantSite) => {
-    let updated: ImportantSite[];
-    const exists = sites.some((s) => s.id === savedSite.id);
-    if (exists) {
-      updated = sites.map((s) => (s.id === savedSite.id ? savedSite : s));
+  // Folder Operations
+  const handleSaveFolder = (folderData: { id?: string; name: string; color: string; description?: string }) => {
+    if (folderData.id) {
+      renameSiteFolder(folderData.id, folderData.name, folderData.color);
     } else {
-      updated = [savedSite, ...sites];
+      createSiteFolder(folderData.name, folderData.color, folderData.description);
+    }
+    setFolders(loadSiteFolders());
+    setSites(loadImportantSites());
+    triggerAppNotification(
+      folderData.id ? `Folder "${folderData.name}" updated` : `Folder "${folderData.name}" created`,
+      "success"
+    );
+  };
+
+  const handleDeleteFolderConfirm = () => {
+    if (!folderToDelete) return;
+    deleteSiteFolder(folderToDelete.id);
+    if (selectedFolder === folderToDelete.name) {
+      setSelectedFolder("ALL");
+    }
+    setFolders(loadSiteFolders());
+    setSites(loadImportantSites());
+    triggerAppNotification(`Folder "${folderToDelete.name}" deleted`, "info");
+    setFolderToDelete(null);
+  };
+
+  // Site Save & Delete
+  const handleSaveSite = (site: ImportantSite) => {
+    const existingIndex = sites.findIndex((s) => s.id === site.id);
+    let updated: ImportantSite[];
+    if (existingIndex >= 0) {
+      updated = sites.map((s) => (s.id === site.id ? site : s));
+    } else {
+      updated = [site, ...sites];
     }
     setSites(updated);
     saveImportantSites(updated);
-
-    triggerAppNotification(
-      "INVOICE_GENERATED" as any,
-      exists ? "Site Details Updated" : "New Website Added",
-      `"${savedSite.name}" saved to Important Sites Vault.`,
-      { invoiceId: savedSite.id }
-    );
+    triggerAppNotification(`Website "${site.name}" saved successfully`, "success");
   };
 
-  const handleConfirmDelete = () => {
+  const handleDeleteSiteConfirm = () => {
     if (!siteToDelete) return;
     const remaining = deleteImportantSite(siteToDelete.id);
     setSites(remaining);
+    triggerAppNotification(`Website "${siteToDelete.name}" removed`, "info");
     setSiteToDelete(null);
+  };
 
-    triggerAppNotification(
-      "INVOICE_GENERATED" as any,
-      "Site Removed",
-      `Website was removed from Important Sites.`,
-      { invoiceId: siteToDelete.id }
+  // Direct In-line Edit Handler
+  const cancelInlineEdit = () => {
+    setInlineEditingSiteId(null);
+    setInlineForm({});
+  };
+
+  const saveInlineEdit = (siteId: string) => {
+    const site = sites.find((s) => s.id === siteId);
+    if (!site) return;
+
+    let cleanUrl = (inlineForm.url || site.url || "").trim();
+    if (cleanUrl && !cleanUrl.startsWith("http://") && !cleanUrl.startsWith("https://")) {
+      cleanUrl = "https://" + cleanUrl;
+    }
+
+    const updatedSite: ImportantSite = {
+      ...site,
+      name: (inlineForm.name || site.name).trim(),
+      url: cleanUrl,
+      folder: (inlineForm.folder || site.folder || "General").trim(),
+      customCategory: (inlineForm.folder || site.folder || "General").trim(),
+      username: (inlineForm.username ?? site.username ?? "").trim(),
+      password: inlineForm.password ?? site.password ?? "",
+      notes: (inlineForm.notes ?? site.notes ?? "").trim(),
+      color: inlineForm.color || site.color || "emerald",
+      updatedAt: new Date().toISOString()
+    };
+
+    const updated = sites.map((s) => (s.id === siteId ? updatedSite : s));
+    setSites(updated);
+    saveImportantSites(updated);
+    setInlineEditingSiteId(null);
+    setInlineForm({});
+    triggerAppNotification(`Updated "${updatedSite.name}"`, "success");
+  };
+
+  // Quick Open Modal with Specific Folder
+  const openNewSiteModalWithFolder = (folderName: string) => {
+    setEditingSite(null);
+    setDefaultModalFolder(folderName);
+    setIsNewEditSiteModalOpen(true);
+  };
+
+  // Filtered Sites
+  const filteredSites = sites.filter((site) => {
+    const folderMatch =
+      selectedFolder === "ALL"
+        ? true
+        : selectedFolder === "FAVORITES"
+        ? !!site.isFavorite
+        : (site.folder || site.customCategory || "General").toLowerCase() === selectedFolder.toLowerCase();
+
+    const q = searchQuery.toLowerCase().trim();
+    const searchMatch =
+      !q ||
+      site.name.toLowerCase().includes(q) ||
+      site.url.toLowerCase().includes(q) ||
+      (site.username && site.username.toLowerCase().includes(q)) ||
+      (site.notes && site.notes.toLowerCase().includes(q)) ||
+      (site.folder && site.folder.toLowerCase().includes(q));
+
+    return folderMatch && searchMatch;
+  });
+
+  const getFolderSiteCount = (folderName: string) => {
+    return sites.filter(
+      (s) => (s.folder || s.customCategory || "General").toLowerCase() === folderName.toLowerCase()
+    ).length;
+  };
+
+  const getFolderSites = (folderName: string) => {
+    return sites.filter(
+      (s) => (s.folder || s.customCategory || "General").toLowerCase() === folderName.toLowerCase()
     );
   };
 
-  const handleUnlockWithPin = (e: React.FormEvent) => {
-    e.preventDefault();
-    const masterPin = getMasterPin();
-    if (enteredPin === masterPin) {
-      setIsLocked(false);
-      setVaultLockedState(false);
-      setShowPinPrompt(false);
-      setEnteredPin("");
-      setPinError("");
-    } else {
-      setPinError("Incorrect PIN. (Default PIN is 1234)");
-    }
-  };
-
-  const handleToggleVaultLock = () => {
-    if (!isLocked) {
-      setIsLocked(true);
-      setVaultLockedState(true);
-      setVisiblePasswords({});
-    } else {
-      setShowPinPrompt(true);
-    }
-  };
-
-  // Import JSON handler
-  const handleImportJson = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const content = event.target?.result as string;
-        const parsed = JSON.parse(content);
-        if (Array.isArray(parsed)) {
-          const merged = [...parsed, ...sites.filter((s) => !parsed.some((p: any) => p.id === s.id))];
-          setSites(merged);
-          saveImportantSites(merged);
-          alert(`Successfully imported ${parsed.length} important sites!`);
-        } else {
-          alert("Invalid backup file format.");
-        }
-      } catch (err) {
-        alert("Failed to parse backup JSON file.");
-      }
-    };
-    reader.readAsText(file);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-
-  // Filtered sites
-  const filteredSites = sites
-    .filter((site) => {
-      // Category filter
-      if (selectedCategory === "FAVORITES") {
-        if (!site.isFavorite) return false;
-      } else if (selectedCategory !== "ALL") {
-        if (site.category !== selectedCategory) return false;
-      }
-
-      // Search query
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matchesName = (site.name || "").toLowerCase().includes(q);
-        const matchesUrl = (site.url || "").toLowerCase().includes(q);
-        const matchesUser = (site.username || "").toLowerCase().includes(q);
-        const matchesNotes = (site.notes || "").toLowerCase().includes(q);
-        const matchesCategory = (site.customCategory || "").toLowerCase().includes(q);
-        return matchesName || matchesUrl || matchesUser || matchesNotes || matchesCategory;
-      }
-      return true;
-    })
-    .sort((a, b) => {
-      // Pinned favorites first
-      if (a.isFavorite && !b.isFavorite) return -1;
-      if (!a.isFavorite && b.isFavorite) return 1;
-      return a.name.localeCompare(b.name);
-    });
-
-  const favoritesCount = sites.filter((s) => s.isFavorite).length;
-  const lsgdCount = sites.filter((s) => s.category === "LSGD_GOVT").length;
-  const surveyCount = sites.filter((s) => s.category === "REVENUE_SURVEY").length;
-  const taxCount = sites.filter((s) => s.category === "TAX_BANKING").length;
-  const cadCount = sites.filter((s) => s.category === "CAD_SOFTWARE").length;
-  const utilityCount = sites.filter((s) => s.category === "UTILITY_OFFICE").length;
-
-  const getCategoryBadge = (cat: ImportantSiteCategory, custom?: string) => {
-    switch (cat) {
-      case "LSGD_GOVT":
-        return { text: "LSGD & Permits", color: "bg-emerald-950 text-emerald-300 border-emerald-800" };
-      case "REVENUE_SURVEY":
-        return { text: "Survey & Revenue", color: "bg-cyan-950 text-cyan-300 border-cyan-800" };
-      case "TAX_BANKING":
-        return { text: "Tax & Banking", color: "bg-indigo-950 text-indigo-300 border-indigo-800" };
-      case "CAD_SOFTWARE":
-        return { text: "CAD & Engineering", color: "bg-rose-950 text-rose-300 border-rose-800" };
-      case "UTILITY_OFFICE":
-        return { text: "Office Utilities", color: "bg-amber-950 text-amber-300 border-amber-800" };
-      default:
-        return { text: custom || "Custom Portal", color: "bg-slate-800 text-slate-300 border-slate-700" };
-    }
-  };
-
-  const getBorderColor = (color?: string) => {
-    switch (color) {
+  // Color helper
+  const getColorClasses = (colorName = "emerald") => {
+    switch (colorName) {
+      case "emerald":
+        return {
+          bg: "bg-emerald-500/15",
+          text: "text-emerald-400",
+          border: "border-emerald-500/30",
+          badgeBg: "bg-emerald-500/20",
+          badgeText: "text-emerald-300",
+          ring: "ring-emerald-400"
+        };
       case "cyan":
-        return "border-cyan-800/80 hover:border-cyan-400";
+        return {
+          bg: "bg-cyan-500/15",
+          text: "text-cyan-400",
+          border: "border-cyan-500/30",
+          badgeBg: "bg-cyan-500/20",
+          badgeText: "text-cyan-300",
+          ring: "ring-cyan-400"
+        };
       case "blue":
-        return "border-blue-800/80 hover:border-blue-400";
+        return {
+          bg: "bg-blue-500/15",
+          text: "text-blue-400",
+          border: "border-blue-500/30",
+          badgeBg: "bg-blue-500/20",
+          badgeText: "text-blue-300",
+          ring: "ring-blue-400"
+        };
       case "indigo":
-        return "border-indigo-800/80 hover:border-indigo-400";
+        return {
+          bg: "bg-indigo-500/15",
+          text: "text-indigo-400",
+          border: "border-indigo-500/30",
+          badgeBg: "bg-indigo-500/20",
+          badgeText: "text-indigo-300",
+          ring: "ring-indigo-400"
+        };
+      case "purple":
+        return {
+          bg: "bg-purple-500/15",
+          text: "text-purple-400",
+          border: "border-purple-500/30",
+          badgeBg: "bg-purple-500/20",
+          badgeText: "text-purple-300",
+          ring: "ring-purple-400"
+        };
       case "amber":
-        return "border-amber-800/80 hover:border-amber-400";
+        return {
+          bg: "bg-amber-500/15",
+          text: "text-amber-400",
+          border: "border-amber-500/30",
+          badgeBg: "bg-amber-500/20",
+          badgeText: "text-amber-300",
+          ring: "ring-amber-400"
+        };
       case "rose":
-        return "border-rose-800/80 hover:border-rose-400";
+        return {
+          bg: "bg-rose-500/15",
+          text: "text-rose-400",
+          border: "border-rose-500/30",
+          badgeBg: "bg-rose-500/20",
+          badgeText: "text-rose-300",
+          ring: "ring-rose-400"
+        };
+      case "teal":
+        return {
+          bg: "bg-teal-500/15",
+          text: "text-teal-400",
+          border: "border-teal-500/30",
+          badgeBg: "bg-teal-500/20",
+          badgeText: "text-teal-300",
+          ring: "ring-teal-400"
+        };
       default:
-        return "border-emerald-800/80 hover:border-emerald-400";
+        return {
+          bg: "bg-emerald-500/15",
+          text: "text-emerald-400",
+          border: "border-emerald-500/30",
+          badgeBg: "bg-emerald-500/20",
+          badgeText: "text-emerald-300",
+          ring: "ring-emerald-400"
+        };
     }
   };
 
   return (
-    <div className="space-y-6">
-      {/* Launch Toast Notification Banner */}
-      {launchToast && (
-        <div className="bg-emerald-950/90 border-2 border-emerald-500 rounded-2xl p-4 text-emerald-200 flex items-center justify-between gap-3 shadow-2xl animate-fade-in font-sans">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-emerald-900 border border-emerald-600 flex items-center justify-center text-emerald-300 font-bold shrink-0">
-              <Zap className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="font-mono font-bold text-xs uppercase tracking-wider text-white">
-                {launchToast.siteName} Launched!
+    <div className="space-y-6 pb-20">
+      {/* 1. TOP HEADER & MAIN CONTROLS */}
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
+        <div className="absolute bottom-0 left-0 w-80 h-80 bg-teal-500/10 rounded-full blur-3xl pointer-events-none -ml-20 -mb-20" />
+
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl text-slate-950 font-bold shadow-lg shadow-emerald-500/20">
+                <Globe className="w-6 h-6 stroke-[2.5]" />
               </div>
-              <div className="text-xs text-emerald-300 font-medium">{launchToast.text}</div>
+              <div>
+                <h1 className="text-xl sm:text-2xl font-black text-white tracking-wide flex items-center gap-2.5">
+                  <span>Important Sites</span>
+                  <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-mono uppercase font-bold">
+                    Vault & Folders
+                  </span>
+                </h1>
+                <p className="text-xs text-slate-400 font-mono">
+                  Organize government portals, service links, VEO forms & login credentials by folders
+                </p>
+              </div>
             </div>
           </div>
 
-          <button
-            onClick={() => setLaunchToast(null)}
-            className="px-3 py-1 bg-emerald-900/80 hover:bg-emerald-800 text-emerald-200 rounded-lg text-xs font-mono font-bold border border-emerald-700 cursor-pointer"
-          >
-            Dismiss
-          </button>
-        </div>
-      )}
-
-      {/* Main Top Header & Action Controls */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 sm:p-6 space-y-4 shadow-xl">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-slate-950 flex items-center justify-center shadow-lg shadow-emerald-500/20 font-black">
-              <Globe className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800 uppercase">
-                  VAULT & AUTO-LOGIN
-                </span>
-                <span className="text-[10px] font-mono text-slate-400">
-                  {sites.length} Portals Stored
-                </span>
-              </div>
-              <h2 className="text-lg sm:text-xl font-black text-white font-sans uppercase tracking-tight">
-                Important Sites & Credentials Storage
-              </h2>
-            </div>
-          </div>
-
-          {/* Action Buttons: Add Site, Export, Import, Lock/Unlock */}
+          {/* Quick Action Buttons */}
           <div className="flex flex-wrap items-center gap-2">
-            {/* Vault Lock / Unlock Button */}
+            {/* Direct Edit Mode Toggle */}
             <button
-              onClick={handleToggleVaultLock}
-              className={`px-3 py-2 rounded-xl text-xs font-mono font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${
-                isLocked
-                  ? "bg-amber-950/60 border-amber-800 text-amber-300 hover:bg-amber-900/80"
-                  : "bg-slate-800 border-slate-700 text-slate-300 hover:text-white"
+              onClick={() => setIsDirectEditMode(!isDirectEditMode)}
+              className={`px-3.5 py-2 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${
+                isDirectEditMode
+                  ? "bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/25 ring-2 ring-white/40"
+                  : "bg-slate-800/90 text-slate-300 hover:text-white border border-slate-700"
               }`}
-              title={isLocked ? "Vault is PIN-Protected. Click to Unlock" : "Click to Lock Credentials with Master PIN"}
+              title="Toggle Direct Edit mode on cards"
             >
-              {isLocked ? <Lock className="w-3.5 h-3.5 text-amber-400" /> : <Unlock className="w-3.5 h-3.5 text-emerald-400" />}
-              <span>{isLocked ? "Vault Locked (PIN)" : "Vault Unlocked"}</span>
+              <Edit2 className="w-3.5 h-3.5" />
+              <span>{isDirectEditMode ? "Direct Edit: ON" : "Direct Edit"}</span>
+            </button>
+
+            {/* Toggle Folder Directory Section */}
+            <button
+              onClick={() => setShowFolderDirectory(!showFolderDirectory)}
+              className={`px-3.5 py-2 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${
+                showFolderDirectory
+                  ? "bg-teal-500/20 text-teal-300 border border-teal-500/40"
+                  : "bg-slate-850 text-slate-400 hover:text-white border border-slate-700"
+              }`}
+            >
+              <FolderKanban className="w-3.5 h-3.5 text-teal-400" />
+              <span>{showFolderDirectory ? "Hide Folder List" : "Show All Folders"}</span>
+            </button>
+
+            {/* New Folder Button */}
+            <button
+              onClick={() => {
+                setEditingFolder(null);
+                setIsNewEditFolderModalOpen(true);
+              }}
+              className="px-3.5 py-2 bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white border border-slate-700 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-sm"
+              title="Create a new folder (e.g. VEO, Taxes, Survey)"
+            >
+              <FolderPlus className="w-4 h-4 text-emerald-400" />
+              <span>+ New Folder</span>
+            </button>
+
+            {/* Add Website Link Button */}
+            <button
+              onClick={() => {
+                setEditingSite(null);
+                setDefaultModalFolder(selectedFolder !== "ALL" && selectedFolder !== "FAVORITES" ? selectedFolder : "VEO");
+                setIsNewEditSiteModalOpen(true);
+              }}
+              className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition shadow-lg shadow-emerald-500/25 cursor-pointer"
+            >
+              <Plus className="w-4 h-4 stroke-[3]" />
+              <span>+ Add Website Link</span>
             </button>
 
             {/* Export JSON */}
             <button
-              onClick={() => exportSitesVaultJson(sites)}
-              className="px-3 py-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-300 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
-              title="Download offline backup JSON of all stored websites & credentials"
+              onClick={() => exportSitesVaultJson(sites, folders)}
+              className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 rounded-2xl transition cursor-pointer"
+              title="Backup / Export Sites & Folders JSON"
             >
-              <Download className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="hidden sm:inline">Export Backup</span>
-            </button>
-
-            {/* Import JSON */}
-            <label className="px-3 py-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-300 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm">
-              <Upload className="w-3.5 h-3.5 text-indigo-400" />
-              <span className="hidden sm:inline">Import</span>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".json"
-                onChange={handleImportJson}
-                className="hidden"
-              />
-            </label>
-
-            {/* Add Website Button */}
-            <button
-              onClick={() => {
-                setEditingSite(null);
-                setIsNewEditModalOpen(true);
-              }}
-              className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black rounded-xl text-xs font-mono shadow-lg shadow-emerald-500/20 cursor-pointer transition-all flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Important Website</span>
+              <Download className="w-4 h-4" />
             </button>
           </div>
         </div>
+      </div>
 
-        {/* Search Bar & View Mode Switcher */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-slate-800">
-          <div className="relative w-full sm:max-w-md">
-            <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
+      {/* 2. ALL FOLDERS DIRECTORY LIST ON DASHBOARD */}
+      {showFolderDirectory && (
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 space-y-4 shadow-xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3.5">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                <FolderKanban className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-sm sm:text-base font-bold text-white tracking-wide flex items-center gap-2">
+                  <span>All Folders Directory</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-emerald-300 font-mono font-bold">
+                    {folders.length} Folders
+                  </span>
+                </h2>
+                <p className="text-[11px] text-slate-400 font-mono">
+                  Click any folder to filter websites or manage links inside it
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                setEditingFolder(null);
+                setIsNewEditFolderModalOpen(true);
+              }}
+              className="self-start sm:self-auto px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+            >
+              <FolderPlus className="w-3.5 h-3.5" />
+              <span>+ Create Folder</span>
+            </button>
+          </div>
+
+          {/* FOLDERS GRID LIST */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5">
+            {folders.map((f) => {
+              const isSelected = selectedFolder.toLowerCase() === f.name.toLowerCase();
+              const siteCount = getFolderSiteCount(f.name);
+              const folderSitesList = getFolderSites(f.name);
+              const colorClass = getColorClasses(f.color);
+
+              return (
+                <div
+                  key={f.id}
+                  onClick={() => setSelectedFolder(f.name)}
+                  className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between group relative ${
+                    isSelected
+                      ? "bg-slate-850 border-emerald-400 ring-2 ring-emerald-400/40 shadow-lg shadow-emerald-500/10"
+                      : "bg-slate-950/80 border-slate-800 hover:border-slate-700 hover:bg-slate-900"
+                  }`}
+                >
+                  {/* Folder Header */}
+                  <div className="space-y-2.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div
+                          className={`w-9 h-9 rounded-xl ${colorClass.bg} ${colorClass.text} border ${colorClass.border} flex items-center justify-center shrink-0 font-bold shadow`}
+                        >
+                          <Folder className="w-5 h-5" />
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="text-sm font-bold text-white truncate group-hover:text-emerald-400 transition flex items-center gap-1.5">
+                            <span>{f.name}</span>
+                            {f.name.toLowerCase() === "veo" && (
+                              <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 font-mono">
+                                ACTIVE
+                              </span>
+                            )}
+                          </h3>
+                          <span className="text-[11px] text-slate-400 font-mono">
+                            <strong className="text-emerald-400">{siteCount}</strong> site(s) saved
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Folder Card Actions */}
+                      <div
+                        className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          onClick={() => {
+                            setEditingFolder(f);
+                            setIsNewEditFolderModalOpen(true);
+                          }}
+                          className="p-1 text-slate-400 hover:text-emerald-400 hover:bg-slate-800 rounded-lg transition"
+                          title="Rename / Edit Folder"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setFolderToDelete(f);
+                            setIsDeleteFolderModalOpen(true);
+                          }}
+                          className="p-1 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition"
+                          title="Delete Folder"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Description or preview snippet */}
+                    {f.description ? (
+                      <p className="text-[11px] text-slate-400 line-clamp-1 italic">
+                        {f.description}
+                      </p>
+                    ) : (
+                      <p className="text-[10px] text-slate-500 font-mono">
+                        {siteCount === 0 ? "No websites in this folder yet" : "Click to view links"}
+                      </p>
+                    )}
+
+                    {/* Quick site tags in this folder */}
+                    {folderSitesList.length > 0 && (
+                      <div className="pt-1 flex flex-wrap gap-1">
+                        {folderSitesList.slice(0, 3).map((s) => (
+                          <span
+                            key={s.id}
+                            className="text-[10px] px-2 py-0.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 font-mono truncate max-w-[120px]"
+                            title={s.name}
+                          >
+                            {s.name}
+                          </span>
+                        ))}
+                        {folderSitesList.length > 3 && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-lg bg-slate-900 text-slate-400 font-mono">
+                            +{folderSitesList.length - 3}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Footer Bar inside card */}
+                  <div
+                    className="pt-3 mt-3 border-t border-slate-850 flex items-center justify-between text-[11px]"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      onClick={() => openNewSiteModalWithFolder(f.name)}
+                      className="text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 cursor-pointer transition"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add Site Link</span>
+                    </button>
+
+                    <button
+                      onClick={() => setSelectedFolder(f.name)}
+                      className={`font-semibold flex items-center gap-0.5 transition cursor-pointer ${
+                        isSelected ? "text-emerald-300 font-bold" : "text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      <span>{isSelected ? "Active" : "Open"}</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 3. FOLDER NAVIGATION TABS & SEARCH BAR */}
+      <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-3 sm:p-4 space-y-3">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          {/* Search Box */}
+          <div className="relative flex-1 max-w-md">
+            <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-500" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search websites by name, URL, username, or tag..."
-              className="w-full bg-slate-950 border border-slate-700 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400 font-sans transition-colors"
+              placeholder="Search by name, link, folder, username or notes..."
+              className="w-full bg-slate-950 border border-slate-800 rounded-2xl pl-10 pr-9 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-2.5 text-slate-400 hover:text-white text-xs font-mono"
+                className="absolute right-3 top-2.5 text-slate-500 hover:text-white"
               >
-                Clear
+                <X className="w-4 h-4" />
               </button>
             )}
           </div>
 
-          <div className="flex items-center gap-1.5 self-end sm:self-auto bg-slate-950 p-1 rounded-xl border border-slate-800">
-            <button
-              onClick={() => setViewMode("grid")}
-              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                viewMode === "grid" ? "bg-slate-800 text-white shadow" : "text-slate-500 hover:text-slate-300"
-              }`}
-              title="Grid Card View"
-            >
-              <LayoutGrid className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setViewMode("table")}
-              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                viewMode === "table" ? "bg-slate-800 text-white shadow" : "text-slate-500 hover:text-slate-300"
-              }`}
-              title="Compact Table View"
-            >
-              <List className="w-4 h-4" />
-            </button>
+          {/* View Mode Toggle & Total Count */}
+          <div className="flex items-center gap-2 self-end md:self-auto">
+            <span className="text-xs text-slate-400 font-mono">
+              Showing <strong className="text-emerald-400">{filteredSites.length}</strong> link(s)
+            </span>
+            <div className="bg-slate-950 p-1 rounded-xl border border-slate-800 flex items-center gap-1">
+              <button
+                onClick={() => setViewMode("grid")}
+                className={`p-1.5 rounded-lg transition cursor-pointer ${
+                  viewMode === "grid" ? "bg-emerald-500 text-slate-950" : "text-slate-400 hover:text-white"
+                }`}
+                title="Grid View"
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => setViewMode("table")}
+                className={`p-1.5 rounded-lg transition cursor-pointer ${
+                  viewMode === "table" ? "bg-emerald-500 text-slate-950" : "text-slate-400 hover:text-white"
+                }`}
+                title="Table List View"
+              >
+                <List className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Category Filter Pills */}
-        <div className="flex flex-wrap items-center gap-2 pt-1 overflow-x-auto pb-1">
+        {/* FOLDERS FILTER TABS */}
+        <div className="pt-2 border-t border-slate-800 flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+          {/* ALL SITES FOLDER */}
           <button
-            onClick={() => setSelectedCategory("ALL")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-              selectedCategory === "ALL"
-                ? "bg-emerald-500 text-slate-950 font-black shadow-md shadow-emerald-500/20"
-                : "bg-slate-950 text-slate-400 hover:text-white border border-slate-800"
+            onClick={() => setSelectedFolder("ALL")}
+            className={`px-3.5 py-2 rounded-2xl text-xs font-bold shrink-0 flex items-center gap-2 transition cursor-pointer ${
+              selectedFolder === "ALL"
+                ? "bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20"
+                : "bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800"
             }`}
           >
+            <FolderOpen className="w-3.5 h-3.5" />
             <span>All Sites</span>
-            <span className="bg-slate-900/60 px-1.5 py-0.2 rounded-full text-[10px]">{sites.length}</span>
+            <span
+              className={`text-[10px] px-2 py-0.2 rounded-full font-mono font-bold ${
+                selectedFolder === "ALL" ? "bg-slate-950/30 text-slate-950" : "bg-slate-800 text-slate-400"
+              }`}
+            >
+              {sites.length}
+            </span>
           </button>
 
+          {/* FAVORITES */}
           <button
-            onClick={() => setSelectedCategory("FAVORITES")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-              selectedCategory === "FAVORITES"
-                ? "bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20"
-                : "bg-slate-950 text-amber-400/80 hover:text-amber-300 border border-slate-800"
+            onClick={() => setSelectedFolder("FAVORITES")}
+            className={`px-3.5 py-2 rounded-2xl text-xs font-bold shrink-0 flex items-center gap-1.5 transition cursor-pointer ${
+              selectedFolder === "FAVORITES"
+                ? "bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20"
+                : "bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800"
             }`}
           >
-            <Star className="w-3 h-3 fill-amber-400" />
-            <span>Pinned Favorites</span>
-            <span className="bg-slate-900/60 px-1.5 py-0.2 rounded-full text-[10px]">{favoritesCount}</span>
+            <Star className={`w-3.5 h-3.5 ${selectedFolder === "FAVORITES" ? "fill-slate-950" : "text-amber-400"}`} />
+            <span>Favorites</span>
+            <span
+              className={`text-[10px] px-2 py-0.2 rounded-full font-mono font-bold ${
+                selectedFolder === "FAVORITES" ? "bg-slate-950/30 text-slate-950" : "bg-slate-800 text-slate-400"
+              }`}
+            >
+              {sites.filter((s) => s.isFavorite).length}
+            </span>
           </button>
 
-          <button
-            onClick={() => setSelectedCategory("LSGD_GOVT")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-              selectedCategory === "LSGD_GOVT"
-                ? "bg-emerald-500 text-slate-950 font-black shadow-md shadow-emerald-500/20"
-                : "bg-slate-950 text-emerald-400/80 hover:text-emerald-300 border border-slate-800"
-            }`}
-          >
-            <span>LSGD & Permits</span>
-            <span className="bg-slate-900/60 px-1.5 py-0.2 rounded-full text-[10px]">{lsgdCount}</span>
-          </button>
+          {/* INDIVIDUAL CUSTOM FOLDERS (VEO, General, etc.) */}
+          {folders.map((f) => {
+            const isSelected = selectedFolder.toLowerCase() === f.name.toLowerCase();
+            const count = getFolderSiteCount(f.name);
+            const colorClass = getColorClasses(f.color);
 
-          <button
-            onClick={() => setSelectedCategory("REVENUE_SURVEY")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-              selectedCategory === "REVENUE_SURVEY"
-                ? "bg-cyan-500 text-slate-950 font-black shadow-md shadow-cyan-500/20"
-                : "bg-slate-950 text-cyan-400/80 hover:text-cyan-300 border border-slate-800"
-            }`}
-          >
-            <span>Survey & Revenue</span>
-            <span className="bg-slate-900/60 px-1.5 py-0.2 rounded-full text-[10px]">{surveyCount}</span>
-          </button>
+            return (
+              <div key={f.id} className="relative group shrink-0 flex items-center">
+                <button
+                  onClick={() => setSelectedFolder(f.name)}
+                  className={`px-3.5 py-2 rounded-2xl text-xs font-bold flex items-center gap-2 transition cursor-pointer ${
+                    isSelected
+                      ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 shadow-md shadow-emerald-500/20 font-black"
+                      : "bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800"
+                  }`}
+                >
+                  <Folder className={`w-3.5 h-3.5 ${isSelected ? "text-slate-950" : colorClass.text}`} />
+                  <span>{f.name}</span>
+                  <span
+                    className={`text-[10px] px-2 py-0.2 rounded-full font-mono font-bold ${
+                      isSelected ? "bg-slate-950/30 text-slate-950" : "bg-slate-800 text-slate-400"
+                    }`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              </div>
+            );
+          })}
 
+          {/* ADD FOLDER BUTTON */}
           <button
-            onClick={() => setSelectedCategory("TAX_BANKING")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-              selectedCategory === "TAX_BANKING"
-                ? "bg-indigo-500 text-slate-950 font-black shadow-md shadow-indigo-500/20"
-                : "bg-slate-950 text-indigo-400/80 hover:text-indigo-300 border border-slate-800"
-            }`}
+            onClick={() => {
+              setEditingFolder(null);
+              setIsNewEditFolderModalOpen(true);
+            }}
+            className="px-3 py-2 rounded-2xl text-xs font-semibold shrink-0 bg-slate-950/60 hover:bg-slate-800 text-slate-400 hover:text-emerald-400 border border-dashed border-slate-700 flex items-center gap-1.5 transition cursor-pointer"
           >
-            <span>Tax, GST & Banking</span>
-            <span className="bg-slate-900/60 px-1.5 py-0.2 rounded-full text-[10px]">{taxCount}</span>
-          </button>
-
-          <button
-            onClick={() => setSelectedCategory("CAD_SOFTWARE")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-              selectedCategory === "CAD_SOFTWARE"
-                ? "bg-rose-500 text-slate-950 font-black shadow-md shadow-rose-500/20"
-                : "bg-slate-950 text-rose-400/80 hover:text-rose-300 border border-slate-800"
-            }`}
-          >
-            <span>CAD & Engineering</span>
-            <span className="bg-slate-900/60 px-1.5 py-0.2 rounded-full text-[10px]">{cadCount}</span>
-          </button>
-
-          <button
-            onClick={() => setSelectedCategory("UTILITY_OFFICE")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-              selectedCategory === "UTILITY_OFFICE"
-                ? "bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20"
-                : "bg-slate-950 text-amber-400/80 hover:text-amber-300 border border-slate-800"
-            }`}
-          >
-            <span>Office Utilities</span>
-            <span className="bg-slate-900/60 px-1.5 py-0.2 rounded-full text-[10px]">{utilityCount}</span>
+            <FolderPlus className="w-3.5 h-3.5" />
+            <span>+ Folder</span>
           </button>
         </div>
       </div>
 
-      {/* SITES DISPLAY CONTAINER */}
+      {/* 4. SITES DISPLAY (GRID OR TABLE) */}
       {filteredSites.length === 0 ? (
-        <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-12 text-center space-y-4 shadow-xl">
-          <div className="w-14 h-14 rounded-2xl bg-slate-800 text-slate-400 flex items-center justify-center mx-auto">
-            <Globe className="w-7 h-7" />
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-12 text-center space-y-4">
+          <div className="w-16 h-16 mx-auto rounded-3xl bg-slate-800/80 border border-slate-700 flex items-center justify-center text-slate-500">
+            <Globe className="w-8 h-8" />
           </div>
-          <div className="space-y-1">
-            <h3 className="text-base font-bold text-white font-sans">No Websites Found</h3>
-            <p className="text-xs text-slate-400 font-mono">
-              {searchQuery ? `No sites matching "${searchQuery}"` : "Add your required portal with auto-password login provisions."}
+          <div>
+            <h3 className="text-base font-bold text-white">No websites found</h3>
+            <p className="text-xs text-slate-400 mt-1">
+              {searchQuery
+                ? `No links matched "${searchQuery}". Try another keyword.`
+                : selectedFolder !== "ALL"
+                ? `No website links saved under the "${selectedFolder}" folder yet.`
+                : "No important sites saved yet. Add your first link!"}
             </p>
           </div>
-          <button
-            onClick={() => {
-              setEditingSite(null);
-              setIsNewEditModalOpen(true);
-            }}
-            className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs font-mono cursor-pointer transition-all inline-flex items-center gap-1.5"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Important Website Now</span>
-          </button>
+          <div className="flex items-center justify-center gap-3 pt-2">
+            <button
+              onClick={() => {
+                setEditingSite(null);
+                setDefaultModalFolder(selectedFolder !== "ALL" && selectedFolder !== "FAVORITES" ? selectedFolder : "VEO");
+                setIsNewEditSiteModalOpen(true);
+              }}
+              className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-2xl text-xs font-bold transition shadow-lg shadow-emerald-500/20 cursor-pointer flex items-center gap-1.5"
+            >
+              <Plus className="w-4 h-4 stroke-[3]" />
+              <span>
+                Add Website Link {selectedFolder !== "ALL" && selectedFolder !== "FAVORITES" ? `to ${selectedFolder}` : ""}
+              </span>
+            </button>
+          </div>
         </div>
       ) : viewMode === "grid" ? (
-        /* GRID CARD VIEW */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        /* GRID VIEW */
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredSites.map((site) => {
-            const badge = getCategoryBadge(site.category, site.customCategory);
-            const isPasswordVisible = !!visiblePasswords[site.id];
-            const borderCls = getBorderColor(site.color);
+            const isInlineEditing = inlineEditingSiteId === site.id || isDirectEditMode;
+            const colorClass = getColorClasses(site.color);
 
             return (
               <div
                 key={site.id}
-                className={`bg-slate-900/90 border ${borderCls} rounded-3xl p-5 flex flex-col justify-between space-y-4 shadow-xl transition-all hover:shadow-2xl relative group`}
+                className={`bg-slate-900 border ${
+                  isInlineEditing ? "border-emerald-500 ring-1 ring-emerald-500/50" : "border-slate-800 hover:border-slate-700"
+                } rounded-3xl p-5 space-y-4 shadow-xl transition-all relative flex flex-col justify-between`}
               >
-                {/* Card Top: Category Badge, Favorite Star & Action Icons */}
-                <div className="space-y-2.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className={`text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full border ${badge.color}`}>
-                      {badge.text}
-                    </span>
+                {/* Card Header */}
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div
+                        className={`w-10 h-10 rounded-2xl ${colorClass.bg} ${colorClass.text} border ${colorClass.border} flex items-center justify-center font-bold text-sm shadow-md shrink-0`}
+                      >
+                        <Globe className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        {isInlineEditing ? (
+                          <input
+                            type="text"
+                            value={inlineForm.name !== undefined ? inlineForm.name : site.name}
+                            onChange={(e) => setInlineForm({ ...inlineForm, name: e.target.value })}
+                            className="bg-slate-950 border border-emerald-500 rounded-xl px-2.5 py-1 text-sm font-bold text-white w-full focus:outline-none"
+                            placeholder="Website Title"
+                          />
+                        ) : (
+                          <h4 className="text-sm font-bold text-white truncate hover:text-emerald-400 transition">
+                            {site.name}
+                          </h4>
+                        )}
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span
+                            className={`text-[10px] px-2 py-0.5 rounded-lg ${colorClass.bg} ${colorClass.text} border ${colorClass.border} font-bold font-mono flex items-center gap-1`}
+                          >
+                            <Folder className="w-2.5 h-2.5" />
+                            <span>{site.folder || site.customCategory || "General"}</span>
+                          </span>
+                          {site.isFavorite && (
+                            <Star className="w-3 h-3 text-amber-400 fill-amber-400 shrink-0" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
 
+                    {/* Pin / Direct Edit / Modal Action Buttons */}
                     <div className="flex items-center gap-1">
-                      {/* Favorite Pin Star */}
                       <button
-                        onClick={(e) => handleToggleFavorite(site.id, e)}
-                        className="p-1.5 text-slate-400 hover:text-amber-400 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+                        onClick={() => handleToggleFavorite(site)}
+                        className={`p-1.5 rounded-xl transition cursor-pointer ${
+                          site.isFavorite ? "text-amber-400 bg-amber-500/10" : "text-slate-500 hover:text-white bg-slate-950"
+                        }`}
                         title={site.isFavorite ? "Unpin Favorite" : "Pin to Favorites"}
                       >
-                        <Star
-                          className={`w-4 h-4 ${site.isFavorite ? "fill-amber-400 text-amber-400" : ""}`}
-                        />
+                        <Star className={`w-3.5 h-3.5 ${site.isFavorite ? "fill-amber-400" : ""}`} />
                       </button>
 
-                      {/* Edit Button */}
                       <button
                         onClick={() => {
                           setEditingSite(site);
-                          setIsNewEditModalOpen(true);
+                          setIsNewEditSiteModalOpen(true);
                         }}
-                        className="p-1.5 text-slate-400 hover:text-cyan-300 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
-                        title="Edit Website & Credentials"
+                        className="p-1.5 rounded-xl bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-emerald-400 transition cursor-pointer"
+                        title="Edit Website Link & Details"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
 
-                      {/* Delete Button */}
                       <button
                         onClick={() => {
                           setSiteToDelete(site);
-                          setIsDeleteModalOpen(true);
+                          setIsDeleteSiteModalOpen(true);
                         }}
-                        className="p-1.5 text-slate-400 hover:text-red-400 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
-                        title="Delete Portal"
+                        className="p-1.5 rounded-xl bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-rose-400 transition cursor-pointer"
+                        title="Delete Website Link"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
 
-                  {/* Title and Direct Link */}
-                  <div>
-                    <h3 className="text-sm font-black text-white font-sans tracking-tight line-clamp-1">
-                      {site.name}
-                    </h3>
-                    <a
-                      href={site.url.startsWith("http") ? site.url : `https://${site.url}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[11px] font-mono text-cyan-400 hover:text-cyan-300 hover:underline flex items-center gap-1 mt-0.5 truncate"
-                    >
-                      <span className="truncate">{site.url.replace(/^https?:\/\//, "")}</span>
-                      <ExternalLink className="w-3 h-3 shrink-0" />
-                    </a>
+                  {/* URL Display / Direct Input */}
+                  <div className="p-2.5 bg-slate-950 border border-slate-850 rounded-2xl space-y-1">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-slate-400 font-mono font-semibold flex items-center gap-1">
+                        <ExternalLink className="w-3 h-3 text-cyan-400" />
+                        URL Link
+                      </span>
+                      <button
+                        onClick={() => handleCopy(site.id, "url", site.url)}
+                        className="text-[10px] text-cyan-400 hover:text-cyan-300 flex items-center gap-1 cursor-pointer"
+                        title="Copy Website Link"
+                      >
+                        {copiedField?.id === site.id && copiedField?.field === "url" ? (
+                          <>
+                            <Check className="w-3 h-3 text-emerald-400" />
+                            <span className="text-emerald-400 font-bold">Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3" />
+                            <span>Copy URL</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    {isInlineEditing ? (
+                      <input
+                        type="text"
+                        value={inlineForm.url !== undefined ? inlineForm.url : site.url}
+                        onChange={(e) => setInlineForm({ ...inlineForm, url: e.target.value })}
+                        className="bg-slate-900 border border-cyan-500/60 rounded-xl px-2.5 py-1 text-xs text-cyan-300 font-mono w-full focus:outline-none"
+                        placeholder="https://..."
+                      />
+                    ) : (
+                      <p className="text-xs text-cyan-300 font-mono truncate select-all">{site.url}</p>
+                    )}
                   </div>
 
-                  {/* Notes / Remarks if available */}
-                  {site.notes && (
-                    <p className="text-[11px] text-slate-400 font-sans leading-relaxed line-clamp-2 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80">
-                      {site.notes}
+                  {/* Credentials / Details if present */}
+                  {(site.username || site.password || isInlineEditing) && (
+                    <div className="p-2.5 bg-slate-950/80 border border-slate-850 rounded-2xl space-y-2 text-xs">
+                      {/* Username */}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] text-slate-400 font-mono">User ID:</span>
+                        {isInlineEditing ? (
+                          <input
+                            type="text"
+                            value={inlineForm.username !== undefined ? inlineForm.username : site.username}
+                            onChange={(e) => setInlineForm({ ...inlineForm, username: e.target.value })}
+                            className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-xs text-white w-36 focus:outline-none"
+                            placeholder="Username"
+                          />
+                        ) : (
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="text-xs text-slate-200 font-mono truncate font-semibold">
+                              {site.username || "—"}
+                            </span>
+                            {site.username && (
+                              <button
+                                onClick={() => handleCopy(site.id, "username", site.username)}
+                                className="text-slate-400 hover:text-white"
+                                title="Copy Username"
+                              >
+                                {copiedField?.id === site.id && copiedField?.field === "username" ? (
+                                  <Check className="w-3 h-3 text-emerald-400" />
+                                ) : (
+                                  <Copy className="w-3 h-3" />
+                                )}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Password */}
+                      {(site.password || isInlineEditing) && (
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[11px] text-slate-400 font-mono">Password:</span>
+                          {isInlineEditing ? (
+                            <input
+                              type="password"
+                              value={inlineForm.password !== undefined ? inlineForm.password : site.password}
+                              onChange={(e) => setInlineForm({ ...inlineForm, password: e.target.value })}
+                              className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-xs text-amber-300 font-mono w-36 focus:outline-none"
+                              placeholder="Password"
+                            />
+                          ) : (
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs text-amber-300 font-mono font-bold">
+                                {visiblePasswords[site.id] ? site.password : "••••••••••••"}
+                              </span>
+                              <button
+                                onClick={() => handleTogglePassword(site.id)}
+                                className="text-slate-400 hover:text-white"
+                                title={visiblePasswords[site.id] ? "Hide" : "Show"}
+                              >
+                                {visiblePasswords[site.id] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                              </button>
+                              {site.password && (
+                                <button
+                                  onClick={() => handleCopy(site.id, "password", site.password!)}
+                                  className="text-slate-400 hover:text-white"
+                                  title="Copy Password"
+                                >
+                                  {copiedField?.id === site.id && copiedField?.field === "password" ? (
+                                    <Check className="w-3 h-3 text-emerald-400" />
+                                  ) : (
+                                    <Copy className="w-3 h-3" />
+                                  )}
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Notes */}
+                  {site.notes && !isInlineEditing && (
+                    <p className="text-[11px] text-slate-400 line-clamp-2 italic px-1">
+                      "{site.notes}"
                     </p>
                   )}
                 </div>
 
-                {/* Credentials Storage Vault Box */}
-                <div className="bg-slate-950 border border-slate-800 rounded-2xl p-3.5 space-y-2.5 text-xs font-mono">
-                  {/* Username Row */}
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5 text-slate-400 truncate">
-                      <User className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                      <span className="text-slate-200 font-bold truncate select-all">{site.username}</span>
-                    </div>
-
-                    <button
-                      onClick={() => handleCopy(site.id, "username", site.username)}
-                      className="px-2 py-1 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white rounded-lg text-[10px] border border-slate-800 flex items-center gap-1 cursor-pointer transition-colors shrink-0"
-                      title="Copy Username"
-                    >
-                      {copiedField?.id === site.id && copiedField?.field === "username" ? (
-                        <Check className="w-3 h-3 text-emerald-400" />
-                      ) : (
-                        <Copy className="w-3 h-3" />
-                      )}
-                      <span>
-                        {copiedField?.id === site.id && copiedField?.field === "username" ? "Copied" : "Copy ID"}
-                      </span>
-                    </button>
-                  </div>
-
-                  {/* Password Row */}
-                  <div className="flex items-center justify-between gap-2 border-t border-slate-800/80 pt-2">
-                    <div className="flex items-center gap-1.5 text-slate-400 truncate">
-                      <Lock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                      {site.password ? (
-                        <span className="text-slate-200 font-bold tracking-wider truncate">
-                          {isPasswordVisible && !isLocked ? site.password : "••••••••••••"}
-                        </span>
-                      ) : (
-                        <span className="text-slate-500 italic text-[11px]">No password stored</span>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-1 shrink-0">
-                      {site.password && (
-                        <>
-                          <button
-                            onClick={() => handleTogglePassword(site.id)}
-                            className="p-1 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-900 transition-colors"
-                            title={isPasswordVisible && !isLocked ? "Hide Password" : "Show Password"}
-                          >
-                            {isPasswordVisible && !isLocked ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                          </button>
-
-                          <button
-                            onClick={() => handleCopy(site.id, "password", site.password || "")}
-                            className="px-2 py-1 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white rounded-lg text-[10px] border border-slate-800 flex items-center gap-1 cursor-pointer transition-colors"
-                            title="Copy Password to Clipboard"
-                          >
-                            {copiedField?.id === site.id && copiedField?.field === "password" ? (
-                              <Check className="w-3 h-3 text-emerald-400" />
-                            ) : (
-                              <Copy className="w-3 h-3" />
-                            )}
-                            <span>
-                              {copiedField?.id === site.id && copiedField?.field === "password" ? "Copied" : "Copy Pass"}
-                            </span>
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Security PIN or OTP mobile if stored */}
-                  {site.securityPin && (
-                    <div className="flex items-center justify-between gap-2 border-t border-slate-800/80 pt-2 text-[10px]">
-                      <div className="flex items-center gap-1.5 text-slate-400 truncate">
-                        <Shield className="w-3 h-3 text-amber-500 shrink-0" />
-                        <span className="text-amber-300 font-bold truncate">PIN/OTP: {site.securityPin}</span>
-                      </div>
+                {/* Card Footer Actions */}
+                <div className="pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
+                  {isInlineEditing ? (
+                    <div className="flex items-center gap-2 w-full">
                       <button
-                        onClick={() => handleCopy(site.id, "pin", site.securityPin || "")}
-                        className="text-slate-400 hover:text-white p-0.5"
-                        title="Copy PIN"
+                        onClick={() => saveInlineEdit(site.id)}
+                        className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow"
                       >
-                        {copiedField?.id === site.id && copiedField?.field === "pin" ? (
-                          <Check className="w-3 h-3 text-emerald-400" />
-                        ) : (
-                          <Copy className="w-3 h-3" />
-                        )}
+                        <Save className="w-3.5 h-3.5" />
+                        <span>Save Changes</span>
+                      </button>
+                      <button
+                        onClick={cancelInlineEdit}
+                        className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-xl font-semibold cursor-pointer"
+                      >
+                        Cancel
                       </button>
                     </div>
+                  ) : (
+                    <>
+                      <span className="text-[10px] text-slate-500 font-mono">
+                        {site.lastOpenedAt
+                          ? `Opened ${new Date(site.lastOpenedAt).toLocaleDateString()}`
+                          : "Ready to launch"}
+                      </span>
+
+                      <button
+                        onClick={() => handleOpenSite(site)}
+                        className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-md shadow-emerald-500/20 cursor-pointer"
+                      >
+                        <span>Open Site</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </button>
+                    </>
                   )}
-                </div>
-
-                {/* Bottom Primary Action Bar */}
-                <div className="space-y-2 pt-1">
-                  {/* Primary 1-Click Open & Auto-Copy Button */}
-                  <button
-                    onClick={() => handleOpenAndAutoCopy(site)}
-                    className="w-full py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black rounded-xl text-xs font-mono shadow-md shadow-emerald-500/20 cursor-pointer transition-all flex items-center justify-center gap-2"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                    <span>Open & Auto-Copy Password</span>
-                  </button>
-
-                  {/* Auto-Login Helper Bookmarklet Trigger */}
-                  <button
-                    onClick={() => {
-                      setSelectedHelperSite(site);
-                      setIsAutoLoginModalOpen(true);
-                    }}
-                    className="w-full py-1.5 bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-cyan-800 text-slate-400 hover:text-cyan-300 rounded-xl text-[10px] font-mono font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                  >
-                    <Zap className="w-3 h-3 text-cyan-400" />
-                    <span>Auto-Login Bookmarklet Helper</span>
-                  </button>
                 </div>
               </div>
             );
           })}
         </div>
       ) : (
-        /* COMPACT TABLE VIEW */
-        <div className="bg-slate-900/90 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
+        /* TABLE LIST VIEW */
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs font-sans">
-              <thead className="bg-slate-950 border-b border-slate-800 font-mono text-[11px] text-slate-400 uppercase tracking-wider">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-950 text-slate-400 uppercase font-mono text-[10px] border-b border-slate-800">
                 <tr>
-                  <th className="py-3 px-4">Website & Portal</th>
-                  <th className="py-3 px-4">Category</th>
-                  <th className="py-3 px-4">Username / ID</th>
-                  <th className="py-3 px-4">Password</th>
-                  <th className="py-3 px-4">Primary Launch</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                  <th className="py-3.5 px-4">Website / Form Name</th>
+                  <th className="py-3.5 px-4">Folder</th>
+                  <th className="py-3.5 px-4">URL Link</th>
+                  <th className="py-3.5 px-4">Credentials</th>
+                  <th className="py-3.5 px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800 text-slate-200">
+              <tbody className="divide-y divide-slate-800">
                 {filteredSites.map((site) => {
-                  const badge = getCategoryBadge(site.category, site.customCategory);
-                  const isPasswordVisible = !!visiblePasswords[site.id];
+                  const colorClass = getColorClasses(site.color);
 
                   return (
-                    <tr key={site.id} className="hover:bg-slate-800/50 transition-colors">
-                      {/* Name & URL */}
-                      <td className="py-3.5 px-4 space-y-0.5">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={(e) => handleToggleFavorite(site.id, e)}
-                            className="text-slate-400 hover:text-amber-400"
-                          >
-                            <Star className={`w-3.5 h-3.5 ${site.isFavorite ? "fill-amber-400 text-amber-400" : ""}`} />
-                          </button>
-                          <span className="font-bold text-white line-clamp-1">{site.name}</span>
-                        </div>
-                        <a
-                          href={site.url.startsWith("http") ? site.url : `https://${site.url}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[11px] font-mono text-cyan-400 hover:underline flex items-center gap-1 ml-5"
+                    <tr key={site.id} className="hover:bg-slate-850/60 transition group">
+                      <td className="py-3.5 px-4 font-bold text-white flex items-center gap-2.5">
+                        <button
+                          onClick={() => handleToggleFavorite(site)}
+                          className="text-slate-500 hover:text-amber-400 cursor-pointer"
                         >
-                          <span>{site.url.replace(/^https?:\/\//, "")}</span>
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
+                          <Star
+                            className={`w-3.5 h-3.5 ${
+                              site.isFavorite ? "text-amber-400 fill-amber-400" : ""
+                            }`}
+                          />
+                        </button>
+                        <div
+                          className={`w-7 h-7 rounded-xl ${colorClass.bg} ${colorClass.text} border ${colorClass.border} flex items-center justify-center font-bold text-xs shrink-0`}
+                        >
+                          <Globe className="w-4 h-4" />
+                        </div>
+                        <span className="truncate max-w-xs">{site.name}</span>
                       </td>
 
-                      {/* Category */}
                       <td className="py-3.5 px-4">
-                        <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${badge.color}`}>
-                          {badge.text}
+                        <span
+                          className={`text-[10px] px-2 py-0.5 rounded-lg ${colorClass.bg} ${colorClass.text} border ${colorClass.border} font-bold font-mono inline-flex items-center gap-1`}
+                        >
+                          <Folder className="w-2.5 h-2.5" />
+                          <span>{site.folder || site.customCategory || "General"}</span>
                         </span>
                       </td>
 
-                      {/* Username */}
-                      <td className="py-3.5 px-4 font-mono">
-                        <div className="flex items-center gap-1.5">
-                          <span className="select-all font-bold">{site.username}</span>
-                          <button
-                            onClick={() => handleCopy(site.id, "username", site.username)}
-                            className="p-1 text-slate-400 hover:text-white rounded"
-                            title="Copy Username"
-                          >
-                            {copiedField?.id === site.id && copiedField?.field === "username" ? (
-                              <Check className="w-3.5 h-3.5 text-emerald-400" />
-                            ) : (
-                              <Copy className="w-3.5 h-3.5" />
-                            )}
-                          </button>
-                        </div>
+                      <td className="py-3.5 px-4 font-mono text-cyan-300 max-w-xs truncate select-all">
+                        {site.url}
                       </td>
 
-                      {/* Password */}
-                      <td className="py-3.5 px-4 font-mono">
-                        {site.password ? (
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-slate-300 font-bold">
-                              {isPasswordVisible && !isLocked ? site.password : "••••••••"}
-                            </span>
+                      <td className="py-3.5 px-4 text-slate-300 font-mono">
+                        {site.username ? (
+                          <div className="flex items-center gap-2">
+                            <span>{site.username}</span>
                             <button
-                              onClick={() => handleTogglePassword(site.id)}
-                              className="p-1 text-slate-400 hover:text-white"
-                              title={isPasswordVisible && !isLocked ? "Hide Password" : "Show Password"}
+                              onClick={() => handleCopy(site.id, "username", site.username)}
+                              className="text-slate-500 hover:text-white"
+                              title="Copy Username"
                             >
-                              {isPasswordVisible && !isLocked ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                            </button>
-                            <button
-                              onClick={() => handleCopy(site.id, "password", site.password || "")}
-                              className="p-1 text-slate-400 hover:text-white"
-                              title="Copy Password"
-                            >
-                              {copiedField?.id === site.id && copiedField?.field === "password" ? (
-                                <Check className="w-3.5 h-3.5 text-emerald-400" />
-                              ) : (
-                                <Copy className="w-3.5 h-3.5" />
-                              )}
+                              <Copy className="w-3 h-3" />
                             </button>
                           </div>
                         ) : (
-                          <span className="text-slate-500 italic text-[11px]">None</span>
+                          <span className="text-slate-600">—</span>
                         )}
                       </td>
 
-                      {/* Primary Launch */}
-                      <td className="py-3.5 px-4">
-                        <button
-                          onClick={() => handleOpenAndAutoCopy(site)}
-                          className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs font-mono flex items-center gap-1.5 cursor-pointer shadow"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5" />
-                          <span>Open & Auto-Copy</span>
-                        </button>
-                      </td>
-
-                      {/* Actions */}
                       <td className="py-3.5 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1">
+                        <div className="flex items-center justify-end gap-2">
                           <button
-                            onClick={() => {
-                              setSelectedHelperSite(site);
-                              setIsAutoLoginModalOpen(true);
-                            }}
-                            className="p-1.5 text-slate-400 hover:text-cyan-300 rounded-lg hover:bg-slate-800"
-                            title="Auto-Login Bookmarklet Helper"
+                            onClick={() => handleOpenSite(site)}
+                            className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-1 cursor-pointer transition shadow"
                           >
-                            <Zap className="w-4 h-4" />
+                            <span>Open</span>
+                            <ExternalLink className="w-3 h-3" />
                           </button>
 
                           <button
                             onClick={() => {
                               setEditingSite(site);
-                              setIsNewEditModalOpen(true);
+                              setIsNewEditSiteModalOpen(true);
                             }}
-                            className="p-1.5 text-slate-400 hover:text-cyan-300 rounded-lg hover:bg-slate-800"
-                            title="Edit Site"
+                            className="p-1.5 text-slate-400 hover:text-emerald-400 bg-slate-950 hover:bg-slate-800 rounded-xl transition cursor-pointer"
+                            title="Edit"
                           >
-                            <Edit2 className="w-4 h-4" />
+                            <Edit2 className="w-3.5 h-3.5" />
                           </button>
 
                           <button
                             onClick={() => {
                               setSiteToDelete(site);
-                              setIsDeleteModalOpen(true);
+                              setIsDeleteSiteModalOpen(true);
                             }}
-                            className="p-1.5 text-slate-400 hover:text-red-400 rounded-lg hover:bg-slate-800"
-                            title="Delete Site"
+                            className="p-1.5 text-slate-400 hover:text-rose-400 bg-slate-950 hover:bg-slate-800 rounded-xl transition cursor-pointer"
+                            title="Delete"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </td>
@@ -950,93 +1188,57 @@ export const ImportantSitesView: React.FC = () => {
         </div>
       )}
 
-      {/* MASTER PIN UNLOCK MODAL */}
-      {showPinPrompt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl text-center">
-            <div className="w-12 h-12 rounded-2xl bg-amber-950 border border-amber-800 text-amber-400 flex items-center justify-center mx-auto">
-              <Lock className="w-6 h-6" />
-            </div>
-
-            <div className="space-y-1">
-              <h3 className="text-base font-black text-white font-sans uppercase">
-                Unlock Password Vault
-              </h3>
-              <p className="text-xs text-slate-400 font-mono">
-                Enter your 4-digit Office Master PIN to view passwords. (Default: 1234)
-              </p>
-            </div>
-
-            <form onSubmit={handleUnlockWithPin} className="space-y-3 pt-2">
-              <input
-                type="password"
-                maxLength={8}
-                value={enteredPin}
-                onChange={(e) => {
-                  setEnteredPin(e.target.value);
-                  setPinError("");
-                }}
-                autoFocus
-                placeholder="Enter PIN (1234)"
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-center text-lg font-mono text-white tracking-widest focus:outline-none focus:border-amber-400"
-              />
-              {pinError && <p className="text-xs text-red-400 font-mono">{pinError}</p>}
-
-              <div className="flex items-center gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowPinPrompt(false);
-                    setEnteredPin("");
-                    setPinError("");
-                  }}
-                  className="w-1/2 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl font-mono text-xs cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="w-1/2 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl font-mono text-xs cursor-pointer shadow-lg shadow-amber-500/20"
-                >
-                  Unlock
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Add / Edit Site Modal */}
+      {/* MODALS */}
+      {/* 1. Add / Edit Site Modal */}
       <NewEditSiteModal
-        isOpen={isNewEditModalOpen}
-        onClose={() => {
-          setIsNewEditModalOpen(false);
-          setEditingSite(null);
-        }}
+        isOpen={isNewEditSiteModalOpen}
+        onClose={() => setIsNewEditSiteModalOpen(false)}
         onSave={handleSaveSite}
         siteToEdit={editingSite}
-      />
-
-      {/* Auto-Login Provisions & Bookmarklet Helper Modal */}
-      <AutoLoginHelperModal
-        isOpen={isAutoLoginModalOpen}
-        onClose={() => {
-          setIsAutoLoginModalOpen(false);
-          setSelectedHelperSite(null);
+        defaultFolder={defaultModalFolder}
+        folders={folders}
+        onAddNewFolder={(folderName) => {
+          createSiteFolder(folderName);
+          setFolders(loadSiteFolders());
         }}
-        site={selectedHelperSite}
       />
 
-      {/* Delete Confirmation Modal */}
+      {/* 2. Add / Edit Folder Modal */}
+      <NewEditFolderModal
+        isOpen={isNewEditFolderModalOpen}
+        onClose={() => setIsNewEditFolderModalOpen(false)}
+        onSave={handleSaveFolder}
+        folderToEdit={editingFolder}
+      />
+
+      {/* 3. Delete Site Modal */}
       <DeleteSiteModal
-        isOpen={isDeleteModalOpen}
-        onClose={() => {
-          setIsDeleteModalOpen(false);
-          setSiteToDelete(null);
-        }}
-        onConfirm={handleConfirmDelete}
+        isOpen={isDeleteSiteModalOpen}
+        onClose={() => setIsDeleteSiteModalOpen(false)}
+        onConfirm={handleDeleteSiteConfirm}
         site={siteToDelete}
       />
+
+      {/* 4. Delete Folder Modal */}
+      <DeleteFolderModal
+        isOpen={isDeleteFolderModalOpen}
+        onClose={() => setIsDeleteFolderModalOpen(false)}
+        onConfirm={handleDeleteFolderConfirm}
+        folder={folderToDelete}
+        siteCount={folderToDelete ? getFolderSiteCount(folderToDelete.name) : 0}
+      />
+
+      {/* 5. Auto Login Helper Modal */}
+      {selectedHelperSite && (
+        <AutoLoginHelperModal
+          isOpen={isAutoLoginModalOpen}
+          onClose={() => {
+            setIsAutoLoginModalOpen(false);
+            setSelectedHelperSite(null);
+          }}
+          site={selectedHelperSite}
+        />
+      )}
     </div>
   );
 };

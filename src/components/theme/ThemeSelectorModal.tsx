@@ -8,6 +8,8 @@ import {
   Sparkles,
   Trees,
   Cpu,
+  Building2,
+  Zap,
   Check,
   X,
   RotateCcw,
@@ -21,10 +23,12 @@ interface ThemeSelectorModalProps {
 }
 
 const THEME_ICONS: Record<Theme, React.FC<{ className?: string }>> = {
+  corporate: Building2,
+  tech_startup: Zap,
   dark: Moon,
+  ai_platform: Cpu,
   baroque: Crown,
-  anthropomorphic: Trees,
-  ai_platform: Cpu
+  anthropomorphic: Trees
 };
 
 export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({
@@ -32,12 +36,13 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({
   onClose
 }) => {
   const { theme, setTheme, themesList, cycleNextTheme, isSystemTheme } = useTheme();
-  const [selectedCategory, setSelectedCategory] = React.useState<"all" | "dark" | "artistic">("all");
+  const [selectedCategory, setSelectedCategory] = React.useState<"all" | "corporate" | "dark" | "artistic">("all");
 
   if (!isOpen) return null;
 
   const filteredThemes = themesList.filter((t) => {
     if (selectedCategory === "all") return true;
+    if (selectedCategory === "corporate") return t.id === "corporate";
     return t.category === selectedCategory;
   });
 
@@ -94,8 +99,9 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({
             <span className="text-slate-500 font-mono text-[11px] mr-1">FILTER:</span>
             {(
               [
-                { id: "all", label: "All Themes (4)" },
-                { id: "dark", label: "Dark View" },
+                { id: "all", label: "All Themes (6)" },
+                { id: "corporate", label: "Corporate & Trust" },
+                { id: "dark", label: "Dark & Tech View" },
                 { id: "artistic", label: "Artistic & Architectural" }
               ] as const
             ).map((cat) => (

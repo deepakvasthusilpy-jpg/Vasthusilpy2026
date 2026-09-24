@@ -46,13 +46,13 @@ export const KsebBillTab: React.FC = () => {
 
   // Form State
   const [formData, setFormData] = useState<Partial<KsebBillRecord>>({
-    consumerNo: "1155890024512",
-    billMonth: "May - June 2026",
-    totalAmount: 1386,
+    consumerNo: "",
+    billMonth: "",
+    totalAmount: 0,
     paidAmount: 0,
     paidDate: "",
     status: "UNPAID",
-    notes: "Payment UPI ID: deepak.vasthusilpy@okhdfcbank"
+    notes: ""
   });
 
   // Pay Modal State

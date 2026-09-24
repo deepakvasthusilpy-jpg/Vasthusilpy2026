@@ -57,9 +57,9 @@ export const QuotationCreateEdit: React.FC<QuotationCreateEditProps> = ({
 }) => {
   const isEditing = !!initialQuotation;
 
-  // View Mode: "split" (Side-by-side form + live preview), "form" (Form only), "sheet" (Full WYSIWYG Document)
-  const [viewMode, setViewMode] = useState<"split" | "form" | "sheet">("split");
-  const [zoomLevel, setZoomLevel] = useState<number>(85); // zoom for split view sheet
+  // View Mode: "form" (Form only), "sheet" (Full WYSIWYG Document Sheet)
+  const [viewMode, setViewMode] = useState<"form" | "sheet">("sheet");
+  const [zoomLevel, setZoomLevel] = useState<number>(100);
 
   // Auto-calculated defaults
   const todayStr = new Date().toISOString().split("T")[0];
@@ -545,20 +545,6 @@ export const QuotationCreateEdit: React.FC<QuotationCreateEditProps> = ({
           <div className="bg-slate-950 p-1 rounded-xl border border-slate-800 flex items-center gap-1">
             <button
               type="button"
-              onClick={() => setViewMode("split")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
-                viewMode === "split"
-                  ? "bg-amber-500 text-slate-950 font-bold"
-                  : "text-slate-400 hover:text-white"
-              }`}
-              title="Split View: Form and Live Preview side-by-side"
-            >
-              <Columns className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Split Live View</span>
-            </button>
-
-            <button
-              type="button"
               onClick={() => setViewMode("sheet")}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
                 viewMode === "sheet"
@@ -568,7 +554,7 @@ export const QuotationCreateEdit: React.FC<QuotationCreateEditProps> = ({
               title="Interactive Document Sheet: Full-width WYSIWYG click-to-edit"
             >
               <FileText className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Interactive Sheet</span>
+              <span>Interactive Sheet</span>
             </button>
 
             <button
@@ -579,10 +565,10 @@ export const QuotationCreateEdit: React.FC<QuotationCreateEditProps> = ({
                   ? "bg-amber-500 text-slate-950 font-bold"
                   : "text-slate-400 hover:text-white"
               }`}
-              title="Form View only"
+              title="Form Editor view"
             >
               <Eye className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Form Only</span>
+              <span>Form Editor</span>
             </button>
           </div>
 
@@ -628,12 +614,8 @@ export const QuotationCreateEdit: React.FC<QuotationCreateEditProps> = ({
         </div>
       )}
 
-      {/* 2. WORKSPACE CONTAINER (SPLIT OR SINGLE VIEW) */}
-      <div
-        className={`grid gap-6 items-start ${
-          viewMode === "split" ? "grid-cols-1 xl:grid-cols-2" : "grid-cols-1"
-        }`}
-      >
+      {/* 2. WORKSPACE CONTAINER */}
+      <div className="w-full">
         {/* === FORM PANEL (Hidden if viewMode === "sheet") === */}
         {viewMode !== "sheet" && (
           <div className="space-y-6">
@@ -1313,58 +1295,32 @@ export const QuotationCreateEdit: React.FC<QuotationCreateEditProps> = ({
           </div>
         )}
 
-        {/* === LIVE PREVIEW PANEL (Visible in "split" or "sheet" modes) === */}
-        {viewMode !== "form" && (
-          <div
-            className={`space-y-4 ${
-              viewMode === "split"
-                ? "xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto"
-                : "w-full max-w-4xl mx-auto"
-            }`}
-          >
-            {/* Split view helper bar */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3 flex items-center justify-between text-xs text-white">
+        {/* === LIVE DOCUMENT SHEET (Visible when viewMode === "sheet") === */}
+        {viewMode === "sheet" && (
+          <div className="space-y-4 w-full max-w-4xl mx-auto">
+            {/* Sheet Toolbar */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3 flex items-center justify-between text-xs text-white shadow-md">
               <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span className="font-bold text-amber-400">Live Preview</span>
-                <span className="text-slate-400 hidden sm:inline">• Updates live while typing</span>
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+                <span className="font-bold text-amber-400">Interactive Document Sheet</span>
+                <span className="text-slate-400 hidden sm:inline">• Click on any text to edit directly</span>
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="text-[10px] text-slate-400 hidden sm:inline">Zoom:</span>
-                <select
-                  value={zoomLevel}
-                  onChange={(e) => setZoomLevel(parseInt(e.target.value, 10))}
-                  className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-[11px] text-white font-mono cursor-pointer"
-                >
-                  <option value="100">100%</option>
-                  <option value="90">90%</option>
-                  <option value="85">85%</option>
-                  <option value="75">75%</option>
-                  <option value="65">65%</option>
-                </select>
-
                 <button
                   type="button"
                   onClick={handleDirectPrint}
-                  className="px-3 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1 cursor-pointer"
-                  title="Print this sheet"
+                  className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow"
+                  title="Print or Save as PDF"
                 >
                   <Printer className="w-3.5 h-3.5" />
-                  <span>Print</span>
+                  <span>Print / PDF</span>
                 </button>
               </div>
             </div>
 
             {/* Render interactive sheet */}
-            <div
-              className="transition-transform origin-top flex justify-center"
-              style={{
-                transform: viewMode === "split" ? `scale(${zoomLevel / 100})` : "none",
-                transformOrigin: "top center",
-                marginBottom: viewMode === "split" ? `-${(100 - zoomLevel) * 9}px` : 0
-              }}
-            >
+            <div className="flex justify-center">
               <QuotationInteractiveSheet
                 quotation={liveQuotation}
                 contractors={contractors}

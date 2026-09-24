@@ -2,15 +2,17 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 
 export type Theme =
   | "dark"
+  | "corporate"
+  | "tech_startup"
+  | "ai_platform"
   | "baroque"
-  | "anthropomorphic"
-  | "ai_platform";
+  | "anthropomorphic";
 
 export interface ThemeOption {
   id: Theme;
   name: string;
   nameMl: string;
-  category: "dark" | "light" | "artistic";
+  category: "dark" | "light" | "artistic" | "corporate";
   colorScheme: "dark" | "light";
   primaryColor: string;
   accentColor: string;
@@ -24,6 +26,38 @@ export interface ThemeOption {
 }
 
 export const THEME_OPTIONS: ThemeOption[] = [
+  {
+    id: "corporate",
+    name: "Corporate Executive Blue",
+    nameMl: "കോർപ്പറേറ്റ് എക്സിക്യൂട്ടീവ് ബ്ലൂ",
+    category: "corporate",
+    colorScheme: "light",
+    primaryColor: "#1e40af",
+    accentColor: "#0284c7",
+    bgPreview: "#f1f5f9",
+    cardPreview: "#ffffff",
+    borderPreview: "#cbd5e1",
+    textPreview: "#0f172a",
+    tagline: "Professional Style, Royal Blue & Clean White",
+    description: "Trustworthy and reliable corporate architecture aesthetic with deep executive navy (#1e40af / #0f2b48), crisp white surfaces, authoritative typography, and clean hairline structures.",
+    iconName: "Building2"
+  },
+  {
+    id: "tech_startup",
+    name: "Futuristic Tech Startup",
+    nameMl: "ഫ്യൂച്ചറിസ്റ്റിക് ടെക് സ്റ്റാർട്ടപ്പ്",
+    category: "dark",
+    colorScheme: "dark",
+    primaryColor: "#00f2fe",
+    accentColor: "#4facfe",
+    bgPreview: "#030712",
+    cardPreview: "#090e17",
+    borderPreview: "#00f2fe66",
+    textPreview: "#e0f2fe",
+    tagline: "Futuristic Cyber Obsidian & Glowing Holographic Cyan",
+    description: "Cutting-edge tech startup aesthetic featuring sleek obsidian surfaces (#030712), glowing neon cyan rings (#00f2fe), innovative UI elements, and high-tech visual dynamism.",
+    iconName: "Zap"
+  },
   {
     id: "dark",
     name: "Twilight Glass Aurora",
@@ -39,6 +73,22 @@ export const THEME_OPTIONS: ThemeOption[] = [
     tagline: "Celestial Twilight Glass & Aurora Purple",
     description: "Frosted translucent glass panels, glowing starlight, and rich sunset twilight gradient aesthetics.",
     iconName: "Moon"
+  },
+  {
+    id: "ai_platform",
+    name: "Modern High-Tech AI",
+    nameMl: "മോഡേൺ ഹൈ-ടെക് AI",
+    category: "dark",
+    colorScheme: "dark",
+    primaryColor: "#00E5FF",
+    accentColor: "#00E5FF",
+    bgPreview: "#121212",
+    cardPreview: "#1a1a1a",
+    borderPreview: "#00E5FF4d",
+    textPreview: "#ffffff",
+    tagline: "Deep Charcoal #121212 & Glowing Cyan #00E5FF",
+    description: "Sleek dark mode theme with a deep charcoal background (#121212), glowing cyan/electric blue accents (#00E5FF), and clean, authoritative typography.",
+    iconName: "Cpu"
   },
   {
     id: "baroque",
@@ -71,22 +121,6 @@ export const THEME_OPTIONS: ThemeOption[] = [
     tagline: "Human-Scale Terracotta, Earth Clay & Teak Timber",
     description: "Humanistic biophilic architecture inspired by baked terracotta, Kerala clay tiles, warm cedar, and organic earth.",
     iconName: "Trees"
-  },
-  {
-    id: "ai_platform",
-    name: "Modern High-Tech AI",
-    nameMl: "മോഡേൺ ഹൈ-ടെക് AI",
-    category: "dark",
-    colorScheme: "dark",
-    primaryColor: "#00E5FF",
-    accentColor: "#00E5FF",
-    bgPreview: "#121212",
-    cardPreview: "#1a1a1a",
-    borderPreview: "#00E5FF4d",
-    textPreview: "#ffffff",
-    tagline: "Deep Charcoal #121212 & Glowing Cyan #00E5FF",
-    description: "Sleek dark mode theme with a deep charcoal background (#121212), glowing cyan/electric blue accents (#00E5FF), and clean, authoritative typography.",
-    iconName: "Cpu"
   }
 ];
 
@@ -102,7 +136,14 @@ export interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-export const VALID_THEMES: Theme[] = ["dark", "baroque", "anthropomorphic", "ai_platform"];
+export const VALID_THEMES: Theme[] = [
+  "corporate",
+  "tech_startup",
+  "dark",
+  "ai_platform",
+  "baroque",
+  "anthropomorphic"
+];
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setThemeState] = useState<Theme>(() => {
@@ -123,13 +164,21 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const root = document.documentElement;
     
     // Remove all previous theme classes
-    VALID_THEMES.forEach((t) => root.classList.remove("dark", "light", "baroque", "anthropomorphic", "ai_platform", "neoclassical", "ethereal", t));
+    VALID_THEMES.forEach((t) => {
+      root.classList.remove(t);
+      root.classList.remove(`theme-${t}`);
+    });
+    root.classList.remove("light", "neoclassical", "ethereal");
     
     // Add current theme class
     root.classList.add(theme);
+    root.classList.add(`theme-${theme}`);
     root.classList.add("dark");
-    root.classList.remove("light");
-    root.style.colorScheme = "dark";
+    if (theme === "corporate") {
+      root.style.colorScheme = "light";
+    } else {
+      root.style.colorScheme = "dark";
+    }
   }, [theme]);
 
   // Listen for system preference changes if user hasn't set an explicit preference

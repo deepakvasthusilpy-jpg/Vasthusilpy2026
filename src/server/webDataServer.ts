@@ -531,6 +531,50 @@ export function registerWebDataRoutes(app: Express) {
   });
 
   // -------------------------------------------------------------
+  // WIPE SPECIFIED TABS (DATA VAULT, CRM PIPELINES/APPS, INVOICES, PERSONAL BILLS)
+  // -------------------------------------------------------------
+  app.post("/api/web-data/reset-tabs-storage", (req: Request, res: Response) => {
+    try {
+      // 1. Data Storage Vault files
+      writeJsonFile("cad_files.json", []);
+
+      // 2. CRM Projects and Applications
+      writeJsonFile("crm_projects.json", []);
+      try {
+        const crmFile = path.join(process.cwd(), "data", "crm_projects.json");
+        fs.writeFileSync(crmFile, JSON.stringify([], null, 2), "utf-8");
+      } catch (e) {}
+      writeJsonFile("application_entries.json", []);
+
+      // 3. Invoices & Customers & Rate items
+      writeJsonFile("crm_invoices.json", []);
+      try {
+        const crmInvFile = path.join(process.cwd(), "data", "crm_invoices.json");
+        fs.writeFileSync(crmInvFile, JSON.stringify([], null, 2), "utf-8");
+      } catch (e) {}
+      writeJsonFile("customers.json", []);
+      writeJsonFile("rate_items.json", []);
+
+      // 4. Cloud store backups
+      try {
+        const csProj = path.join(process.cwd(), "data", "cloud_store", "crm_projects.json");
+        if (fs.existsSync(path.dirname(csProj))) fs.writeFileSync(csProj, JSON.stringify([], null, 2), "utf-8");
+        const csInv = path.join(process.cwd(), "data", "cloud_store", "crm_invoices.json");
+        if (fs.existsSync(path.dirname(csInv))) fs.writeFileSync(csInv, JSON.stringify([], null, 2), "utf-8");
+      } catch (e) {}
+
+      broadcastSSE("tabs_cleared", { type: "DATA_TABS_CLEARED", timestamp: new Date().toISOString() });
+
+      return res.json({
+        success: true,
+        message: "Tabs data storage vault, CRM pipelines/apps, invoices & payments, and personal bills successfully reset to clean empty state."
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // -------------------------------------------------------------
   // GET USER PROFILE BY IDENTIFIER (EMAIL OR PHONE)
   // -------------------------------------------------------------
   app.get("/api/web-data/profile/:identifier", (req: Request, res: Response) => {

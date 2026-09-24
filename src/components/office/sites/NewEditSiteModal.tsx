@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { ImportantSite, ImportantSiteCategory } from "../../../types";
-import { generateStrongPassword } from "../../../utils/importantSitesManager";
+import { ImportantSite, ImportantSiteCategory, SiteFolder } from "../../../types";
+import { generateStrongPassword, loadSiteFolders } from "../../../utils/importantSitesManager";
 import {
   X,
   Globe,
@@ -16,7 +16,8 @@ import {
   Palette,
   ExternalLink,
   Check,
-  RefreshCw
+  Folder,
+  FolderPlus
 } from "lucide-react";
 
 interface NewEditSiteModalProps {
@@ -24,36 +25,36 @@ interface NewEditSiteModalProps {
   onClose: () => void;
   onSave: (site: ImportantSite) => void;
   siteToEdit?: ImportantSite | null;
+  defaultFolder?: string;
+  folders?: SiteFolder[];
+  onAddNewFolder?: (name: string) => void;
 }
-
-const CATEGORY_OPTIONS: { id: ImportantSiteCategory; label: string; subLabel: string; color: string }[] = [
-  { id: "LSGD_GOVT", label: "LSGD & Building Permits", subLabel: "Permits & LSGD", color: "text-emerald-400 border-emerald-800 bg-emerald-950/40" },
-  { id: "REVENUE_SURVEY", label: "Revenue & Land Survey", subLabel: "Revenue & Survey", color: "text-cyan-400 border-cyan-800 bg-cyan-950/40" },
-  { id: "TAX_BANKING", label: "GST, Tax & Banking", subLabel: "Tax, GST & Banking", color: "text-indigo-400 border-indigo-800 bg-indigo-950/40" },
-  { id: "CAD_SOFTWARE", label: "CAD, Design & DSR", subLabel: "CAD, Design & DSR", color: "text-rose-400 border-rose-800 bg-rose-950/40" },
-  { id: "UTILITY_OFFICE", label: "Office & Utilities", subLabel: "Office & Utilities", color: "text-amber-400 border-amber-800 bg-amber-950/40" },
-  { id: "OTHER", label: "Other / Custom Portals", subLabel: "Other Portals", color: "text-slate-300 border-slate-700 bg-slate-800/60" }
-];
 
 const COLOR_OPTIONS = [
   { id: "emerald", label: "Emerald", bg: "bg-emerald-500", border: "border-emerald-400" },
   { id: "cyan", label: "Cyan", bg: "bg-cyan-500", border: "border-cyan-400" },
   { id: "blue", label: "Blue", bg: "bg-blue-500", border: "border-blue-400" },
   { id: "indigo", label: "Indigo", bg: "bg-indigo-500", border: "border-indigo-400" },
+  { id: "purple", label: "Purple", bg: "bg-purple-500", border: "border-purple-400" },
   { id: "amber", label: "Amber", bg: "bg-amber-500", border: "border-amber-400" },
-  { id: "rose", label: "Rose", bg: "bg-rose-500", border: "border-rose-400" }
+  { id: "rose", label: "Rose", bg: "bg-rose-500", border: "border-rose-400" },
+  { id: "teal", label: "Teal", bg: "bg-teal-500", border: "border-teal-400" }
 ];
 
 export const NewEditSiteModal: React.FC<NewEditSiteModalProps> = ({
   isOpen,
   onClose,
   onSave,
-  siteToEdit
+  siteToEdit,
+  defaultFolder,
+  folders = [],
+  onAddNewFolder
 }) => {
   const [name, setName] = useState("");
-  const [category, setCategory] = useState<ImportantSiteCategory>("LSGD_GOVT");
-  const [customCategory, setCustomCategory] = useState("");
   const [url, setUrl] = useState("");
+  const [folder, setFolder] = useState("VEO");
+  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [securityPin, setSecurityPin] = useState("");
@@ -64,12 +65,13 @@ export const NewEditSiteModal: React.FC<NewEditSiteModalProps> = ({
   const [generatedToast, setGeneratedToast] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const availableFolders = folders.length > 0 ? folders : loadSiteFolders();
+
   useEffect(() => {
     if (siteToEdit) {
       setName(siteToEdit.name || "");
-      setCategory(siteToEdit.category || "LSGD_GOVT");
-      setCustomCategory(siteToEdit.customCategory || "");
       setUrl(siteToEdit.url || "");
+      setFolder(siteToEdit.folder || siteToEdit.customCategory || "VEO");
       setUsername(siteToEdit.username || "");
       setPassword(siteToEdit.password || "");
       setSecurityPin(siteToEdit.securityPin || "");
@@ -78,9 +80,8 @@ export const NewEditSiteModal: React.FC<NewEditSiteModalProps> = ({
       setColor(siteToEdit.color || "emerald");
     } else {
       setName("");
-      setCategory("LSGD_GOVT");
-      setCustomCategory("");
       setUrl("");
+      setFolder(defaultFolder || (availableFolders[0]?.name || "VEO"));
       setUsername("");
       setPassword("");
       setSecurityPin("");
@@ -88,9 +89,11 @@ export const NewEditSiteModal: React.FC<NewEditSiteModalProps> = ({
       setIsFavorite(false);
       setColor("emerald");
     }
+    setIsCreatingFolder(false);
+    setNewFolderName("");
     setShowPassword(false);
     setErrors({});
-  }, [siteToEdit, isOpen]);
+  }, [siteToEdit, isOpen, defaultFolder]);
 
   if (!isOpen) return null;
 
@@ -110,25 +113,32 @@ export const NewEditSiteModal: React.FC<NewEditSiteModalProps> = ({
     }
   };
 
+  const handleCreateNewFolder = () => {
+    if (!newFolderName.trim()) return;
+    const cleanName = newFolderName.trim();
+    if (onAddNewFolder) {
+      onAddNewFolder(cleanName);
+    }
+    setFolder(cleanName);
+    setIsCreatingFolder(false);
+    setNewFolderName("");
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: Record<string, string> = {};
 
     if (!name.trim()) {
-      newErrors.name = "Please provide website or portal name";
+      newErrors.name = "Please provide website or link name";
     }
 
     let formattedUrl = url.trim();
     if (!formattedUrl) {
-      newErrors.url = "Please enter website login URL";
+      newErrors.url = "Please enter website or portal URL";
     } else {
       if (!formattedUrl.startsWith("http://") && !formattedUrl.startsWith("https://")) {
         formattedUrl = "https://" + formattedUrl;
       }
-    }
-
-    if (!username.trim()) {
-      newErrors.username = "Please enter username, email, or user ID";
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -136,11 +146,14 @@ export const NewEditSiteModal: React.FC<NewEditSiteModalProps> = ({
       return;
     }
 
+    const targetFolder = isCreatingFolder && newFolderName.trim() ? newFolderName.trim() : (folder.trim() || "General");
+
     const savedSite: ImportantSite = {
-      id: siteToEdit?.id || `site_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      id: siteToEdit?.id || `site_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       name: name.trim(),
-      category,
-      customCategory: category === "OTHER" ? customCategory.trim() : undefined,
+      category: "OTHER",
+      customCategory: targetFolder,
+      folder: targetFolder,
       url: formattedUrl,
       username: username.trim(),
       password: password,
@@ -158,27 +171,27 @@ export const NewEditSiteModal: React.FC<NewEditSiteModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full p-5 sm:p-7 space-y-6 shadow-2xl my-8 relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto animate-fadeIn">
+      <div className="bg-slate-900 border border-slate-700/80 rounded-3xl max-w-2xl w-full p-5 sm:p-7 space-y-5 shadow-2xl my-8 relative">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-800 pb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-950/80 border border-emerald-800 text-emerald-400 flex items-center justify-center shadow-md">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shadow-md">
               <Globe className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base sm:text-lg font-black text-white font-sans uppercase tracking-wide">
-                {siteToEdit ? "Edit Important Site & Credentials" : "Add Important Website / Portal"}
+              <h3 className="text-base sm:text-lg font-bold text-white tracking-wide">
+                {siteToEdit ? "Edit Website Link" : "Add New Website Link"}
               </h3>
-              <p className="text-xs text-slate-400 font-mono">
-                Store login URL, username, password & auto-fill provisions
+              <p className="text-xs text-slate-400">
+                Save portal URL, folder, and optional credentials for instant access
               </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white rounded-xl bg-slate-800 hover:bg-slate-700 transition-colors"
+            className="p-2 text-slate-400 hover:text-white rounded-xl bg-slate-800 hover:bg-slate-700 transition cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -189,8 +202,8 @@ export const NewEditSiteModal: React.FC<NewEditSiteModalProps> = ({
           {/* Site Name & Favorite Toggle */}
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
             <div className="sm:col-span-9 space-y-1.5">
-              <label className="block text-slate-300 font-bold font-mono">
-                Website / Portal Name <span className="text-red-400">*</span>
+              <label className="block text-slate-300 font-bold">
+                Website / Form Name <span className="text-emerald-400">*</span>
               </label>
               <input
                 type="text"
@@ -199,20 +212,21 @@ export const NewEditSiteModal: React.FC<NewEditSiteModalProps> = ({
                   setName(e.target.value);
                   if (errors.name) setErrors((prev) => ({ ...prev, name: "" }));
                 }}
-                placeholder="e.g. K-SMART LSGD Permit Portal, e-Rekha Survey, GST Portal"
+                placeholder="e.g. VEO Form, KSEB Portal, Panchayath Service..."
                 className={`w-full bg-slate-950 border ${
-                  errors.name ? "border-red-500 ring-1 ring-red-500" : "border-slate-700"
-                } rounded-xl px-3.5 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400 transition-colors`}
+                  errors.name ? "border-rose-500 ring-1 ring-rose-500" : "border-slate-700"
+                } rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400 transition`}
+                autoFocus
               />
-              {errors.name && <p className="text-[11px] text-red-400 font-mono">{errors.name}</p>}
+              {errors.name && <p className="text-[11px] text-rose-400">{errors.name}</p>}
             </div>
 
             <div className="sm:col-span-3 flex sm:flex-col justify-between sm:justify-center items-start sm:items-center bg-slate-950 border border-slate-800 rounded-xl p-2.5">
-              <span className="text-[11px] font-mono text-slate-400 font-bold">Favorite</span>
+              <span className="text-[11px] text-slate-400 font-bold">Favorite</span>
               <button
                 type="button"
                 onClick={() => setIsFavorite((prev) => !prev)}
-                className={`mt-1 flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono font-bold text-xs cursor-pointer transition-all ${
+                className={`mt-1 flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs cursor-pointer transition ${
                   isFavorite
                     ? "bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20"
                     : "bg-slate-800 text-slate-400 hover:text-white"
@@ -224,10 +238,10 @@ export const NewEditSiteModal: React.FC<NewEditSiteModalProps> = ({
             </div>
           </div>
 
-          {/* Website Login URL */}
+          {/* Website Link URL */}
           <div className="space-y-1.5">
-            <label className="block text-slate-300 font-bold font-mono">
-              Website / Login URL <span className="text-red-400">*</span>
+            <label className="block text-slate-300 font-bold">
+              Website / Form URL <span className="text-emerald-400">*</span>
             </label>
             <div className="relative">
               <input
@@ -238,201 +252,205 @@ export const NewEditSiteModal: React.FC<NewEditSiteModalProps> = ({
                   if (errors.url) setErrors((prev) => ({ ...prev, url: "" }));
                 }}
                 onBlur={handleUrlBlur}
-                placeholder="https://ksmart.lsgkerala.gov.in/ui/web-portal"
+                placeholder="https://forms.fillout.com/t/rckeaFvH5ous"
                 className={`w-full bg-slate-950 border ${
-                  errors.url ? "border-red-500 ring-1 ring-red-500" : "border-slate-700"
-                } rounded-xl pl-3.5 pr-24 py-2.5 text-cyan-300 font-mono placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition-colors`}
+                  errors.url ? "border-rose-500 ring-1 ring-rose-500" : "border-slate-700"
+                } rounded-xl pl-3.5 pr-24 py-2.5 text-sm text-cyan-300 font-mono placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition`}
               />
               {url && (
                 <a
                   href={url.startsWith("http") ? url : `https://${url}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="absolute right-2 top-2 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-cyan-300 rounded-lg text-[10px] font-mono flex items-center gap-1 border border-slate-700 transition-colors"
+                  className="absolute right-2 top-2 px-2.5 py-1 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 rounded-lg text-[11px] font-bold flex items-center gap-1 transition"
                 >
-                  <span>Test URL</span>
                   <ExternalLink className="w-3 h-3" />
+                  <span>Test Link</span>
                 </a>
               )}
             </div>
-            {errors.url && <p className="text-[11px] text-red-400 font-mono">{errors.url}</p>}
+            {errors.url && <p className="text-[11px] text-rose-400">{errors.url}</p>}
           </div>
 
-          {/* Category Selector */}
-          <div className="space-y-1.5">
-            <label className="block text-slate-300 font-bold font-mono">Category / Classification</label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {CATEGORY_OPTIONS.map((cat) => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => setCategory(cat.id)}
-                  className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all ${
-                    category === cat.id
-                      ? `${cat.color} ring-1 ring-emerald-400 font-black shadow-md`
-                      : "border-slate-800 bg-slate-950 text-slate-400 hover:text-slate-200 hover:bg-slate-900"
-                  }`}
-                >
-                  <div className="font-mono font-bold text-xs truncate">{cat.label}</div>
-                  <div className="text-[10px] opacity-75 truncate">{cat.subLabel}</div>
-                </button>
-              ))}
+          {/* Folder Selection & Inline Folder Creator */}
+          <div className="p-3 bg-slate-950 border border-slate-800 rounded-2xl space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-slate-300 font-bold flex items-center gap-1.5">
+                <Folder className="w-4 h-4 text-emerald-400" />
+                Folder Option
+              </label>
+              <button
+                type="button"
+                onClick={() => setIsCreatingFolder(!isCreatingFolder)}
+                className="text-[11px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-semibold cursor-pointer"
+              >
+                <FolderPlus className="w-3.5 h-3.5" />
+                <span>{isCreatingFolder ? "Choose Existing" : "+ New Folder"}</span>
+              </button>
             </div>
-            {category === "OTHER" && (
-              <input
-                type="text"
-                value={customCategory}
-                onChange={(e) => setCustomCategory(e.target.value)}
-                placeholder="Enter custom category name..."
-                className="mt-2 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs font-mono"
-              />
+
+            {isCreatingFolder ? (
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="text"
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  placeholder="Enter new folder name (e.g. VEO, Survey, KSEB)"
+                  className="flex-1 bg-slate-900 border border-emerald-500/50 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-400"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={handleCreateNewFolder}
+                  className="px-3 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs cursor-pointer transition"
+                >
+                  Add Folder
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {availableFolders.map((f) => {
+                  const isSelected = folder.toLowerCase() === f.name.toLowerCase();
+                  return (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setFolder(f.name)}
+                      className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition ${
+                        isSelected
+                          ? "bg-emerald-500 text-slate-950 border-emerald-400 font-bold shadow-md shadow-emerald-500/20"
+                          : "bg-slate-900 border-slate-700 text-slate-300 hover:border-slate-600 hover:text-white"
+                      }`}
+                    >
+                      <Folder className="w-3.5 h-3.5" />
+                      <span>{f.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
             )}
           </div>
 
-          {/* Credentials Section */}
-          <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 space-y-3.5">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-              <div className="flex items-center gap-2 text-slate-200 font-bold font-mono">
-                <Lock className="w-4 h-4 text-emerald-400" />
-                <span>Login Credentials Storage & Autofill</span>
-              </div>
-              <span className="text-[10px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
-                Encrypted & Persisted
+          {/* Credentials Vault (Optional) */}
+          <div className="p-3.5 bg-slate-950 border border-slate-800 rounded-2xl space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-300 font-bold flex items-center gap-1.5 text-xs">
+                <Lock className="w-3.5 h-3.5 text-amber-400" />
+                Login Credentials (Optional)
               </span>
+              <button
+                type="button"
+                onClick={handleGeneratePassword}
+                className="px-2.5 py-1 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/40 text-[11px] font-bold flex items-center gap-1 cursor-pointer transition"
+              >
+                <Sparkles className="w-3 h-3" />
+                <span>Generate Password</span>
+              </button>
             </div>
 
+            {generatedToast && (
+              <div className="p-2 bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 rounded-xl text-[11px] text-center font-bold animate-fadeIn">
+                ✨ Strong 16-character password generated & populated!
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Username / Email */}
               <div className="space-y-1">
-                <label className="block text-slate-300 font-bold font-mono">
-                  Username / Email / User ID <span className="text-red-400">*</span>
-                </label>
+                <label className="block text-[11px] text-slate-400 font-semibold">Username / Login ID</label>
                 <div className="relative">
-                  <User className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+                  <User className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-500" />
                   <input
                     type="text"
                     value={username}
-                    onChange={(e) => {
-                      setUsername(e.target.value);
-                      if (errors.username) setErrors((prev) => ({ ...prev, username: "" }));
-                    }}
-                    placeholder="e.g. vasthusilpy@gmail.com / KL123"
-                    className={`w-full bg-slate-900 border ${
-                      errors.username ? "border-red-500" : "border-slate-700"
-                    } rounded-xl pl-9 pr-3 py-2.5 text-white font-mono placeholder-slate-500 focus:outline-none focus:border-emerald-400`}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="e.g. user@domain.com or ID"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-8 pr-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
                   />
                 </div>
-                {errors.username && <p className="text-[11px] text-red-400 font-mono">{errors.username}</p>}
               </div>
 
-              {/* Password */}
               <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <label className="block text-slate-300 font-bold font-mono">Password</label>
-                  <button
-                    type="button"
-                    onClick={handleGeneratePassword}
-                    className="text-[10px] font-mono text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-bold cursor-pointer"
-                    title="Generate secure randomized password"
-                  >
-                    <RefreshCw className="w-3 h-3" />
-                    <span>Auto-Gen</span>
-                  </button>
-                </div>
+                <label className="block text-[11px] text-slate-400 font-semibold">Password / Security Key</label>
                 <div className="relative">
-                  <KeyRound className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+                  <KeyRound className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-500" />
                   <input
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter or generate password"
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-9 pr-10 py-2.5 text-white font-mono placeholder-slate-500 focus:outline-none focus:border-emerald-400"
+                    placeholder="Optional portal password"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-8 pr-9 py-2 text-amber-300 font-mono placeholder-slate-500 focus:outline-none focus:border-amber-400"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute right-3 top-2.5 text-slate-400 hover:text-white p-0.5"
-                    title={showPassword ? "Hide password" : "Show password"}
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+                  {password && (
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-2.5 top-2.5 text-slate-400 hover:text-white"
+                    >
+                      {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                  )}
                 </div>
-                {generatedToast && (
-                  <p className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
-                    <Check className="w-3 h-3" /> Strong randomized password generated!
-                  </p>
-                )}
               </div>
             </div>
+          </div>
 
-            {/* Optional Security PIN / Secret Code */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-              <div className="space-y-1">
-                <label className="block text-slate-400 font-mono text-[11px]">
-                  Security PIN / Transaction Code / OTP Mobile (Optional)
-                </label>
-                <div className="relative">
-                  <Shield className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
-                  <input
-                    type="text"
-                    value={securityPin}
-                    onChange={(e) => setSecurityPin(e.target.value)}
-                    placeholder="e.g. 4-digit PIN, Reg No, or OTP Phone"
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-9 pr-3 py-2 text-white font-mono text-xs placeholder-slate-500 focus:outline-none focus:border-emerald-400"
-                  />
-                </div>
-              </div>
-
-              {/* Color Tag */}
-              <div className="space-y-1">
-                <label className="block text-slate-400 font-mono text-[11px]">Card Accent Color</label>
-                <div className="flex items-center gap-2 pt-1">
-                  {COLOR_OPTIONS.map((c) => (
+          {/* Color & Notes */}
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+            <div className="sm:col-span-6 space-y-1.5">
+              <label className="block text-slate-300 font-bold flex items-center gap-1.5">
+                <Palette className="w-3.5 h-3.5 text-slate-400" />
+                Color Tag
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {COLOR_OPTIONS.map((c) => {
+                  const isSelected = color === c.id;
+                  return (
                     <button
                       key={c.id}
                       type="button"
                       onClick={() => setColor(c.id)}
-                      className={`w-6 h-6 rounded-full ${c.bg} transition-all cursor-pointer ${
-                        color === c.id ? "ring-2 ring-white ring-offset-2 ring-offset-slate-900 scale-110" : "opacity-60 hover:opacity-100"
+                      className={`w-7 h-7 rounded-xl ${c.bg} flex items-center justify-center transition cursor-pointer ${
+                        isSelected ? "ring-2 ring-white scale-110 shadow-md" : "opacity-60 hover:opacity-100"
                       }`}
                       title={c.label}
-                    />
-                  ))}
-                </div>
+                    >
+                      {isSelected && <Check className="w-3.5 h-3.5 text-slate-950 stroke-[3]" />}
+                    </button>
+                  );
+                })}
               </div>
+            </div>
+
+            <div className="sm:col-span-6 space-y-1.5">
+              <label className="block text-slate-300 font-bold flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5 text-slate-400" />
+                Notes / Purpose
+              </label>
+              <input
+                type="text"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="e.g. For Village Extension Office form submission"
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400"
+              />
             </div>
           </div>
 
-          {/* Notes & Special Instructions */}
-          <div className="space-y-1.5">
-            <label className="block text-slate-300 font-bold font-mono">
-              Notes & Login Hints (e.g. OTP instructions, renewal date)
-            </label>
-            <textarea
-              rows={2}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. OTP is sent to Deepak's mobile number. Renewal required every 3 years. Sub-Registrar Office Code: SRO-104."
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400 text-xs font-sans"
-            />
-          </div>
-
-          {/* Footer Buttons */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+          {/* Form Actions */}
+          <div className="pt-3 border-t border-slate-800 flex items-center justify-end gap-2.5">
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl font-mono text-xs cursor-pointer transition-colors"
+              className="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white rounded-xl text-xs font-semibold transition cursor-pointer"
             >
               Cancel
             </button>
-
             <button
               type="submit"
-              className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl font-mono text-xs shadow-lg shadow-emerald-500/20 cursor-pointer transition-all flex items-center gap-2"
+              className="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 rounded-xl text-xs font-bold transition shadow-lg shadow-emerald-500/25 cursor-pointer flex items-center gap-1.5"
             >
               <Check className="w-4 h-4" />
-              <span>{siteToEdit ? "Update Site Details" : "Save Website & Credentials"}</span>
+              <span>{siteToEdit ? "Save Changes" : "Add Website Link"}</span>
             </button>
           </div>
         </form>

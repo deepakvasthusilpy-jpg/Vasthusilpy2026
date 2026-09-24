@@ -70,12 +70,11 @@ import {
   Edit3,
   FileCheck,
   QrCode,
-  Smartphone,
-  Monitor,
   Settings,
-  FolderTree
+  FolderTree,
+  Smartphone,
+  Server
 } from "lucide-react";
-import { useViewMode } from "../context/ViewModeContext";
 
 interface SidebarProps {
   activeSection: MainSectionType;
@@ -101,7 +100,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setIsMobileOpen
 }) => {
   const { theme, currentThemeMeta, cycleNextTheme } = useTheme();
-  const { viewMode, setViewMode, toggleViewMode, isMobileView } = useViewMode();
   const { isPrimaryAdmin, isSubscriberLogin } = useAuth();
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [expandedSection, setExpandedSection] = useState<MainSectionType>(activeSection);
@@ -249,9 +247,43 @@ export const Sidebar: React.FC<SidebarProps> = ({
       ]
     },
     {
+      id: "site_inspection" as MainSectionType,
+      title: "Site Inspection",
+      subtitle: "MOBILE FIELD DATA & GPS",
+      shortLabel: "Inspection",
+      icon: MapPin,
+      defaultTab: "site_inspection_form" as TabType,
+      color: "from-emerald-500 via-teal-500 to-cyan-500",
+      activeBorder: "border-emerald-400",
+      activeText: "text-emerald-300",
+      badge: "MOBILE",
+      subTabs: [
+        { id: "site_inspection_form" as TabType, label: "Field Inspection Form", sub: "MOBILE TOUCH & GPS", icon: Smartphone, badge: "FIELD" },
+        { id: "site_inspection_dashboard" as TabType, label: "Admin Inspections", sub: "REVIEWS & PDF EXPORT", icon: LayoutGrid, badge: "ADMIN" },
+        { id: "site_inspection_builder" as TabType, label: "Dynamic Questions", sub: "CHECKLIST TEMPLATES", icon: Layers },
+        { id: "site_inspection_guide" as TabType, label: "Backend Architecture", sub: "WHATSAPP & NODEMAILER", icon: Server }
+      ]
+    },
+    {
+      id: "important_sites" as MainSectionType,
+      title: "Important Sites",
+      subtitle: "PORTALS, LINKS & FOLDERS",
+      shortLabel: "Sites",
+      icon: Globe,
+      defaultTab: "important_sites" as TabType,
+      color: "from-emerald-400 via-teal-500 to-cyan-500",
+      activeBorder: "border-emerald-400",
+      activeText: "text-emerald-300",
+      badge: "LINKS",
+      subTabs: [
+        { id: "important_sites" as TabType, label: "All Important Sites", sub: "VAULT & FOLDERS", icon: Globe, badge: "ALL" },
+        { id: "sites_folders" as TabType, label: "VEO & Folders", sub: "FOLDER DIRECTORY", icon: FolderKanban, badge: "VEO" }
+      ]
+    },
+    {
       id: "invoices_payments" as MainSectionType,
       title: "Invoices & Payments",
-      subtitle: "BILLING & CLIENT PORTAL",
+      subtitle: "BILLING, CLIENT & PERSONAL",
       shortLabel: "Billing",
       icon: Receipt,
       defaultTab: "invoices_list" as TabType,
@@ -263,7 +295,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         { id: "invoices_list" as TabType, label: "Invoices & Billing", sub: "CLIENT INVOICES", icon: Receipt },
         { id: "products_services" as TabType, label: "Products & Services", sub: "RATES CATALOG", icon: Box, badge: "RATES" },
         { id: "customers" as TabType, label: "Customers & Clients", sub: "CLIENT DIRECTORY", icon: Users },
-        { id: "reports_analysis" as TabType, label: "Reports & Analytics", sub: "REVENUE INSIGHTS", icon: BarChart3 }
+        { id: "reports_analysis" as TabType, label: "Reports & Analytics", sub: "REVENUE INSIGHTS", icon: BarChart3 },
+        { id: "personal_bills" as TabType, label: "Personal Bills & Payments", sub: "UTILITIES, RD & POOV MALA", icon: Wallet, badge: "BILLS" }
       ]
     },
     {
@@ -305,24 +338,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       ]
     },
     {
-      id: "ksmart" as MainSectionType,
-      title: "K-SMART LSGD",
-      subtitle: "PERMITS & TAX PORTAL",
-      shortLabel: "K-SMART",
-      icon: Globe,
-      defaultTab: "rules_ksmart" as TabType,
-      color: "from-emerald-500 to-teal-500",
-      activeBorder: "border-emerald-400",
-      activeText: "text-emerald-400",
-      badge: "LSGD",
-      subTabs: [
-        { id: "rules_ksmart" as TabType, label: "K-SMART File Tracking", sub: "LIVE LSGD TRACKER", icon: Search, badge: "TRACK" },
-        { id: "ksmart_plan_scrutiny" as TabType, label: "CAD Plan Scrutiny", sub: "AUTO-DCR SCRUTINY", icon: FileCode, badge: "AUTO-DCR" },
-        { id: "ksmart_quick_certificates" as TabType, label: "Quick Certificates", sub: "LSGD CERTIFICATES", icon: Award, badge: "CERTS" },
-        { id: "ksmart_property_tax" as TabType, label: "Property Tax Assessment", sub: "LOCAL BODY TAX", icon: Receipt, badge: "TAX" }
-      ]
-    },
-    {
       id: "survey" as MainSectionType,
       title: "Digital Land Survey",
       subtitle: "FMB & AREA CALCULATOR",
@@ -353,25 +368,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         { id: "concrete_block" as TabType, label: "Concrete Block Calc", sub: "SOLID & HOLLOW CMU", icon: Box },
         { id: "cement_concrete" as TabType, label: "Cement Concrete Calc", sub: "IS 456 PCC & RCC", icon: Truck },
         { id: "material_quantity_bbs" as TabType, label: "Material Quantity & BBS", sub: "IS 2502 BAR BENDING", icon: Layers, badge: "BBS" }
-      ]
-    },
-    {
-      id: "personal_bills" as MainSectionType,
-      title: "Personal Bills & Payments",
-      subtitle: "UTILITIES & EXPENSES",
-      shortLabel: "Payments",
-      icon: Wallet,
-      defaultTab: "poov_mala_bill" as TabType,
-      color: "from-purple-500 via-pink-500 to-amber-500",
-      activeBorder: "border-purple-400",
-      activeText: "text-purple-300",
-      badge: "BILLS",
-      subTabs: [
-        { id: "poov_mala_bill" as TabType, label: "Poov Mala Bill", sub: "DAILY FLOWER BILL", icon: Sparkles, badge: "CALC" },
-        { id: "kseb_bills" as TabType, label: "KSEB Electricity Bills", sub: "POWER UTILITIES", icon: Zap, badge: "KSEB" },
-        { id: "health_insurance" as TabType, label: "Health Insurance", sub: "MEDICLAIM POLICIES", icon: HeartPulse, badge: "HEALTH" },
-        { id: "rd_accounts" as TabType, label: "Recurring Deposit (RD)", sub: "POST OFFICE RD PASSBOOK", icon: PiggyBank, badge: "PASSBOOK" },
-        { id: "panchayath_bills" as TabType, label: "Panchayath Fees & Taxes", sub: "TRADE LICENSE & FEES", icon: Landmark, badge: "K-SMART" }
       ]
     }
   ];
@@ -474,19 +470,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             style={{ backgroundColor: currentThemeMeta.primaryColor }}
           />
         </button>
-
-        {/* View Mode Switcher Button (Mobile / Desktop) */}
-        <button
-          onClick={toggleViewMode}
-          className={`w-11 h-11 rounded-2xl border flex items-center justify-center transition hover:scale-105 cursor-pointer shadow-sm relative backdrop-blur-md ${
-            isMobileView
-              ? "bg-pink-500/20 hover:bg-pink-500/30 border-pink-400/40 text-pink-300"
-              : "bg-cyan-500/20 hover:bg-cyan-500/30 border-cyan-400/40 text-cyan-300"
-          }`}
-          title={isMobileView ? "Switch to Desktop View" : "Switch to Mobile View"}
-        >
-          {isMobileView ? <Monitor className="w-4 h-4" /> : <Smartphone className="w-4 h-4" />}
-        </button>
       </div>
     </div>
   );
@@ -527,31 +510,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <X className="w-5 h-5" />
           </button>
         )}
-      </div>
-
-      {/* Quick Access Action Bar */}
-      <div className="px-3 pt-2.5 pb-1 flex items-center gap-2">
-        <button
-          onClick={handleQuickAgreement}
-          className="flex-1 py-1.5 px-3 bg-gradient-to-r from-amber-500/25 to-pink-500/25 hover:from-amber-500/35 hover:to-pink-500/35 border border-amber-400/40 text-amber-200 rounded-full text-[10.5px] font-mono font-bold flex items-center justify-center gap-1.5 cursor-pointer transition shadow-sm backdrop-blur-md"
-          title="Create E-Stamp & Plain A4 Agreement"
-        >
-          <Stamp className="w-3.5 h-3.5" />
-          <span>E-Stamp Agreement</span>
-        </button>
-
-        <button
-          onClick={() => {
-            setActiveSection("estimate");
-            setActiveTab("estimate_sheet");
-            if (isMobileOpen) setIsMobileOpen(false);
-          }}
-          className="py-1.5 px-3 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-full text-[10.5px] font-mono font-bold flex items-center gap-1 cursor-pointer transition backdrop-blur-md"
-          title="New Estimate (BOQ)"
-        >
-          <Plus className="w-3.5 h-3.5 text-emerald-300" />
-          <span>BOQ</span>
-        </button>
       </div>
 
       {/* Main Sections Navigation List */}
@@ -676,42 +634,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             NEXT
           </button>
         </div>
-
-        {/* View Mode Switcher Control (Desktop / Mobile) */}
-        <div className="flex items-center justify-between bg-white/5 border border-white/10 p-1.5 rounded-2xl">
-          <span className="text-[10px] font-mono font-bold text-purple-200 flex items-center gap-1.5 pl-1">
-            {isMobileView ? (
-              <Smartphone className="w-3.5 h-3.5 text-pink-400" />
-            ) : (
-              <Monitor className="w-3.5 h-3.5 text-cyan-400" />
-            )}
-            <span>VIEW</span>
-          </span>
-          <div className="flex items-center bg-black/40 p-0.5 rounded-full border border-white/10 text-[9.5px] font-mono font-bold">
-            <button
-              onClick={() => setViewMode("desktop")}
-              className={`px-2.5 py-1 rounded-full transition-all cursor-pointer ${
-                !isMobileView
-                  ? "bg-cyan-600 text-white shadow-xs"
-                  : "text-purple-300/70 hover:text-white"
-              }`}
-              title="Switch to Desktop View"
-            >
-              Desktop
-            </button>
-            <button
-              onClick={() => setViewMode("mobile")}
-              className={`px-2.5 py-1 rounded-full transition-all cursor-pointer ${
-                isMobileView
-                  ? "bg-pink-600 text-white shadow-xs"
-                  : "text-purple-300/70 hover:text-white"
-              }`}
-              title="Switch to Mobile View"
-            >
-              Mobile
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -725,15 +647,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
       />
 
       {/* Desktop Persistent Collapsible Side Dock */}
-      {!isMobileView && (
-        <aside
-          className={`hidden md:block print:hidden sticky top-0 h-screen bg-[#0e021a]/85 backdrop-blur-2xl border-r border-white/15 transition-all duration-300 z-30 shrink-0 ${
-            isCollapsed ? "w-[72px]" : "w-72"
-          }`}
-        >
-          {isCollapsed ? collapsedDockView : expandedDockView}
-        </aside>
-      )}
+      <aside
+        className={`hidden md:block print:hidden sticky top-0 h-screen bg-[#0e021a]/85 backdrop-blur-2xl border-r border-white/15 transition-all duration-300 z-30 shrink-0 ${
+          isCollapsed ? "w-[72px]" : "w-72"
+        }`}
+      >
+        {isCollapsed ? collapsedDockView : expandedDockView}
+      </aside>
 
       {/* Mobile Off-canvas Drawer */}
       {isMobileOpen && (

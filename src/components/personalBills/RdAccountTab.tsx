@@ -40,18 +40,18 @@ export const RdAccountTab: React.FC = () => {
 
   // Form State
   const [formData, setFormData] = useState<Partial<RdAccount>>({
-    accountNumber: "020084596312",
+    accountNumber: "",
     institutionType: "POST_OFFICE",
-    bankOrPostOfficeName: "Keralassery Sub Post Office (678641)",
-    accountHolderName: "Deepak Vasthusilpy",
-    monthlyInstallment: 5000,
-    dueDayOfMonth: 15,
-    tenureMonths: 60,
-    interestRate: 6.7,
-    startDate: "2024-04-01",
-    maturityDate: "2029-03-31",
-    expectedMaturityAmount: 356830,
-    notes: "Post Office 5-Year RD"
+    bankOrPostOfficeName: "",
+    accountHolderName: "",
+    monthlyInstallment: 0,
+    dueDayOfMonth: 1,
+    tenureMonths: 12,
+    interestRate: 0,
+    startDate: "",
+    maturityDate: "",
+    expectedMaturityAmount: 0,
+    notes: ""
   });
 
   // Monthly Pay Modal State

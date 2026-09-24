@@ -131,11 +131,11 @@ export const NewEditInvoiceModal: React.FC<NewEditInvoiceModalProps> = ({
       : [
           {
             id: `item_${Date.now()}`,
-            description: "KSMART - REGULARISATION COMPLETION OCCUPANCY + FORM 2",
+            description: "",
             unit: "1",
             quantity: 1,
-            rate: 5000,
-            amount: 5000
+            rate: 0,
+            amount: 0
           }
         ]
   );
@@ -186,11 +186,11 @@ export const NewEditInvoiceModal: React.FC<NewEditInvoiceModalProps> = ({
             : [
                 {
                   id: `item_${Date.now()}`,
-                  description: "KSMART - REGULARISATION COMPLETION OCCUPANCY + FORM 2",
+                  description: "",
                   unit: "1",
                   quantity: 1,
-                  rate: 5000,
-                  amount: 5000
+                  rate: 0,
+                  amount: 0
                 }
               ]
         );
@@ -209,6 +209,29 @@ export const NewEditInvoiceModal: React.FC<NewEditInvoiceModalProps> = ({
         );
       } else {
         setCurrentInvoiceId(`inv_${Date.now()}`);
+        setApplicantName("");
+        setApplicantMobile("");
+        setApplicantEmail("");
+        setApplicantAddress("");
+        setApplicantContactPerson("");
+        setInvoiceNumber(`${Math.floor(220 + Math.random() * 80)}`);
+        setPoNumber("");
+        setInvoiceDate(new Date().toISOString().split("T")[0]);
+        setDueDate(new Date(Date.now() + 15 * 86400000).toISOString().split("T")[0]);
+        setItems([
+          {
+            id: `item_${Date.now()}`,
+            description: "",
+            unit: "1",
+            quantity: 1,
+            rate: 0,
+            amount: 0
+          }
+        ]);
+        setDiscount(0);
+        setShowDiscount(false);
+        setAdvancePayment(0);
+        setAdvancePaymentRef("");
         if (defaultProjectId) {
           setSelectedProjectId(defaultProjectId);
           const matchedProj = projects.find((p) => p.id === defaultProjectId);
@@ -224,6 +247,8 @@ export const NewEditInvoiceModal: React.FC<NewEditInvoiceModalProps> = ({
               if (matchedProj.advancePaymentRef) setAdvancePaymentRef(matchedProj.advancePaymentRef);
             }
           }
+        } else {
+          setSelectedProjectId("");
         }
       }
     }

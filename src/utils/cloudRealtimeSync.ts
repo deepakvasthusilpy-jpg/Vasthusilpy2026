@@ -21,6 +21,9 @@ export const SYNC_KEYS = {
   CAD_FOLDERS: "vasthusilpy_cad_folders_v3",
   CAD_FILES: "vasthusilpy_cad_files_vault_v3",
   IMPORTANT_SITES: "vasthusilpy_important_sites_v1",
+  SITE_FOLDERS: "vasthusilpy_site_folders_v1",
+  SITE_INSPECTIONS: "vasthusilpy_site_inspections_v1",
+  INSPECTION_TEMPLATES: "vasthusilpy_site_inspection_templates_v1",
   ONLINE_APPLICATIONS: "vasthusilpy_online_applications_v1",
   CONSTRUCTION_AGREEMENTS: "vasthusilpy_construction_agreements",
   SUBSCRIPTIONS: "vasthusilpy_subscription_requests",
@@ -65,6 +68,15 @@ export function dispatchAllSyncEvents(targetKey?: string) {
   }
   if (!targetKey || targetKey === SYNC_KEYS.IMPORTANT_SITES) {
     window.dispatchEvent(new Event("vasthusilpy_important_sites_updated"));
+  }
+  if (!targetKey || targetKey === SYNC_KEYS.SITE_FOLDERS) {
+    window.dispatchEvent(new Event("vasthusilpy_site_folders_updated"));
+  }
+  if (!targetKey || targetKey === SYNC_KEYS.SITE_INSPECTIONS) {
+    window.dispatchEvent(new Event("vasthusilpy_site_inspections_updated"));
+  }
+  if (!targetKey || targetKey === SYNC_KEYS.INSPECTION_TEMPLATES) {
+    window.dispatchEvent(new Event("vasthusilpy_inspection_templates_updated"));
   }
   if (!targetKey || targetKey === SYNC_KEYS.ONLINE_APPLICATIONS) {
     window.dispatchEvent(new Event("vasthusilpy_online_applications_updated"));
@@ -273,6 +285,9 @@ export function initializeCloudRealtimeSync(): () => void {
     { collection: "cad_folders", storageKey: SYNC_KEYS.CAD_FOLDERS },
     { collection: "cad_files", storageKey: SYNC_KEYS.CAD_FILES },
     { collection: "important_sites", storageKey: SYNC_KEYS.IMPORTANT_SITES },
+    { collection: "site_folders", storageKey: SYNC_KEYS.SITE_FOLDERS },
+    { collection: "site_inspections", storageKey: SYNC_KEYS.SITE_INSPECTIONS },
+    { collection: "inspection_templates", storageKey: SYNC_KEYS.INSPECTION_TEMPLATES },
     { collection: "online_applications", storageKey: SYNC_KEYS.ONLINE_APPLICATIONS },
     { collection: "construction_agreements", storageKey: SYNC_KEYS.CONSTRUCTION_AGREEMENTS },
     { collection: "subscription_requests", storageKey: SYNC_KEYS.SUBSCRIPTIONS }

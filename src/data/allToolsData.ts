@@ -55,7 +55,7 @@ export interface AppToolItem {
   name: string;
   nameMl: string;
   englishName: string;
-  category: "vasthu" | "building_rules" | "ksmart" | "survey" | "civil" | "estimate" | "office" | "invoices" | "construction" | "ai_agent";
+  category: "vasthu" | "building_rules" | "survey" | "civil" | "estimate" | "office" | "invoices" | "construction" | "ai_agent";
   categoryName: string;
   section: MainSectionType;
   tab: TabType;
@@ -112,16 +112,6 @@ export const TOOL_CATEGORIES: ToolCategory[] = [
     badgeBg: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
     icon: Building2,
     description: "Kerala Municipality & Panchayat Building Rules (KPBR 2019/2024), setback yard computations & occupancy norms."
-  },
-  {
-    id: "ksmart",
-    name: "KSMART Kerala LSGD",
-    nameMl: "കെ-സ്മാർട്ട് (KSMART)",
-    color: "from-teal-500 to-emerald-600",
-    accent: "text-teal-400 border-teal-500/40 bg-teal-950/60",
-    badgeBg: "bg-teal-500/20 text-teal-300 border-teal-500/40",
-    icon: Globe,
-    description: "Official KSMART live file tracking portal and permit verification."
   },
   {
     id: "survey",
@@ -439,78 +429,6 @@ export const ALL_TOOLS_DATA: AppToolItem[] = [
     accentColor: "text-emerald-400",
     bgGlow: "from-emerald-500/20 to-teal-500/10",
     isCalculator: true
-  },
-  {
-    id: "rules_ksmart",
-    name: "KSMART ഫയൽ ട്രാക്കിംഗ് (Live Tracker)",
-    nameMl: "KSMART ഫയൽ ട്രാക്കിംഗ്",
-    englishName: "KSMART LSGD Live File Tracking",
-    category: "ksmart",
-    categoryName: "കെ-സ്മാർട്ട്",
-    section: "ksmart",
-    tab: "rules_ksmart",
-    icon: Globe,
-    standard: "Kerala LSGD KSMART Live Portal",
-    description: "Official LSGD live permit application tracking portal with instant status verification & clipboard lookup.",
-    descriptionMl: "തദ്ദേശ സ്വയംഭരണ സ്ഥാപനങ്ങളിലെ പെർമിറ്റ് അപേക്ഷകളുടെ തത്സമയ സ്റ്റാറ്റസ് പരിശോധിക്കൽ.",
-    badges: ["KSMART", "LIVE TRACKER", "LSGD KERALA"],
-    color: "border-emerald-800/80 hover:border-emerald-400 bg-slate-900/90 text-emerald-400",
-    accentColor: "text-emerald-400",
-    bgGlow: "from-emerald-500/20 to-teal-500/10"
-  },
-  {
-    id: "ksmart_plan_scrutiny",
-    name: "K-SMART CAD പ്ലാൻ സ്ക്രൂട്ടീനി (Auto-DCR)",
-    nameMl: "CAD പ്ലാൻ സ്ക്രൂട്ടീനി",
-    englishName: "K-SMART Building Plan Scrutiny Suite",
-    category: "ksmart",
-    categoryName: "കെ-സ്മാർട്ട്",
-    section: "ksmart",
-    tab: "ksmart_plan_scrutiny",
-    icon: FileCode,
-    standard: "KSMART Auto-DCR Scrutiny Engine",
-    description: "Official KSMART building plan scrutiny suite to scrutinize attached CAD plans (.dwg/.dxf) against KPBR/KMBR rules.",
-    descriptionMl: "അറ്റാച്ച് ചെയ്ത CAD പ്ലാനുകൾ K-SMART Auto-DCR വഴി സ്ക്രൂട്ടീനി ചെയ്ത് ബിൽഡിംഗ് റൂൾസ് പരിശോധിക്കുക.",
-    badges: ["AUTO-DCR", "CAD SCRUTINY", "PLAN VERIFICATION"],
-    color: "border-indigo-800/80 hover:border-indigo-400 bg-slate-900/90 text-indigo-400",
-    accentColor: "text-indigo-400",
-    bgGlow: "from-indigo-500/20 to-cyan-500/10"
-  },
-  {
-    id: "ksmart_quick_certificates",
-    name: "K-SMART ക്വിക്ക് സർട്ടിഫിക്കറ്റുകൾ",
-    nameMl: "ക്വിക്ക് സർട്ടിഫിക്കറ്റുകൾ",
-    englishName: "K-SMART Quick Certificates Portal",
-    category: "ksmart",
-    categoryName: "കെ-സ്മാർട്ട്",
-    section: "ksmart",
-    tab: "ksmart_quick_certificates",
-    icon: Award,
-    standard: "Kerala LSGD Civil Registration System",
-    description: "Instant access to Birth, Death, and Marriage certificates download and verification directly on K-SMART portal.",
-    descriptionMl: "ജനന, മരണ, വിവാഹ സർട്ടിഫിക്കറ്റുകൾ തത്സമയം പരിശോധിക്കാനും ഡൗൺലോഡ് ചെയ്യാനുമുള്ള പോർട്ടൽ.",
-    badges: ["CERTIFICATES", "BIRTH/DEATH", "MARRIAGE", "LSGD"],
-    color: "border-teal-800/80 hover:border-teal-400 bg-slate-900/90 text-teal-400",
-    accentColor: "text-teal-400",
-    bgGlow: "from-teal-500/20 to-emerald-500/10"
-  },
-  {
-    id: "ksmart_property_tax",
-    name: "K-SMART കെട്ടിട നികുതി & ഉടമസ്ഥാവകാശം",
-    nameMl: "കെട്ടിട നികുതി (Property Tax)",
-    englishName: "K-SMART Property Tax & Assessment Portal",
-    category: "ksmart",
-    categoryName: "കെ-സ്മാർട്ട്",
-    section: "ksmart",
-    tab: "ksmart_property_tax",
-    icon: Receipt,
-    standard: "LSGD Sanchaya & K-SMART Revenue System",
-    description: "Search property assessment, verify building ownership, and pay local body property tax online with e-receipt download.",
-    descriptionMl: "കെട്ടിടങ്ങളുടെ നികുതി, ഉടമസ്ഥാവകാശം, അസസ്‌മെന്റ് വിവരങ്ങൾ എന്നിവ പരിശോധിക്കാനും ഓൺലൈനായി നികുതി അടയ്ക്കാനും.",
-    badges: ["PROPERTY TAX", "ASSESSMENT", "SANCHAYA", "E-PAYMENT"],
-    color: "border-amber-800/80 hover:border-amber-400 bg-slate-900/90 text-amber-400",
-    accentColor: "text-amber-400",
-    bgGlow: "from-amber-500/20 to-orange-500/10"
   },
 
   // ==========================================

@@ -22,6 +22,7 @@ import { ProductsServicesView } from "../office/crm/ProductsServicesView";
 import { CustomersView } from "../office/crm/CustomersView";
 import { ReportsView } from "../office/crm/ReportsView";
 import { OfflineBackupRestoreModal } from "../office/crm/OfflineBackupRestoreModal";
+import { PersonalBillsDashboard } from "../personalBills/PersonalBillsDashboard";
 import { EstimateProject } from "../../data/estimateData";
 import { useLanguage } from "../../context/LanguageContext";
 import { triggerAppNotification } from "../../context/NotificationContext";
@@ -37,7 +38,10 @@ import {
   CreditCard,
   CheckCircle2,
   AlertCircle,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Wallet,
+  PiggyBank,
+  Sparkles
 } from "lucide-react";
 
 interface InvoicePaymentsTabProps {
@@ -425,7 +429,7 @@ export const InvoicePaymentsTab: React.FC<InvoicePaymentsTabProps> = ({
   };
 
   // Normalization for active sub-tab matching
-  const isTabActive = (tabKey: "invoices_list" | "products_services" | "customers" | "reports_analysis" | "client_view") => {
+  const isTabActive = (tabKey: "invoices_list" | "products_services" | "customers" | "reports_analysis" | "client_view" | "personal_bills") => {
     if (tabKey === "invoices_list") {
       return currentTab === "invoices_list" || currentTab === "office_invoices";
     }
@@ -440,6 +444,25 @@ export const InvoicePaymentsTab: React.FC<InvoicePaymentsTabProps> = ({
     }
     if (tabKey === "client_view") {
       return currentTab === "client_view" || currentTab === "office_client_view";
+    }
+    if (tabKey === "personal_bills") {
+      return (
+        currentTab === "personal_bills" ||
+        currentTab === "staff_salary" ||
+        currentTab === "poov_mala" ||
+        currentTab === "poov_mala_bill" ||
+        currentTab === "kseb_bills" ||
+        currentTab === "kseb_bill" ||
+        currentTab === "health_insurance" ||
+        currentTab === "rd_accounts" ||
+        currentTab === "rd_deposit" ||
+        currentTab === "panchayath_bills" ||
+        currentTab === "licence_panchayath" ||
+        currentTab === "panchayath_fees" ||
+        currentTab === "all_vendors" ||
+        currentTab === "all_vendors_bills" ||
+        currentTab === "personal_vendors"
+      );
     }
     return false;
   };
@@ -459,7 +482,7 @@ export const InvoicePaymentsTab: React.FC<InvoicePaymentsTabProps> = ({
             }`}
           >
             <Receipt className="w-4 h-4" />
-            <span>{t("tab_invoices", "Invoices & Payments")}</span>
+            <span>{t("tab_invoices", "Invoices & Receipts")}</span>
             <span className="ml-1 bg-slate-900/60 text-slate-200 px-2 py-0.5 rounded-full text-[10px]">
               {invoices.length}
             </span>
@@ -502,6 +525,19 @@ export const InvoicePaymentsTab: React.FC<InvoicePaymentsTabProps> = ({
           >
             <BarChart3 className="w-4 h-4" />
             <span>{t("tab_reports", "Reports & Analysis")}</span>
+          </button>
+
+          {/* Sub-tab 5: Personal Bills & Expenses */}
+          <button
+            onClick={() => handleTabSwitch("personal_bills")}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl text-xs font-mono font-bold transition-all cursor-pointer ${
+              isTabActive("personal_bills")
+                ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/20 font-black"
+                : "text-slate-400 hover:text-white hover:bg-slate-900"
+            }`}
+          >
+            <Wallet className="w-4 h-4 text-purple-300" />
+            <span>{t("tab_personal_bills", "Personal Bills & Payments")}</span>
           </button>
         </div>
 
@@ -565,6 +601,22 @@ export const InvoicePaymentsTab: React.FC<InvoicePaymentsTabProps> = ({
         <CustomersView projects={projects} invoices={invoices} />
       ) : isTabActive("reports_analysis") ? (
         <ReportsView invoices={invoices} projects={projects} />
+      ) : isTabActive("personal_bills") ? (
+        <PersonalBillsDashboard
+          initialSubTab={
+            currentTab === "kseb_bills" || currentTab === "kseb_bill"
+              ? "kseb_bills"
+              : currentTab === "health_insurance"
+              ? "health_insurance"
+              : currentTab === "rd_accounts" || currentTab === "rd_deposit"
+              ? "rd_accounts"
+              : currentTab === "panchayath_bills" || currentTab === "licence_panchayath" || currentTab === "panchayath_fees"
+              ? "licence_panchayath"
+              : currentTab === "all_vendors" || currentTab === "all_vendors_bills" || currentTab === "personal_vendors"
+              ? "all_vendors"
+              : "poov_mala"
+          }
+        />
       ) : (
         <InvoicesListView
           invoices={invoices}

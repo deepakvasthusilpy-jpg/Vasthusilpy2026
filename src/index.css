@@ -417,14 +417,324 @@ html.light .bg-blueprint-grid {
    DARK MODE DESIGN SPECIFICATIONS:
    Soft white text on deep slate gray canvas (#020617 / #0f172a)
    ========================================================= */
-html.dark:not(.baroque):not(.anthropomorphic):not(.ai_platform) {
+html.dark:not(.baroque):not(.anthropomorphic):not(.ai_platform):not(.corporate):not(.tech_startup) {
   color-scheme: dark;
 }
 
-html.dark:not(.baroque):not(.anthropomorphic):not(.ai_platform) body,
-html.dark:not(.baroque):not(.anthropomorphic):not(.ai_platform) #root {
+html.dark:not(.baroque):not(.anthropomorphic):not(.ai_platform):not(.corporate):not(.tech_startup) body,
+html.dark:not(.baroque):not(.anthropomorphic):not(.ai_platform):not(.corporate):not(.tech_startup) #root {
   background-color: #020617;
   color: #f8fafc;
+}
+
+/* =========================================================
+   1. CORPORATE WEBSITE THEME (Executive Royal Blue & Crisp White)
+   Professional style, blue and white color scheme, trustworthy and reliable.
+   ========================================================= */
+html.corporate {
+  color-scheme: light;
+  --corp-navy-primary: #1e40af;
+  --corp-navy-deep: #0f2b48;
+  --corp-sky-accent: #0284c7;
+  --corp-slate-canvas: #f1f5f9;
+  --corp-white-card: #ffffff;
+  --corp-slate-subcard: #f8fafc;
+  --corp-slate-border: #cbd5e1;
+  --corp-text-dark: #0f172a;
+}
+
+html.corporate body,
+html.corporate #root,
+html.corporate #app-root-wrapper {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+/* Deep Canvas / Page Background */
+html.corporate .bg-slate-950,
+html.corporate .bg-slate-950\/95,
+html.corporate .bg-slate-950\/90,
+html.corporate .bg-slate-950\/80 {
+  background-color: #e2e8f0;
+  color: #0f172a;
+}
+
+/* Main Cards & Panels -> Crisp Pristine White with Executive Trust Border */
+html.corporate .bg-slate-900,
+html.corporate .bg-slate-900\/95,
+html.corporate .bg-slate-900\/90,
+html.corporate .bg-slate-900\/80,
+html.corporate .bg-slate-900\/60,
+html.corporate .bg-slate-900\/50 {
+  background-color: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.06), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
+}
+
+/* Elevated Subcards -> Clean Cool Slate White */
+html.corporate .bg-slate-800,
+html.corporate .bg-slate-800\/80,
+html.corporate .bg-slate-800\/50,
+html.corporate .bg-slate-800\/30 {
+  background-color: #f8fafc;
+  color: #1e293b;
+}
+
+/* Hairline Executive Borders */
+html.corporate .border-slate-800,
+html.corporate .border-slate-800\/80,
+html.corporate .border-slate-800\/90,
+html.corporate .border-slate-700,
+html.corporate .border-slate-900 {
+  border-color: #cbd5e1;
+}
+
+/* Authoritative Typography in Corporate Theme */
+html.corporate .text-white,
+html.corporate .text-slate-100,
+html.corporate .text-slate-200 {
+  color: #0f172a;
+}
+
+html.corporate .text-slate-300 {
+  color: #1e293b;
+}
+
+html.corporate .text-slate-400 {
+  color: #475569;
+}
+
+html.corporate .text-slate-500 {
+  color: #64748b;
+}
+
+/* Form Controls in Corporate Mode */
+html.corporate input:not([type="checkbox"]):not([type="radio"]),
+html.corporate select,
+html.corporate textarea {
+  background-color: #ffffff;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+html.corporate input:focus,
+html.corporate select:focus,
+html.corporate textarea:focus {
+  border-color: #1e40af;
+  outline-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(30, 64, 175, 0.15);
+}
+
+html.corporate input::placeholder,
+html.corporate textarea::placeholder {
+  color: #94a3b8;
+}
+
+html.corporate thead,
+html.corporate th {
+  background-color: #f1f5f9;
+  color: #1e40af;
+}
+
+html.corporate .bg-blueprint-grid,
+html.corporate .bg-blueprint-grid-dark {
+  background-size: 32px 32px;
+  background-image: 
+    linear-gradient(to right, rgba(30, 64, 175, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(30, 64, 175, 0.05) 1px, transparent 1px);
+}
+
+/* Corporate Buttons & Primary Action Accents */
+html.corporate .corp-btn-primary {
+  background-color: #1e40af;
+  color: #ffffff;
+  box-shadow: 0 2px 4px rgba(30, 64, 175, 0.2);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html.corporate .corp-btn-primary:hover {
+  background-color: #1d4ed8;
+  box-shadow: 0 4px 12px rgba(30, 64, 175, 0.35);
+  transform: translateY(-1px);
+}
+
+/* =========================================================
+   2. TECH STARTUP WEBSITE THEME (Futuristic Cyber Obsidian & Glowing Holographic Cyan)
+   Futuristic style, sleek design, innovative elements, cutting-edge visuals.
+   ========================================================= */
+html.tech_startup {
+  color-scheme: dark;
+  --tech-cyber-bg: #030712;
+  --tech-card-bg: #090e17;
+  --tech-subcard-bg: #0f172a;
+  --tech-cyan-glow: #00f2fe;
+  --tech-azure-accent: #4facfe;
+  --tech-border-glow: rgba(0, 242, 254, 0.3);
+}
+
+html.tech_startup body,
+html.tech_startup #root,
+html.tech_startup #app-root-wrapper {
+  background-color: #030712;
+  color: #e0f2fe;
+}
+
+/* Deep Cyber Canvas */
+html.tech_startup .bg-slate-950,
+html.tech_startup .bg-slate-950\/95,
+html.tech_startup .bg-slate-950\/90,
+html.tech_startup .bg-slate-950\/80 {
+  background-color: #02040a;
+  color: #e0f2fe;
+}
+
+/* Main Cards & Panels -> Deep Obsidian with Sleek Cyan Neon Edges */
+html.tech_startup .bg-slate-900,
+html.tech_startup .bg-slate-900\/95,
+html.tech_startup .bg-slate-900\/90,
+html.tech_startup .bg-slate-900\/80,
+html.tech_startup .bg-slate-900\/60,
+html.tech_startup .bg-slate-900\/50 {
+  background-color: #090e17;
+  color: #f0f9ff;
+  border-color: rgba(0, 242, 254, 0.22);
+}
+
+/* Elevated Subcards */
+html.tech_startup .bg-slate-800,
+html.tech_startup .bg-slate-800\/80,
+html.tech_startup .bg-slate-800\/50,
+html.tech_startup .bg-slate-800\/30 {
+  background-color: #0f172a;
+  color: #bae6fd;
+}
+
+/* Glowing Neon Cyan & Cyber Azure Borders */
+html.tech_startup .border-slate-800,
+html.tech_startup .border-slate-800\/80,
+html.tech_startup .border-slate-800\/90,
+html.tech_startup .border-slate-700,
+html.tech_startup .border-slate-900 {
+  border-color: rgba(0, 242, 254, 0.28);
+}
+
+/* High Contrast Holographic White & Cyan Typography */
+html.tech_startup .text-white,
+html.tech_startup .text-slate-100,
+html.tech_startup .text-slate-200 {
+  color: #ffffff;
+}
+
+html.tech_startup .text-slate-300 {
+  color: #e0f2fe;
+}
+
+html.tech_startup .text-slate-400 {
+  color: #7dd3fc;
+}
+
+html.tech_startup .text-slate-500 {
+  color: #38bdf8;
+}
+
+/* Form Controls in Tech Startup Mode */
+html.tech_startup input:not([type="checkbox"]):not([type="radio"]),
+html.tech_startup select,
+html.tech_startup textarea {
+  background-color: #050b14;
+  color: #ffffff;
+  border-color: rgba(0, 242, 254, 0.35);
+}
+
+html.tech_startup input:focus,
+html.tech_startup select:focus,
+html.tech_startup textarea:focus {
+  border-color: #00f2fe;
+  outline-color: #00f2fe;
+  box-shadow: 0 0 18px rgba(0, 242, 254, 0.35);
+}
+
+html.tech_startup input::placeholder,
+html.tech_startup textarea::placeholder {
+  color: #0284c7;
+}
+
+html.tech_startup thead,
+html.tech_startup th {
+  background-color: #0b1528;
+  color: #00f2fe;
+}
+
+/* Futuristic Cyber Grid */
+html.tech_startup .bg-blueprint-grid,
+html.tech_startup .bg-blueprint-grid-dark {
+  background-size: 32px 32px;
+  background-image: 
+    linear-gradient(to right, rgba(0, 242, 254, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 242, 254, 0.08) 1px, transparent 1px);
+}
+
+/* Tech Startup Cyber Glow Utilities */
+.tech-glow-box {
+  box-shadow: 0 0 30px rgba(0, 242, 254, 0.25), inset 0 0 15px rgba(0, 242, 254, 0.05);
+  border: 1px solid rgba(0, 242, 254, 0.4);
+}
+
+.tech-btn-glow {
+  background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+  color: #030712;
+  font-weight: 700;
+  box-shadow: 0 0 25px rgba(0, 242, 254, 0.5), inset 0 0 10px rgba(255, 255, 255, 0.4);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tech-btn-glow:hover {
+  background: linear-gradient(135deg, #38bdf8 0%, #00f2fe 100%);
+  box-shadow: 0 0 35px rgba(0, 242, 254, 0.8), inset 0 0 14px rgba(255, 255, 255, 0.6);
+  transform: translateY(-1px);
+}
+
+.tech-btn-outline {
+  border: 1px solid rgba(0, 242, 254, 0.6);
+  color: #00f2fe;
+  background: rgba(0, 242, 254, 0.05);
+  backdrop-filter: blur(8px);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tech-btn-outline:hover {
+  background: rgba(0, 242, 254, 0.18);
+  border-color: #00f2fe;
+  box-shadow: 0 0 25px rgba(0, 242, 254, 0.45);
+  transform: translateY(-1px);
+}
+
+/* Animated Holographic Rings Keyframes */
+@keyframes tech-spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes tech-spin-reverse {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+@keyframes tech-pulse-glow {
+  0%, 100% { opacity: 0.8; filter: drop-shadow(0 0 15px rgba(0, 242, 254, 0.6)); }
+  50% { opacity: 1; filter: drop-shadow(0 0 28px rgba(0, 242, 254, 0.95)); }
+}
+
+.animate-tech-spin {
+  animation: tech-spin-slow 20s linear infinite;
+}
+
+.animate-tech-spin-reverse {
+  animation: tech-spin-reverse 15s linear infinite;
+}
+
+.animate-tech-pulse {
+  animation: tech-pulse-glow 3s ease-in-out infinite;
 }
 
 /* =========================================================

@@ -74,12 +74,12 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
   const [location, setLocation] = useState("");
   const [assignee, setAssignee] = useState<StaffName>("DIBIN");
   const [status, setStatus] = useState<ProjectStatus>("PENDING");
-  const [dueDate, setDueDate] = useState("2026-08-30");
+  const [dueDate, setDueDate] = useState("");
   const [description, setDescription] = useState("");
 
   // Financial & Advance Payment Tracking
-  const [estimatedAmount, setEstimatedAmount] = useState<number | string>(20000);
-  const [advancePayment, setAdvancePayment] = useState<number | string>(5000);
+  const [estimatedAmount, setEstimatedAmount] = useState<number | string>("");
+  const [advancePayment, setAdvancePayment] = useState<number | string>("");
   const [advancePaymentDate, setAdvancePaymentDate] = useState<string>(() => new Date().toISOString().split("T")[0]);
   const [advancePaymentMode, setAdvancePaymentMode] = useState<"CASH" | "UPI" | "BANK_TRANSFER" | "CHEQUE">("UPI");
   const [advancePaymentRef, setAdvancePaymentRef] = useState<string>("");
@@ -127,14 +127,7 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
   const [pastedStatus, setPastedStatus] = useState<string | null>(null);
 
   // Comments State
-  const [comments, setComments] = useState<ProjectComment[]>([
-    {
-      id: `c_1_${Date.now()}`,
-      author: "DIBIN",
-      text: "Project created and initiated in Vasthusilpy CRM.",
-      timestamp: new Date().toLocaleString()
-    }
-  ]);
+  const [comments, setComments] = useState<ProjectComment[]>([]);
   const [newCommentText, setNewCommentText] = useState("");
   const [commentAuthor, setCommentAuthor] = useState<StaffName | "CLIENT" | "ADMIN">("DIBIN");
 
@@ -444,13 +437,13 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
       id: projectId,
       title: title.trim(),
       clientName: clientName.trim(),
-      clientPhone: clientPhone.trim() || "9747995961",
+      clientPhone: clientPhone.trim(),
       clientEmail: clientEmail.trim() || undefined,
-      location: location.trim() || "Keralassery, Palakkad",
+      location: location.trim(),
       assignee,
       status,
       dueDate,
-      description: description.trim() || "Vasthusilpy Engineering Project",
+      description: description.trim(),
       estimatedAmount: numEstimated,
       advancePayment: numAdvance,
       advancePaymentDate: numAdvance > 0 ? advancePaymentDate : undefined,

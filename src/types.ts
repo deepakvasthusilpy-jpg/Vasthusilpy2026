@@ -44,6 +44,8 @@ export type MainSectionType =
   | "office_dashboard"
   | "invoices_payments"
   | "personal_bills"
+  | "site_inspection"
+  | "important_sites"
   | "vasthu"
   | "building_rules"
   | "ksmart"
@@ -52,6 +54,8 @@ export type MainSectionType =
   | "quotation"
   | "online_applications"
   | "application_forms";
+
+export * from "./types/siteInspection";
 
 export type BuildingPlanTabType =
   | "building_plan_dashboard"
@@ -236,6 +240,16 @@ export interface OnlineApplicantRecord {
   updatedAt: string;
 }
 
+export interface SiteFolder {
+  id: string;
+  name: string;
+  color?: string; // e.g. "emerald", "cyan", "blue", "amber", "rose", "indigo", "purple"
+  icon?: string;
+  description?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
 export type ImportantSiteCategory =
   | "LSGD_GOVT"
   | "REVENUE_SURVEY"
@@ -249,17 +263,21 @@ export interface ImportantSite {
   name: string;
   category: ImportantSiteCategory;
   customCategory?: string;
+  folder?: string; // Folder name or ID (e.g. "VEO", "General")
   url: string;
   username: string;
   password?: string;
   securityPin?: string;
   notes?: string;
   isFavorite?: boolean;
-  color?: string; // e.g. "emerald", "cyan", "blue", "amber", "rose", "indigo"
+  color?: string; // e.g. "emerald", "cyan", "blue", "amber", "rose", "indigo", "purple"
+  favicon?: string;
   lastOpenedAt?: string;
   createdAt: string;
   updatedAt: string;
 }
+
+export type ImportantSitesTabType = "important_sites" | "all_sites" | "sites_folders" | "site_vault";
 
 export type InvoicesTabType =
   | "invoices_list"
@@ -271,7 +289,22 @@ export type InvoicesTabType =
   | "office_products"
   | "office_customers"
   | "office_reports"
-  | "office_client_view";
+  | "office_client_view"
+  | "personal_bills"
+  | "staff_salary"
+  | "poov_mala"
+  | "poov_mala_bill"
+  | "kseb_bills"
+  | "kseb_bill"
+  | "health_insurance"
+  | "rd_accounts"
+  | "rd_deposit"
+  | "panchayath_bills"
+  | "licence_panchayath"
+  | "panchayath_fees"
+  | "all_vendors"
+  | "all_vendors_bills"
+  | "personal_vendors";
 
 export interface ClientShareLink {
   id: string; // Unique ID, e.g. "CSL-2026-001"
@@ -715,7 +748,8 @@ export type TabType =
   | PersonalBillsTabType
   | QuotationTabType
   | OnlineApplicationsTabType
-  | ApplicationFormsTabType;
+  | ApplicationFormsTabType
+  | ImportantSitesTabType;
 
 export interface FormFieldDefinition {
   id: string;

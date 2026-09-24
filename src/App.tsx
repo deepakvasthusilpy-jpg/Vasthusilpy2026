@@ -2,11 +2,9 @@ import React, { useState } from "react";
 import { MainSectionType, TabType, ThachuRow, SurveyTabType } from "./types";
 import { THACHU_DATA } from "./data/thachuShastraData";
 import { useAuth } from "./context/AuthContext";
-import { useViewMode } from "./context/ViewModeContext";
 import { LoginPage } from "./components/auth/LoginPage";
 import { Sidebar } from "./components/Sidebar";
 import { Header } from "./components/Header";
-import { MobileViewToolbar, SmartphoneNotch } from "./components/common/MobileViewToolbar";
 import { CalculatorTab } from "./components/CalculatorTab";
 import { SideFinderTab } from "./components/SideFinderTab";
 import { TwoSidePerimeterVasthuTab } from "./components/vasthu/TwoSidePerimeterVasthuTab";
@@ -23,7 +21,6 @@ import { OccupanciesTab } from "./components/buildingRules/OccupanciesTab";
 import { BuildingSetbackCalcTab } from "./components/buildingRules/BuildingSetbackCalcTab";
 import { CalculatorsTab } from "./components/buildingRules/CalculatorsTab";
 import { KsmartTab } from "./components/buildingRules/KsmartTab";
-import { KsmartDashboard } from "./components/ksmart/KsmartDashboard";
 
 // Survey Components
 import { MissingSideCalculator } from "./components/survey/MissingSideCalculator";
@@ -84,6 +81,8 @@ import { ConstructionDashboard } from "./components/construction/ConstructionDas
 // Personal Bills and Payments Master Component
 import { PersonalBillsDashboard } from "./components/personalBills/PersonalBillsDashboard";
 import { PersonalBillsTabType } from "./types";
+import { ImportantSitesView } from "./components/office/sites/ImportantSitesView";
+import { SiteInspectionView } from "./components/inspection/SiteInspectionView";
 
 import {
   Compass,
@@ -115,13 +114,6 @@ export default function App() {
     subscriptionRequests,
     signOutUser
   } = useAuth();
-  const {
-    viewMode,
-    isMobileView,
-    isSimulatedMobileOnDesktop,
-    phonePreset,
-    isForcedDesktopOnMobile
-  } = useViewMode();
   const isAuthenticated = (!!user || !!emailUser) && authorized;
 
   const getInitialRoute = () => {
@@ -156,8 +148,6 @@ export default function App() {
               ? ("estimate_dashboard" as TabType)
               : sec === "building_rules"
               ? ("rules_ai_chat" as TabType)
-              : sec === "ksmart"
-              ? ("rules_ksmart" as TabType)
               : sec === "survey"
               ? ("missing_side" as TabType)
               : sec === "civil"
@@ -170,6 +160,8 @@ export default function App() {
               ? ("online_applications_directory" as TabType)
               : sec === "personal_bills"
               ? ("poov_mala_bill" as TabType)
+              : sec === "site_inspection"
+              ? ("site_inspection_form" as TabType)
               : sec === "data_storage_vault"
               ? ("vault_dashboard" as TabType)
               : ("home_overview" as TabType))
@@ -587,13 +579,7 @@ export default function App() {
   return (
     <div
       id="app-root-wrapper"
-      className={`relative min-h-screen bg-gradient-to-b from-[#0e021a] via-[#1f0530] to-[#420a34] text-slate-100 font-sans antialiased selection:bg-purple-500 selection:text-white ${
-        isSimulatedMobileOnDesktop
-          ? "flex flex-col bg-slate-950 overflow-x-auto"
-          : isForcedDesktopOnMobile
-          ? "flex flex-col min-w-[1200px] overflow-x-auto"
-          : "flex flex-col overflow-x-clip"
-      }`}
+      className="relative min-h-screen bg-gradient-to-b from-[#0e021a] via-[#1f0530] to-[#420a34] text-slate-100 font-sans antialiased selection:bg-purple-500 selection:text-white flex flex-col overflow-x-clip"
     >
       {/* Ambient Twilight Glow & Stars Elements */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0" aria-hidden="true">
@@ -603,18 +589,7 @@ export default function App() {
         <div className="absolute inset-0 bg-blueprint-grid opacity-30" />
       </div>
 
-      {/* Top Mobile View Toolbar (for Simulator / Forced Desktop) */}
-      <MobileViewToolbar />
-
-      <div
-        className={`relative z-10 flex flex-1 w-full ${
-          isSimulatedMobileOnDesktop
-            ? "justify-center items-start px-2 sm:px-6 py-6"
-            : isForcedDesktopOnMobile
-            ? "min-w-[1200px]"
-            : ""
-        }`}
-      >
+      <div className="relative z-10 flex flex-1 w-full">
         {/* Left Collapsible Sidebar */}
         <Sidebar
           activeSection={activeSection}
@@ -628,25 +603,8 @@ export default function App() {
           setIsMobileOpen={setIsMobileSidebarOpen}
         />
 
-        {/* Main Container / Smartphone Shell */}
-        <div
-          className={`relative z-10 flex flex-col transition-all duration-300 ${
-            isSimulatedMobileOnDesktop
-              ? `w-full ${
-                  phonePreset === "390"
-                    ? "max-w-[390px]"
-                    : phonePreset === "414"
-                    ? "max-w-[414px]"
-                    : phonePreset === "430"
-                    ? "max-w-[430px]"
-                    : "max-w-md"
-                } rounded-[48px] border-[10px] border-slate-900 shadow-[0_25px_80px_rgba(0,0,0,0.95),0_0_0_2px_rgba(255,255,255,0.15)] bg-gradient-to-b from-[#0e021a] via-[#1f0530] to-[#420a34] overflow-hidden my-2 ring-1 ring-slate-700/60 min-h-[860px]`
-              : "flex-1 min-w-0 min-h-screen"
-          }`}
-        >
-          {/* Top Smartphone Dynamic Island Notch in simulator */}
-          {isSimulatedMobileOnDesktop && <SmartphoneNotch presetWidth={phonePreset} />}
-
+        {/* Main Application Container */}
+        <div className="flex-1 min-w-0 min-h-screen flex flex-col transition-all duration-300">
           {/* Header with Dual Section Navigation */}
           <Header
             activeSection={activeSection}
@@ -899,14 +857,6 @@ export default function App() {
             </div>
           )}
 
-          {/* KSMART LSGD PORTAL & FILE TRACKING SECTION */}
-          {activeSection === "ksmart" && (
-            <KsmartDashboard
-              activeTab={activeTab}
-              setActiveTab={(tab) => setActiveTab(tab)}
-            />
-          )}
-
           {/* SURVEY SECTION */}
           {activeSection === "survey" && (
             <>
@@ -1066,24 +1016,22 @@ export default function App() {
             <QuotationModule activeTab={activeTab} setActiveTab={setActiveTab} />
           )}
 
-          {/* PERSONAL BILLS AND PAYMENTS SECTION */}
+          {/* IMPORTANT SITES SECTION */}
+          {activeSection === "important_sites" && (
+            <ImportantSitesView />
+          )}
+
+          {/* SITE INSPECTION SECTION */}
+          {activeSection === "site_inspection" && (
+            <SiteInspectionView />
+          )}
+
+          {/* PERSONAL BILLS AND PAYMENTS SECTION (ROUTED UNDER INVOICE & PAYMENTS) */}
           {activeSection === "personal_bills" && (
-            <PersonalBillsDashboard
-              initialSubTab={
-                activeTab === "poov_mala_bill" || activeTab === "poov_mala" || activeTab === "staff_salary"
-                  ? "poov_mala"
-                  : activeTab === "kseb_bills" || activeTab === "kseb_bill"
-                  ? "kseb_bills"
-                  : activeTab === "health_insurance"
-                  ? "health_insurance"
-                  : activeTab === "rd_accounts" || activeTab === "rd_deposit"
-                  ? "rd_accounts"
-                  : activeTab === "panchayath_bills" || activeTab === "licence_panchayath" || activeTab === "panchayath_fees"
-                  ? "licence_panchayath"
-                  : activeTab === "personal_vendors" || activeTab === "all_vendors" || activeTab === "all_vendors_bills"
-                  ? "all_vendors"
-                  : "poov_mala"
-              }
+            <InvoicePaymentsTab
+              activeTab={activeTab as InvoicesTabType}
+              setActiveTab={(tab) => setActiveTab(tab)}
+              estimateProjects={estimateProjects}
             />
           )}
         </main>
@@ -1114,13 +1062,6 @@ export default function App() {
             </div>
           </div>
         </footer>
-
-        {/* Simulated iPhone Bottom Home Indicator Bar */}
-        {isSimulatedMobileOnDesktop && (
-          <div className="w-full py-2.5 bg-slate-950/70 flex items-center justify-center shrink-0 border-t border-white/5">
-            <div className="w-32 h-1 rounded-full bg-white/40" />
-          </div>
-        )}
       </div>
     </div>
 

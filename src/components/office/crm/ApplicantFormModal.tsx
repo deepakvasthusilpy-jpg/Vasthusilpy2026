@@ -54,16 +54,14 @@ export const ApplicantFormModal: React.FC<ApplicantFormModalProps> = ({
   const [applications, setApplications] = useState<ApplicationDetailItem[]>([]);
 
   useEffect(() => {
-    const appTypes = loadApplicationTypes();
-    const primaryType = appTypes[0] || { name: "POSSESSION CERTIFICATE", fee: 70, userId: "USER ID" };
     const createDefaultApp = (): ApplicationDetailItem => ({
       id: `app_entry_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      portal: primaryType.name,
+      portal: "",
       applicationNumber: "",
-      loginId: primaryType.userId || "USER ID",
+      loginId: "",
       portalUrl: "",
       submissionDate: new Date().toISOString().split("T")[0],
-      billAmount: primaryType.fee || 70,
+      billAmount: 0,
       paidAmount: 0,
       paymentStatus: "PENDING",
       remarks: ""
@@ -96,16 +94,14 @@ export const ApplicantFormModal: React.FC<ApplicantFormModalProps> = ({
   const isPaid = totalAppsBill > 0 && totalAppsPaid >= totalAppsBill;
 
   const handleAddApplicationRow = () => {
-    const appTypes = loadApplicationTypes();
-    const primaryType = appTypes[0] || { name: "POSSESSION CERTIFICATE", fee: 70, userId: "USER ID" };
     const newRow: ApplicationDetailItem = {
       id: `app_entry_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      portal: primaryType.name,
+      portal: "",
       applicationNumber: "",
-      loginId: primaryType.userId || "USER ID",
+      loginId: "",
       portalUrl: "",
       submissionDate: new Date().toISOString().split("T")[0],
-      billAmount: primaryType.fee || 70,
+      billAmount: 0,
       paidAmount: 0,
       paymentStatus: "PENDING",
       remarks: ""

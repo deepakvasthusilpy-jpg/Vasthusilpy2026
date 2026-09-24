@@ -21,6 +21,8 @@ import {
   Sparkles,
   Trees,
   Cpu,
+  Building2,
+  Zap,
   Globe,
   Bell,
   CheckCircle2,
@@ -31,14 +33,11 @@ import {
   Palette,
   ChevronDown,
   Sparkle,
-  Smartphone,
-  Monitor,
   Cloud,
   RefreshCw,
   Database
 } from "lucide-react";
 import { OfflineBackupRestoreModal } from "./office/crm/OfflineBackupRestoreModal";
-import { useViewMode } from "../context/ViewModeContext";
 import {
   performFullWebDataSync,
   getLastWebDataSyncTime,
@@ -57,10 +56,12 @@ interface HeaderProps {
 }
 
 const THEME_HEADER_ICONS: Record<Theme, React.FC<{ className?: string }>> = {
+  corporate: Building2,
+  tech_startup: Zap,
   dark: Moon,
+  ai_platform: Cpu,
   baroque: Crown,
-  anthropomorphic: Trees,
-  ai_platform: Cpu
+  anthropomorphic: Trees
 };
 
 export const Header: React.FC<HeaderProps> = ({
@@ -69,7 +70,6 @@ export const Header: React.FC<HeaderProps> = ({
   const { user, emailUser, signOutUser, isPrimaryAdmin } = useAuth();
   const { theme, setTheme, currentThemeMeta, cycleNextTheme, isSystemTheme } = useTheme();
   const { language, toggleLanguage, t } = useLanguage();
-  const { viewMode, toggleViewMode, isMobileView } = useViewMode();
   const { notifications, unreadCount, markAsRead, markAllAsRead, clearAll } = useNotifications();
   const safeNotifications = notifications || [];
 
@@ -186,7 +186,7 @@ export const Header: React.FC<HeaderProps> = ({
               {onOpenMobileSidebar && (
                 <button
                   onClick={onOpenMobileSidebar}
-                  className={`${isMobileView ? "flex" : "md:hidden"} p-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-slate-200 hover:text-white transition cursor-pointer`}
+                  className="md:hidden p-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-slate-200 hover:text-white transition cursor-pointer"
                   title="Open Sidebar"
                 >
                   <Menu className="w-5 h-5" />
@@ -214,53 +214,6 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Desktop Navigation Control & User Profile Bar */}
             <div className="flex items-center gap-2 sm:gap-3">
-              {/* VIEW MODE SWITCHER BUTTON (DESKTOP <-> MOBILE) */}
-              <div
-                className="flex items-center bg-white/10 hover:bg-white/15 border border-white/20 hover:border-white/35 rounded-full p-0.5 transition-all shadow-sm backdrop-blur-md"
-                title={
-                  isMobileView
-                    ? (language === "ml" ? "ഡെസ്ക്ടോപ്പ് വ്യൂവിലേക്ക് മാറ്റുക (Desktop View)" : "Switch to Desktop View (Full Screen)")
-                    : (language === "ml" ? "മൊബൈൽ വ്യൂവിലേക്ക് മാറ്റുക (Mobile View)" : "Switch to Mobile View (Phone View)")
-                }
-              >
-                <button
-                  onClick={toggleViewMode}
-                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-mono font-bold transition-all cursor-pointer ${
-                    isMobileView
-                      ? "bg-gradient-to-r from-pink-500 to-rose-600 text-white shadow-sm"
-                      : "bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-sm"
-                  }`}
-                >
-                  {isMobileView ? (
-                    <>
-                      <Smartphone className="w-3.5 h-3.5 text-pink-100" />
-                      <span className="uppercase text-[11px] font-black tracking-wider">
-                        {language === "ml" ? "മൊബൈൽ" : "Mobile"}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <Monitor className="w-3.5 h-3.5 text-cyan-200" />
-                      <span className="uppercase text-[11px] font-black tracking-wider">
-                        {language === "ml" ? "ഡെസ്ക്ടോപ്പ്" : "Desktop"}
-                      </span>
-                    </>
-                  )}
-                </button>
-
-                <button
-                  onClick={toggleViewMode}
-                  className="px-1.5 py-1 text-purple-200/70 hover:text-white transition-colors cursor-pointer text-[10px] font-mono font-bold"
-                  aria-label="Toggle between Mobile View and Desktop View"
-                >
-                  {isMobileView ? (
-                    <Monitor className="w-3.5 h-3.5 text-purple-200 hover:text-cyan-300 transition-colors" />
-                  ) : (
-                    <Smartphone className="w-3.5 h-3.5 text-purple-200 hover:text-pink-300 transition-colors" />
-                  )}
-                </button>
-              </div>
-
               {/* LANGUAGE SWITCHER BUTTON (MALAYALAM / ENGLISH) */}
               <button
                 onClick={toggleLanguage}

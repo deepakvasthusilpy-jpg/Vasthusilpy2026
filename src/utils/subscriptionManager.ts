@@ -255,6 +255,50 @@ export const ALL_APP_MODULES: TabPermissionDefinition[] = [
     ]
   },
   {
+    sectionId: "site_inspection",
+    sectionTitle: "Site Inspection (Mobile Field App)",
+    sectionTitleMl: "സൈറ്റ് പരിശോധന (മൊബൈൽ ആപ്പ്)",
+    tabs: [
+      {
+        id: "site_inspection_form" as TabType,
+        label: "Field Inspection Form",
+        labelMl: "ഫീൽഡ് ഇൻസ്പെക്ഷൻ ഫോം",
+        description: "Mobile-friendly field inspection data entry with GPS and camera upload"
+      },
+      {
+        id: "site_inspection_dashboard" as TabType,
+        label: "Admin Inspections Dashboard",
+        labelMl: "അഡ്മിൻ പരിശോധന ഡാഷ്‌ബോർഡ്",
+        description: "Review submissions, download A4 PDFs and send WhatsApp summaries"
+      },
+      {
+        id: "site_inspection_builder" as TabType,
+        label: "Dynamic Question Builder",
+        labelMl: "ചോദ്യങ്ങൾ & ചെക്ക്‌ലിസ്റ്റ്",
+        description: "Configure dynamic Yes/No & descriptive observation questions"
+      }
+    ]
+  },
+  {
+    sectionId: "important_sites",
+    sectionTitle: "Important Sites & Vault",
+    sectionTitleMl: "ഇംപോർട്ടന്റ് സൈറ്റുകൾ & ലിങ്കുകൾ",
+    tabs: [
+      {
+        id: "important_sites" as TabType,
+        label: "All Important Sites",
+        labelMl: "എല്ലാ സൈറ്റുകളും ലിങ്കുകളും",
+        description: "Organize portals, external websites, VEO forms and links by folder"
+      },
+      {
+        id: "sites_folders" as TabType,
+        label: "VEO & Folders Directory",
+        labelMl: "ഫോൾഡർ ഡയറക്ടറി",
+        description: "Manage VEO, General and custom folders"
+      }
+    ]
+  },
+  {
     sectionId: "vasthu",
     sectionTitle: "Vasthu Shastra Calculation Suite",
     sectionTitleMl: "വാസ്തു ശാസ്ത്രം",
@@ -331,37 +375,6 @@ export const ALL_APP_MODULES: TabPermissionDefinition[] = [
         label: "Building Technical Calculators",
         labelMl: "ബിൽഡിംഗ് കാൽക്കുലേറ്ററുകൾ",
         description: "FAR, coverage, parking requirement & access road calculators"
-      }
-    ]
-  },
-  {
-    sectionId: "ksmart",
-    sectionTitle: "KSMART Kerala LSGD Portal & Tracking",
-    sectionTitleMl: "കെ-സ്മാർട്ട് (KSMART LSGD)",
-    tabs: [
-      {
-        id: "rules_ksmart" as TabType,
-        label: "KSMART File Tracking",
-        labelMl: "KSMART ഫയൽ ട്രാക്കിംഗ്",
-        description: "Live LSGD permit application tracker and status lookup"
-      },
-      {
-        id: "ksmart_plan_scrutiny" as TabType,
-        label: "Auto-DCR CAD Plan Scrutiny",
-        labelMl: "CAD പ്ലാൻ സ്ക്രൂട്ടീനി",
-        description: "KSMART official building plan scrutiny suite and Auto-DCR compliance"
-      },
-      {
-        id: "ksmart_quick_certificates" as TabType,
-        label: "Quick Certificates Portal",
-        labelMl: "ക്വിക്ക് സർട്ടിഫിക്കറ്റുകൾ",
-        description: "Official KSMART portal for Birth, Death, Marriage certificates and trade licenses"
-      },
-      {
-        id: "ksmart_property_tax" as TabType,
-        label: "Property Tax & Assessment",
-        labelMl: "കെട്ടിട നികുതി",
-        description: "LSGD Sanchaya and K-SMART property tax lookup and online payments"
       }
     ]
   },
