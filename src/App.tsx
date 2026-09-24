@@ -83,6 +83,7 @@ import { PersonalBillsDashboard } from "./components/personalBills/PersonalBills
 import { PersonalBillsTabType } from "./types";
 import { ImportantSitesView } from "./components/office/sites/ImportantSitesView";
 import { SiteInspectionView } from "./components/inspection/SiteInspectionView";
+import { PublicSiteInspectionPortal } from "./components/inspection/PublicSiteInspectionPortal";
 
 import {
   Compass,
@@ -466,6 +467,32 @@ export default function App() {
     hashParams.get("cad_share") ||
     hashParams.get("cad_id") ||
     hashParams.get("share_cad");
+
+  // 0. Public Zero-Login Site Inspection Portal (Direct on-site field entry without login)
+  const isSiteInspectionPublic =
+    urlParams.get("portal") === "site_inspection" ||
+    urlParams.get("portal") === "inspection" ||
+    urlParams.get("portal") === "site-inspection" ||
+    urlParams.get("portal") === "field_inspection" ||
+    urlParams.get("site_inspection") === "1" ||
+    urlParams.get("site_inspection") === "public" ||
+    urlParams.get("public_inspection") === "1" ||
+    urlParams.get("form") === "site_inspection" ||
+    (urlParams.get("section") === "site_inspection" && urlParams.get("public") === "1") ||
+    hashParams.get("portal") === "site_inspection" ||
+    hashParams.get("portal") === "inspection" ||
+    hashParams.get("site_inspection") === "1" ||
+    (typeof window !== "undefined" && window.location.hash.includes("portal=site_inspection"));
+
+  if (isSiteInspectionPublic) {
+    return (
+      <PublicSiteInspectionPortal
+        onGoToApp={() => {
+          window.location.href = window.location.origin;
+        }}
+      />
+    );
+  }
 
   // 0. Public Project Pipeline Record & Attachments Portal (Zero Login, Shareable Client Document View)
   if (crmProjectShareId) {
