@@ -15,178 +15,115 @@ export const DEFAULT_INSPECTION_WHATSAPP = "+918848241463";
 export const CLEAN_WHATSAPP_NUMBER = "918848241463";
 
 const STORAGE_KEY_INSPECTIONS = "vasthusilpy_site_inspections_v1";
-const STORAGE_KEY_TEMPLATES = "vasthusilpy_site_inspection_templates_v1";
+const STORAGE_KEY_TEMPLATES = "vasthusilpy_site_inspection_templates_v2";
+
+export const DEFAULT_INSPECTION_QUESTIONS: InspectionQuestion[] = [
+  {
+    id: "q_ward_no",
+    question: "WARD NO",
+    type: "descriptive",
+    category: "site_conditions",
+    helpText: "Enter local authority / Panchayat Ward Number"
+  },
+  {
+    id: "q_nearest_building_no",
+    question: "NEAREST BUILDING NO",
+    type: "descriptive",
+    category: "site_conditions",
+    helpText: "Enter nearest door / assessment building number"
+  },
+  {
+    id: "q_ele_post_no",
+    question: "ELE.POST NO",
+    type: "descriptive",
+    category: "site_conditions",
+    helpText: "Enter KSEB / Electric post identification number"
+  },
+  {
+    id: "q_work",
+    question: "WORK",
+    type: "descriptive",
+    category: "site_conditions",
+    helpText: "Type of proposed work / construction nature"
+  },
+  {
+    id: "q_plot_subdivision",
+    question: "PLOT SUBDIVISION",
+    type: "yes_no_na",
+    category: "site_conditions"
+  },
+  {
+    id: "q_overheadele_cable",
+    question: "OVERHEADELE CABLE",
+    type: "yes_no_na",
+    category: "statutory_compliance"
+  },
+  {
+    id: "q_abut_neighbour_boundary",
+    question: "ABUT NEIGHBOUR BOUNDARY",
+    type: "yes_no_na",
+    category: "boundaries_access"
+  },
+  {
+    id: "q_neeighbour_concent",
+    question: "NEEIGHBOUR CONCENT",
+    type: "yes_no_na",
+    category: "boundaries_access"
+  },
+  {
+    id: "q_well_borewell",
+    question: "WELL/BOREWELL",
+    type: "descriptive",
+    category: "site_conditions",
+    helpText: "Existing or proposed well / borewell location & distance"
+  },
+  {
+    id: "q_rain_water_storage_tank",
+    question: "RAIN WATER STORAGE TANK",
+    type: "yes_no_na",
+    category: "utilities_services"
+  },
+  {
+    id: "q_septic_tank",
+    question: "SEPTIC TANK",
+    type: "yes_no_na",
+    category: "utilities_services"
+  },
+  {
+    id: "q_waste_pit",
+    question: "WASTE PIT",
+    type: "yes_no_na",
+    category: "utilities_services"
+  },
+  {
+    id: "q_percolation_pit",
+    question: "PERCOLATION PIT",
+    type: "yes_no_na",
+    category: "utilities_services"
+  },
+  {
+    id: "q_court_case",
+    question: "COURT CASE",
+    type: "yes_no_na",
+    category: "statutory_compliance"
+  },
+  {
+    id: "q_land_survey_sketch",
+    question: "LAND SURVEY SKETCH / DIGITAL SURVEY",
+    type: "yes_no_na",
+    category: "site_conditions"
+  }
+];
 
 // Built-in Standard Inspection Templates
 export const DEFAULT_TEMPLATES: InspectionTemplate[] = [
   {
     id: "tpl_standard_site",
-    name: "General Land & Site Inspection",
-    nameMl: "സ്ഥല പരിശോധന (ജനറൽ)",
-    description: "Standard site visit checklist for plot verification, boundary, access, and terrain.",
+    name: "Site Inspection & Verification Checklist",
+    nameMl: "സൈറ്റ് പരിശോധന ചെക്ക്‌ലിസ്റ്റ്",
+    description: "Official 15-point site verification checklist covering ward, electric post, boundary, setbacks, and utilities.",
     isDefault: true,
-    questions: [
-      {
-        id: "q_access_road",
-        question: "Is there proper motorable road access to the site?",
-        questionMl: "സ്ഥലത്തേക്ക് വാഹനം എത്താൻ സാധിക്കുന്ന വഴിയുണ്ടോ?",
-        type: "yes_no",
-        category: "boundaries_access",
-        required: true,
-        helpText: "Check minimum width required for vehicle movement (e.g. 3m+)."
-      },
-      {
-        id: "q_road_width",
-        question: "Road width in front of site (in meters / feet)",
-        questionMl: "വഴിയുടെ വീതി (മീറ്ററിൽ / അടിയിൽ)",
-        type: "descriptive",
-        category: "boundaries_access"
-      },
-      {
-        id: "q_boundary_clear",
-        question: "Are all boundary stones/fences clearly demarcated on-site?",
-        questionMl: "അതിരുകൾ കൃത്യമായി കല്ലിട്ട് വേർതിരിച്ചിട്ടുണ്ടോ?",
-        type: "yes_no",
-        category: "boundaries_access",
-        required: true
-      },
-      {
-        id: "q_terrain_slope",
-        question: "Site terrain / slope condition",
-        questionMl: "സ്ഥലത്തിന്റെ കിടപ്പ് / ചരിവ്",
-        type: "select",
-        category: "site_conditions",
-        options: ["Level / Flat (നിരപ്പായ സ്ഥലം)", "Mild Slope (നേരിയ ചരിവ്)", "Steep Slope / Hillside (കൂടിയ ചരിവ്)", "Waterlogged / Low-lying (താഴ്ന്ന പ്രദേശം)"],
-        required: true
-      },
-      {
-        id: "q_electricity_water",
-        question: "Is electricity & drinking water source available nearby?",
-        questionMl: "വൈദ്യുതി ലൈനും കുടിവെള്ള ലഭ്യതയും അടുത്ത ലഭ്യമാണോ?",
-        type: "yes_no",
-        category: "utilities_services"
-      },
-      {
-        id: "q_ht_line",
-        question: "Are high tension electric lines or transformers passing over/near the plot?",
-        questionMl: "സ്ഥലത്തിന് മുകളിലൂടെ HT ലൈനോ സമീപത്ത് ട്രാൻസ്ഫോർമറോ ഉണ്ടോ?",
-        type: "yes_no",
-        category: "statutory_compliance"
-      },
-      {
-        id: "q_water_body",
-        question: "Is there any river, canal, or waterbody within 10–50 meters?",
-        questionMl: "തോട്, പുഴ, കുളം എന്നിവ സമീപത്തുണ്ടോ?",
-        type: "yes_no",
-        category: "statutory_compliance"
-      },
-      {
-        id: "q_soil_condition",
-        question: "Observed Soil Type & Foundation Suitability",
-        questionMl: "മണ്ണിന്റെ സ്വഭാവവും അടിത്തറയുടെ അനുയോജ്യതയും",
-        type: "descriptive",
-        category: "site_conditions",
-        helpText: "Red soil, sandy, clayey, hard rock, reclaimed marshland, etc."
-      },
-      {
-        id: "q_special_observations",
-        question: "Site Inspector's Special Observations & Recommendations",
-        questionMl: "പ്രത്യേക നിരീക്ഷണങ്ങളും നിർദ്ദേശങ്ങളും",
-        type: "descriptive",
-        category: "custom"
-      }
-    ]
-  },
-  {
-    id: "tpl_ksmart_permit",
-    name: "KSMART / LSGD Permit Verification Inspection",
-    nameMl: "കെ-സ്മാർട്ട് ബിൽഡിംഗ് പെർമിറ്റ് പരിശോധന",
-    description: "Verification checklist for Panchayat/Municipality building permit compliance & KPBR setbacks.",
-    questions: [
-      {
-        id: "ks_front_setback",
-        question: "Front Setback availability from road boundary (minimum 3m required)?",
-        questionMl: "മുൻവശത്തെ സെറ്റ്ബാക്ക് ലഭ്യമാണോ (3m)?",
-        type: "yes_no",
-        category: "statutory_compliance",
-        required: true
-      },
-      {
-        id: "ks_side_rear_setback",
-        question: "Rear & Side Setbacks adhere to KPBR rules (minimum 1m to 1.5m)?",
-        questionMl: "വശങ്ങളിലെയും പിൻവശത്തെയും സെറ്റ്ബാക്കുകൾ ലഭ്യമാണോ?",
-        type: "yes_no",
-        category: "statutory_compliance",
-        required: true
-      },
-      {
-        id: "ks_kseb_distance",
-        question: "Sufficient clearance from electrical lines/poles?",
-        questionMl: "വൈദ്യുത ലൈനുകളിൽ നിന്നുമുള്ള കൃത്യമായ അകലം ഉണ്ടോ?",
-        type: "yes_no",
-        category: "statutory_compliance"
-      },
-      {
-        id: "ks_rainwater_harvesting",
-        question: "Space available for Rain Water Harvesting & Septic Tank / Soak Pit?",
-        questionMl: "മഴവെള്ള സംഭരണി, സെപ്റ്റിക് ടാങ്ക് എന്നിവയ്ക്ക് സൗകര്യമുണ്ടോ?",
-        type: "yes_no",
-        category: "utilities_services"
-      },
-      {
-        id: "ks_descriptive_findings",
-        question: "Detailed Setback & Dimension Findings",
-        questionMl: "സെറ്റ്ബാക്ക് വിശദാംശങ്ങൾ",
-        type: "descriptive",
-        category: "custom"
-      }
-    ]
-  },
-  {
-    id: "tpl_construction_progress",
-    name: "Construction Stage Progress Inspection",
-    nameMl: "നിർമ്മാണ ഘട്ട പരിശോധന",
-    description: "Site visit for ongoing building construction quality check, steel reinforcement, curing & alignment.",
-    questions: [
-      {
-        id: "cp_stage",
-        question: "Current Construction Stage",
-        questionMl: "നിലവിലെ നിർമ്മാണ ഘട്ടം",
-        type: "select",
-        category: "construction_stage",
-        options: ["Foundation / Basement", "Lintel & Beam Level", "Roof Slab Casting Ready", "Brick Masonry & Plastering", "Finishing & Electrical/Plumbing"],
-        required: true
-      },
-      {
-        id: "cp_plan_compliance",
-        question: "Is construction strictly matching approved Vasthusilpy plan dimensions?",
-        questionMl: "നിർമ്മാണം അംഗീകൃത പ്ലാൻ അനുസരിച്ചാണോ നടക്കുന്നത്?",
-        type: "yes_no",
-        category: "construction_stage",
-        required: true
-      },
-      {
-        id: "cp_material_quality",
-        question: "Quality of steel, cement, M-sand and aggregate verified satisfactory?",
-        questionMl: "മെറ്റീരിയൽ ഗുണനിലവാരം തൃപ്തികരമാണോ?",
-        type: "yes_no",
-        category: "construction_stage"
-      },
-      {
-        id: "cp_curing_status",
-        question: "Is water curing being performed adequately (min 7-14 days)?",
-        questionMl: "കൃത്യമായ നനയ്ക്കൽ (Curing) നടക്കുന്നുണ്ടോ?",
-        type: "yes_no",
-        category: "construction_stage"
-      },
-      {
-        id: "cp_contractor_notes",
-        question: "Instructions Given to Site Supervisor / Contractor",
-        questionMl: "സൈറ്റ് സൂപ്പർവൈസർക്ക് നൽകിയ നിർദ്ദേശങ്ങൾ",
-        type: "descriptive",
-        category: "custom"
-      }
-    ]
+    questions: DEFAULT_INSPECTION_QUESTIONS
   }
 ];
 
@@ -200,6 +137,13 @@ export const loadInspectionTemplates = (): InspectionTemplate[] => {
     }
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.length > 0) {
+      const hasNewQuestions = parsed.some((tpl) =>
+        tpl.questions?.some((q: InspectionQuestion) => q.question === "WARD NO" || q.id === "q_ward_no")
+      );
+      if (!hasNewQuestions) {
+        localStorage.setItem(STORAGE_KEY_TEMPLATES, JSON.stringify(DEFAULT_TEMPLATES));
+        return DEFAULT_TEMPLATES;
+      }
       return parsed;
     }
     return DEFAULT_TEMPLATES;
@@ -364,15 +308,23 @@ export const formatWhatsAppInspectionMessage = (inspection: SiteInspection): str
   }
 
   if (inspection.answers && inspection.answers.length > 0) {
-    lines.push(`----------------------------------`, `📋 *Key Inspection Observations:*`);
-    inspection.answers.slice(0, 6).forEach((ans, idx) => {
-      const displayAns = typeof ans.answer === "boolean" ? (ans.answer ? "✅ YES" : "❌ NO") : `${ans.answer}`;
+    lines.push(`----------------------------------`, `📋 *Inspection Observations:*`);
+    inspection.answers.forEach((ans, idx) => {
+      let displayAns = "";
+      if (typeof ans.answer === "boolean") {
+        displayAns = ans.answer ? "✅ YES" : "❌ NO";
+      } else if (ans.answer === "YES") {
+        displayAns = "✅ YES";
+      } else if (ans.answer === "NO") {
+        displayAns = "❌ NO";
+      } else if (ans.answer === "N/A") {
+        displayAns = "⚪ N/A";
+      } else {
+        displayAns = `${ans.answer || "—"}`;
+      }
       lines.push(`${idx + 1}. *${ans.questionText}*`);
-      lines.push(`   ↳ ${displayAns}`);
+      lines.push(`   ↳ ${displayAns}${ans.notes ? ` (${ans.notes})` : ""}`);
     });
-    if (inspection.answers.length > 6) {
-      lines.push(`   *(+ ${inspection.answers.length - 6} more observations in full report)*`);
-    }
   }
 
   if (inspection.overallRemarks) {
@@ -575,13 +527,25 @@ export const generateSiteInspectionPdf = async (inspection: SiteInspection): Pro
     const questionLines = doc.splitTextToSize(item.questionText, 115);
     doc.text(questionLines, margin + 10, y + 4.5);
 
-    const answerStr = typeof item.answer === "boolean" ? (item.answer ? "YES [Compliant]" : "NO [Non-Compliant]") : String(item.answer || "—");
+    let answerStr = "";
+    if (typeof item.answer === "boolean") {
+      answerStr = item.answer ? "YES" : "NO";
+    } else {
+      answerStr = String(item.answer || "—");
+    }
 
-    if (answerStr.startsWith("YES")) {
+    if (item.notes) {
+      answerStr += ` (${item.notes})`;
+    }
+
+    if (answerStr === "YES" || answerStr.startsWith("YES")) {
       doc.setTextColor(5, 150, 105);
       doc.setFont("helvetica", "bold");
-    } else if (answerStr.startsWith("NO")) {
+    } else if (answerStr === "NO" || answerStr.startsWith("NO")) {
       doc.setTextColor(225, 29, 72);
+      doc.setFont("helvetica", "bold");
+    } else if (answerStr === "N/A" || answerStr.startsWith("N/A")) {
+      doc.setTextColor(180, 83, 9);
       doc.setFont("helvetica", "bold");
     } else {
       doc.setTextColor(30, 41, 59);

@@ -1,4 +1,4 @@
-export type InspectionQuestionType = "yes_no" | "descriptive" | "select" | "number";
+export type InspectionQuestionType = "yes_no" | "yes_no_na" | "descriptive" | "select" | "number";
 
 export interface InspectionQuestion {
   id: string;

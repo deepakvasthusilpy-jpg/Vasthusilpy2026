@@ -45,7 +45,8 @@ import {
   Compass,
   Clock,
   HelpCircle,
-  Plus
+  Plus,
+  MinusCircle
 } from "lucide-react";
 
 interface MobileInspectionFormProps {
@@ -89,7 +90,7 @@ export const MobileInspectionForm: React.FC<MobileInspectionFormProps> = ({
   const [customQuestions, setCustomQuestions] = useState<InspectionQuestion[]>([]);
   const [showAddCustomQuestion, setShowAddCustomQuestion] = useState(false);
   const [newQuestionText, setNewQuestionText] = useState("");
-  const [newQuestionType, setNewQuestionType] = useState<"yes_no" | "descriptive">("yes_no");
+  const [newQuestionType, setNewQuestionType] = useState<"yes_no_na" | "descriptive">("yes_no_na");
 
   // Form Submission & Success State
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -108,8 +109,8 @@ export const MobileInspectionForm: React.FC<MobileInspectionFormProps> = ({
     allQuestions.forEach((q) => {
       if (answers[q.id] !== undefined) {
         initialAnswers[q.id] = answers[q.id];
-      } else if (q.type === "yes_no") {
-        initialAnswers[q.id] = { answer: true };
+      } else if (q.type === "yes_no" || q.type === "yes_no_na") {
+        initialAnswers[q.id] = { answer: "YES" };
       } else if (q.type === "select" && q.options && q.options.length > 0) {
         initialAnswers[q.id] = { answer: q.options[0] };
       } else {
@@ -817,14 +818,14 @@ export const MobileInspectionForm: React.FC<MobileInspectionFormProps> = ({
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => setNewQuestionType("yes_no")}
+                      onClick={() => setNewQuestionType("yes_no_na")}
                       className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${
-                        newQuestionType === "yes_no"
+                        newQuestionType === "yes_no_na"
                           ? "bg-emerald-500 text-slate-950 font-bold"
                           : "bg-slate-850 text-slate-400"
                       }`}
                     >
-                      Yes/No Toggle
+                      Yes/No/NA Toggle
                     </button>
                     <button
                       type="button"
@@ -855,16 +856,19 @@ export const MobileInspectionForm: React.FC<MobileInspectionFormProps> = ({
               {allQuestions.map((q, idx) => {
                 const currentAns = answers[q.id]?.answer;
                 const currentNotes = answers[q.id]?.notes || "";
+                const isYes = currentAns === "YES" || currentAns === true;
+                const isNo = currentAns === "NO" || currentAns === false;
+                const isNA = currentAns === "N/A";
 
                 return (
                   <div
                     key={q.id}
-                    className="p-3.5 bg-slate-950 border border-slate-850 rounded-2xl space-y-2.5"
+                    className="p-3.5 bg-slate-950 border border-slate-800 rounded-2xl space-y-2.5 hover:border-slate-700 transition"
                   >
                     {/* Question Header */}
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <p className="text-xs sm:text-sm font-bold text-slate-200">
+                        <p className="text-xs sm:text-sm font-bold text-slate-100 uppercase tracking-wide">
                           <span className="text-emerald-400 mr-1.5">{idx + 1}.</span>
                           {q.question} {q.required && <span className="text-rose-400">*</span>}
                         </p>
@@ -878,33 +882,57 @@ export const MobileInspectionForm: React.FC<MobileInspectionFormProps> = ({
                     </div>
 
                     {/* Question Inputs by Type */}
-                    {q.type === "yes_no" && (
-                      <div className="grid grid-cols-2 gap-2 pt-1">
-                        <button
-                          type="button"
-                          onClick={() => handleAnswerChange(q.id, true)}
-                          className={`py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
-                            currentAns === true
-                              ? "bg-emerald-500 text-slate-950 border-emerald-400 shadow-md shadow-emerald-500/20"
-                              : "bg-slate-900 border-slate-800 text-slate-400 hover:text-white"
-                          }`}
-                        >
-                          <Check className="w-4 h-4 stroke-[3]" />
-                          <span>YES</span>
-                        </button>
+                    {(q.type === "yes_no" || q.type === "yes_no_na") && (
+                      <div className="space-y-2 pt-1">
+                        <div className="grid grid-cols-3 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleAnswerChange(q.id, "YES")}
+                            className={`py-2.5 px-2 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer active:scale-98 ${
+                              isYes
+                                ? "bg-emerald-500 text-slate-950 border-emerald-400 shadow-md shadow-emerald-500/20 font-black"
+                                : "bg-slate-900 border-slate-800 text-slate-400 hover:text-white"
+                            }`}
+                          >
+                            <Check className="w-3.5 h-3.5 stroke-[3]" />
+                            <span>YES</span>
+                          </button>
 
-                        <button
-                          type="button"
-                          onClick={() => handleAnswerChange(q.id, false)}
-                          className={`py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
-                            currentAns === false
-                              ? "bg-rose-600 text-white border-rose-500 shadow-md shadow-rose-600/20"
-                              : "bg-slate-900 border-slate-800 text-slate-400 hover:text-white"
-                          }`}
-                        >
-                          <X className="w-4 h-4 stroke-[3]" />
-                          <span>NO</span>
-                        </button>
+                          <button
+                            type="button"
+                            onClick={() => handleAnswerChange(q.id, "NO")}
+                            className={`py-2.5 px-2 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer active:scale-98 ${
+                              isNo
+                                ? "bg-rose-600 text-white border-rose-500 shadow-md shadow-rose-600/20 font-black"
+                                : "bg-slate-900 border-slate-800 text-slate-400 hover:text-white"
+                            }`}
+                          >
+                            <X className="w-3.5 h-3.5 stroke-[3]" />
+                            <span>NO</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleAnswerChange(q.id, "N/A")}
+                            className={`py-2.5 px-2 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer active:scale-98 ${
+                              isNA
+                                ? "bg-amber-500/30 text-amber-300 border-amber-400/80 shadow-md shadow-amber-500/20 font-black"
+                                : "bg-slate-900 border-slate-800 text-slate-400 hover:text-white"
+                            }`}
+                          >
+                            <MinusCircle className="w-3.5 h-3.5 stroke-[2.5]" />
+                            <span>N/A</span>
+                          </button>
+                        </div>
+
+                        {/* Optional remarks input below Yes/No/NA buttons */}
+                        <input
+                          type="text"
+                          value={currentNotes}
+                          onChange={(e) => handleAnswerChange(q.id, currentAns ?? "YES", e.target.value)}
+                          placeholder="Optional remarks (e.g., 3.5m clearance)"
+                          className="w-full bg-slate-900/60 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 placeholder-slate-600 focus:outline-none focus:border-emerald-500 transition"
+                        />
                       </div>
                     )}
 
@@ -929,17 +957,6 @@ export const MobileInspectionForm: React.FC<MobileInspectionFormProps> = ({
                         onChange={(e) => handleAnswerChange(q.id, e.target.value)}
                         placeholder="Type observation findings / remarks here..."
                         className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400"
-                      />
-                    )}
-
-                    {/* Optional Note Field for Any Question */}
-                    {q.type === "yes_no" && (
-                      <input
-                        type="text"
-                        value={currentNotes}
-                        onChange={(e) => handleAnswerChange(q.id, currentAns ?? true, e.target.value)}
-                        placeholder="Optional remarks (e.g., 3.5m clearance)"
-                        className="w-full bg-slate-900/60 border border-slate-800 rounded-lg px-2.5 py-1 text-[11px] text-slate-300 placeholder-slate-600 focus:outline-none focus:border-emerald-500"
                       />
                     )}
                   </div>

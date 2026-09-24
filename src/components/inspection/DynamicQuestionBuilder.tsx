@@ -258,7 +258,8 @@ export const DynamicQuestionBuilder: React.FC = () => {
                   onChange={(e) => setQuestionType(e.target.value as InspectionQuestionType)}
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-400"
                 >
-                  <option value="yes_no">Yes / No Toggle</option>
+                  <option value="yes_no_na">Yes / No / N/A (3-Way)</option>
+                  <option value="yes_no">Yes / No (2-Way)</option>
                   <option value="descriptive">Descriptive Text Area</option>
                   <option value="select">Dropdown Options</option>
                 </select>

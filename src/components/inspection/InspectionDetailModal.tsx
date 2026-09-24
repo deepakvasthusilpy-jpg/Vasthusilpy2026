@@ -15,6 +15,7 @@ import {
   Video,
   CheckCircle2,
   XCircle,
+  MinusCircle,
   Calendar,
   User,
   Phone,
@@ -176,18 +177,21 @@ export const InspectionDetailModal: React.FC<InspectionDetailModalProps> = ({
                 </div>
 
                 <div>
-                  {typeof ans.answer === "boolean" ? (
-                    ans.answer ? (
-                      <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[11px] font-bold flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3" />
-                        <span>YES</span>
-                      </span>
-                    ) : (
-                      <span className="px-2.5 py-1 rounded-lg bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[11px] font-bold flex items-center gap-1">
-                        <XCircle className="w-3 h-3" />
-                        <span>NO</span>
-                      </span>
-                    )
+                  {ans.answer === true || ans.answer === "YES" ? (
+                    <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[11px] font-bold flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" />
+                      <span>YES</span>
+                    </span>
+                  ) : ans.answer === false || ans.answer === "NO" ? (
+                    <span className="px-2.5 py-1 rounded-lg bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[11px] font-bold flex items-center gap-1">
+                      <XCircle className="w-3 h-3" />
+                      <span>NO</span>
+                    </span>
+                  ) : ans.answer === "N/A" ? (
+                    <span className="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[11px] font-bold flex items-center gap-1">
+                      <MinusCircle className="w-3 h-3" />
+                      <span>N/A</span>
+                    </span>
                   ) : (
                     <span className="px-2.5 py-1 rounded-lg bg-slate-900 text-slate-200 border border-slate-700 text-[11px] font-mono font-bold">
                       {String(ans.answer || "—")}
