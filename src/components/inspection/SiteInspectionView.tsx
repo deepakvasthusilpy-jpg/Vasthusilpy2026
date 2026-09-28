@@ -26,14 +26,58 @@ import {
   Unlock
 } from "lucide-react";
 
-type InspectionTab = "mobile_form" | "admin_dashboard" | "question_builder" | "backend_guide";
+export type InspectionTab = "mobile_form" | "admin_dashboard" | "question_builder" | "backend_guide";
 
-export const SiteInspectionView: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<InspectionTab>("mobile_form");
+interface SiteInspectionViewProps {
+  activeTab?: string;
+  setActiveTab?: (tab: string) => void;
+}
+
+const normalizeTab = (tab?: string): InspectionTab => {
+  if (tab === "site_inspection_dashboard" || tab === "admin_dashboard") return "admin_dashboard";
+  if (tab === "site_inspection_builder" || tab === "question_builder") return "question_builder";
+  if (tab === "site_inspection_guide" || tab === "backend_guide") return "backend_guide";
+  return "mobile_form";
+};
+
+export const SiteInspectionView: React.FC<SiteInspectionViewProps> = ({
+  activeTab: parentActiveTab,
+  setActiveTab: setParentActiveTab
+}) => {
+  const [localTab, setLocalTab] = useState<InspectionTab>(() => normalizeTab(parentActiveTab));
   const [copiedLink, setCopiedLink] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>("");
-  const inspections = loadSiteInspections();
+  const [inspections, setInspections] = useState(() => loadSiteInspections());
+
+  // Listen to parent tab changes (e.g. from Left Dock Sidebar)
+  useEffect(() => {
+    if (parentActiveTab) {
+      setLocalTab(normalizeTab(parentActiveTab));
+    }
+  }, [parentActiveTab]);
+
+  // Sync count on updates
+  useEffect(() => {
+    const handleUpdate = () => {
+      setInspections(loadSiteInspections());
+    };
+    window.addEventListener("vasthusilpy_site_inspections_updated", handleUpdate);
+    return () => window.removeEventListener("vasthusilpy_site_inspections_updated", handleUpdate);
+  }, []);
+
+  const handleTabSwitch = (tab: InspectionTab) => {
+    setLocalTab(tab);
+    if (setParentActiveTab) {
+      const parentIdMap: Record<InspectionTab, string> = {
+        mobile_form: "site_inspection_form",
+        admin_dashboard: "site_inspection_dashboard",
+        question_builder: "site_inspection_builder",
+        backend_guide: "site_inspection_guide"
+      };
+      setParentActiveTab(parentIdMap[tab] || tab);
+    }
+  };
 
   const publicUrl = typeof window !== "undefined"
     ? `${window.location.origin}/?portal=site_inspection`
@@ -154,7 +198,7 @@ export const SiteInspectionView: React.FC = () => {
         </div>
       </div>
 
-      {/* 1. TOP HEADER */}
+      {/* 1. TOP HEADER & SUBTABS */}
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
         <div className="absolute bottom-0 left-0 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none -ml-20 -mb-20" />
@@ -186,12 +230,12 @@ export const SiteInspectionView: React.FC = () => {
           </div>
         </div>
 
-        {/* Navigation Tabs */}
+        {/* Navigation Subtabs (Synced with Left Dock Sidebar) */}
         <div className="mt-5 pt-4 border-t border-slate-800 flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
           <button
-            onClick={() => setActiveTab("mobile_form")}
+            onClick={() => handleTabSwitch("mobile_form")}
             className={`px-4 py-2.5 rounded-2xl text-xs font-bold shrink-0 flex items-center gap-2 transition cursor-pointer ${
-              activeTab === "mobile_form"
+              localTab === "mobile_form"
                 ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 shadow-md shadow-emerald-500/20 font-black"
                 : "bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800"
             }`}
@@ -201,9 +245,9 @@ export const SiteInspectionView: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setActiveTab("admin_dashboard")}
+            onClick={() => handleTabSwitch("admin_dashboard")}
             className={`px-4 py-2.5 rounded-2xl text-xs font-bold shrink-0 flex items-center gap-2 transition cursor-pointer ${
-              activeTab === "admin_dashboard"
+              localTab === "admin_dashboard"
                 ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 shadow-md shadow-emerald-500/20 font-black"
                 : "bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800"
             }`}
@@ -212,7 +256,7 @@ export const SiteInspectionView: React.FC = () => {
             <span>Admin Inspections Dashboard</span>
             <span
               className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-                activeTab === "admin_dashboard" ? "bg-slate-950/30 text-slate-950 font-bold" : "bg-slate-800 text-slate-400"
+                localTab === "admin_dashboard" ? "bg-slate-950/30 text-slate-950 font-bold" : "bg-slate-800 text-slate-400"
               }`}
             >
               {inspections.length}
@@ -220,9 +264,9 @@ export const SiteInspectionView: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setActiveTab("question_builder")}
+            onClick={() => handleTabSwitch("question_builder")}
             className={`px-4 py-2.5 rounded-2xl text-xs font-bold shrink-0 flex items-center gap-2 transition cursor-pointer ${
-              activeTab === "question_builder"
+              localTab === "question_builder"
                 ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 shadow-md shadow-emerald-500/20 font-black"
                 : "bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800"
             }`}
@@ -232,9 +276,9 @@ export const SiteInspectionView: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setActiveTab("backend_guide")}
+            onClick={() => handleTabSwitch("backend_guide")}
             className={`px-4 py-2.5 rounded-2xl text-xs font-bold shrink-0 flex items-center gap-2 transition cursor-pointer ${
-              activeTab === "backend_guide"
+              localTab === "backend_guide"
                 ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 shadow-md shadow-emerald-500/20 font-black"
                 : "bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800"
             }`}
@@ -246,21 +290,21 @@ export const SiteInspectionView: React.FC = () => {
       </div>
 
       {/* 2. TAB CONTENT */}
-      {activeTab === "mobile_form" && (
+      {localTab === "mobile_form" && (
         <MobileInspectionForm
-          onOpenDashboard={() => setActiveTab("admin_dashboard")}
+          onOpenDashboard={() => handleTabSwitch("admin_dashboard")}
         />
       )}
 
-      {activeTab === "admin_dashboard" && (
+      {localTab === "admin_dashboard" && (
         <InspectionDashboard
-          onNewInspectionClick={() => setActiveTab("mobile_form")}
+          onNewInspectionClick={() => handleTabSwitch("mobile_form")}
         />
       )}
 
-      {activeTab === "question_builder" && <DynamicQuestionBuilder />}
+      {localTab === "question_builder" && <DynamicQuestionBuilder />}
 
-      {activeTab === "backend_guide" && <InspectionIntegrationGuide />}
+      {localTab === "backend_guide" && <InspectionIntegrationGuide />}
 
       {/* QR Code Modal for Easy Phone Scanning */}
       {showQrModal && (

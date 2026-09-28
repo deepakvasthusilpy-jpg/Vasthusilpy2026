@@ -28,7 +28,8 @@ import {
   Wallet,
   Zap,
   Lock,
-  RotateCcw
+  RotateCcw,
+  Cloud
 } from "lucide-react";
 import {
   generateFullBackupPackage,
@@ -303,6 +304,20 @@ export const OfflineBackupRestoreModal: React.FC<OfflineBackupRestoreModalProps>
         {/* Tab Navigation */}
         <div className="bg-slate-950/60 px-6 pt-3 flex gap-2 border-b border-slate-800 overflow-x-auto">
           <button
+            onClick={() => {
+              onClose();
+              window.dispatchEvent(new CustomEvent("vasthusilpy_open_gdrive_backup", { detail: { tab: "backup" } }));
+            }}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-t-xl font-mono text-xs font-bold transition border-t border-x border-emerald-500/40 bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-300 hover:text-white"
+          >
+            <Cloud className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+            <span>Google Drive Cloud</span>
+            <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.2 rounded-full border border-emerald-500/30">
+              CLOUD
+            </span>
+          </button>
+
+          <button
             onClick={() => setActiveTab("backup")}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl font-mono text-xs font-bold transition border-t border-x ${
               activeTab === "backup"
@@ -359,15 +374,45 @@ export const OfflineBackupRestoreModal: React.FC<OfflineBackupRestoreModalProps>
           {/* TAB 1: COMPLETE BACKUP */}
           {activeTab === "backup" && (
             <div className="space-y-6">
+              {/* Google Drive Cloud Backup Primary Card */}
+              <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-950/40 border border-emerald-500/40 p-5 rounded-2xl shadow-lg shadow-emerald-950/20">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Cloud className="w-5 h-5 text-emerald-400" />
+                      <h4 className="text-sm font-bold text-white">
+                        Google Drive Cloud Drive Backup (Recommended)
+                      </h4>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        CLOUD
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-300 mt-1">
+                      Directly backs up all site inspections, CRM projects, invoices, estimates, quotations, and bills into your personal Google Drive with automated structured folders.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      onClose();
+                      window.dispatchEvent(new CustomEvent("vasthusilpy_open_gdrive_backup", { detail: { tab: "backup" } }));
+                    }}
+                    className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-mono text-xs font-bold px-5 py-2.5 rounded-xl shadow-lg shadow-emerald-900/40 transition shrink-0 cursor-pointer"
+                  >
+                    <Cloud className="w-4 h-4" />
+                    <span>BACKUP TO GOOGLE DRIVE</span>
+                  </button>
+                </div>
+              </div>
+
               <div className="bg-slate-950/60 border border-slate-800 p-5 rounded-2xl">
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <h4 className="text-sm font-bold text-white flex items-center gap-2">
                       <HardDrive className="w-4 h-4 text-cyan-400" />
-                      Full System Offline Backup
+                      Full System Offline Backup (Local JSON)
                     </h4>
                     <p className="text-xs text-slate-400 mt-1">
-                      Exports an encrypted JSON file containing every file, folder, drawing, quotation, estimate, construction agreement, invoice, CRM record, and personal bill in your workspace.
+                      Exports a JSON file containing every file, folder, drawing, quotation, estimate, construction agreement, invoice, CRM record, and personal bill in your workspace.
                     </p>
                   </div>
                   <button

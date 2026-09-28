@@ -142,7 +142,7 @@ export default function App() {
               : sec === "vasthu"
               ? ("calculator" as TabType)
               : sec === "office_dashboard"
-              ? ("office_crm_projects" as TabType)
+              ? ("office_combined_dashboard" as TabType)
               : sec === "invoices_payments"
               ? ("invoices_list" as TabType)
               : sec === "estimate"
@@ -1050,7 +1050,10 @@ export default function App() {
 
           {/* SITE INSPECTION SECTION */}
           {activeSection === "site_inspection" && (
-            <SiteInspectionView />
+            <SiteInspectionView
+              activeTab={activeTab}
+              setActiveTab={(tab) => setActiveTab(tab as any)}
+            />
           )}
 
           {/* PERSONAL BILLS AND PAYMENTS SECTION (ROUTED UNDER INVOICE & PAYMENTS) */}

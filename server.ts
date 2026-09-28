@@ -3359,6 +3359,7 @@ import { registerApplicationFormsRoutes } from "./src/server/applicationFormsSer
 import { registerCrmRoutes } from "./src/server/crmServer.ts";
 import { registerWebDataRoutes } from "./src/server/webDataServer.ts";
 import { registerRealtimeSyncRoutes } from "./src/server/realtimeSyncServer.ts";
+import { registerGoogleBackupRoutes } from "./src/server/googleBackupServer.ts";
 
 // Register Universal Realtime Cloud Synchronization and SSE Endpoints
 registerRealtimeSyncRoutes(app);
@@ -3371,6 +3372,9 @@ registerCrmRoutes(app);
 
 // Register Comprehensive Web Data & User Profile Synchronization Endpoints
 registerWebDataRoutes(app);
+
+// Register Google Drive Full Website Cloud Backup and Restore Endpoints
+registerGoogleBackupRoutes(app);
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {

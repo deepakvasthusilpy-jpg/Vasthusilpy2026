@@ -42,10 +42,14 @@ import { ClientViewTab } from "../clientView/ClientViewTab";
 import { OfflineBackupRestoreModal } from "./OfflineBackupRestoreModal";
 import { TasksManagementView } from "./TasksManagementView";
 import { OnlineApplicationsTab } from "./OnlineApplicationsTab";
+import { CombinedPipelineDashboard } from "./CombinedPipelineDashboard";
+import { ApplicantFormModal } from "./ApplicantFormModal";
+import { OnlineApplicantRecord } from "../../../types";
+import { loadOnlineApplicants, saveOnlineApplicants } from "../../../utils/onlineApplicationsManager";
 import { EstimateProject } from "../../../data/estimateData";
 import { useLanguage } from "../../../context/LanguageContext";
 import { triggerAppNotification } from "../../../context/NotificationContext";
-import { FolderKanban, Receipt, AlertTriangle, Plus, CreditCard, ShieldAlert, History, Box, Users, BarChart3, Eye, Database, ListTodo, FileText, Layers } from "lucide-react";
+import { FolderKanban, Receipt, AlertTriangle, Plus, CreditCard, ShieldAlert, History, Box, Users, BarChart3, Eye, Database, ListTodo, FileText, Layers, GitMerge, LayoutDashboard } from "lucide-react";
 
 
 interface VasthusilpyCrmTabProps {
@@ -61,8 +65,8 @@ export const VasthusilpyCrmTab: React.FC<VasthusilpyCrmTabProps> = ({
 }) => {
   const { t } = useLanguage();
 
-  // Internal tab state if external prop is not provided
-  const [internalTab, setInternalTab] = useState<OfficeDashboardTabType>("office_crm_projects");
+  // Internal tab state if external prop is not provided (defaults to Combined Pipeline Dashboard)
+  const [internalTab, setInternalTab] = useState<OfficeDashboardTabType>("office_combined_dashboard");
   const currentTab = externalActiveTab || internalTab;
 
   const handleTabSwitch = (tab: OfficeDashboardTabType) => {
@@ -72,6 +76,10 @@ export const VasthusilpyCrmTab: React.FC<VasthusilpyCrmTabProps> = ({
       setInternalTab(tab);
     }
   };
+
+  // Online Applicant Modals State
+  const [isApplicantFormModalOpen, setIsApplicantFormModalOpen] = useState<boolean>(false);
+  const [editingApplicant, setEditingApplicant] = useState<OnlineApplicantRecord | null>(null);
 
   // CRM Projects State initialized from localStorage with deleted IDs filtered
   const [projects, setProjects] = useState<CrmProject[]>(() => {
@@ -672,6 +680,22 @@ export const VasthusilpyCrmTab: React.FC<VasthusilpyCrmTabProps> = ({
       {/* Top Subtab Navigation Switcher Bar */}
       <div className="bg-slate-950 border border-slate-800 rounded-3xl p-2.5 flex flex-wrap items-center justify-between gap-3 shadow-xl">
         <div className="flex flex-wrap items-center gap-2">
+          {/* COMBINED DASHBOARD TAB (PRIMARY COMBINED WORKSTATION) */}
+          <button
+            onClick={() => handleTabSwitch("office_combined_dashboard")}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-mono font-bold transition-all cursor-pointer ${
+              currentTab === "office_combined_dashboard"
+                ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-slate-950 shadow-lg shadow-cyan-500/20 font-black"
+                : "text-slate-400 hover:text-white hover:bg-slate-900"
+            }`}
+          >
+            <LayoutDashboard className="w-4 h-4" />
+            <span>Combined Pipeline</span>
+            <span className="ml-1 bg-slate-900/80 text-cyan-300 border border-cyan-800/80 px-2 py-0.5 rounded-full text-[10px] font-bold">
+              CRM + ONLINE
+            </span>
+          </button>
+
           <button
             onClick={() => handleTabSwitch("office_crm_projects")}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-mono font-bold transition-all cursor-pointer ${
@@ -763,7 +787,39 @@ export const VasthusilpyCrmTab: React.FC<VasthusilpyCrmTabProps> = ({
       </div>
 
       {/* RENDER CONTENT BASED ON TAB */}
-      {currentTab === "office_online_applications" || (currentTab as string) === "online_applications_directory" ? (
+      {currentTab === "office_combined_dashboard" ? (
+        <CombinedPipelineDashboard
+          projects={projects}
+          invoices={invoices}
+          onSelectProject={(proj) => {
+            setSelectedProject(proj);
+            setIsDetailModalOpen(true);
+          }}
+          onEditProject={(proj) => {
+            setEditingProject(proj);
+            setIsEditProjectModalOpen(true);
+          }}
+          onUpdateProject={handleUpdateProject}
+          onDeleteProject={onRequestDeleteProject}
+          onShareProject={(proj) => {
+            setSharingProject(proj);
+            setIsShareModalOpen(true);
+          }}
+          onOpenNewProjectModal={() => setIsNewProjectModalOpen(true)}
+          onSelectOnlineApplicant={(app) => {
+            setEditingApplicant(app);
+            setIsApplicantFormModalOpen(true);
+          }}
+          onEditOnlineApplicant={(app) => {
+            setEditingApplicant(app);
+            setIsApplicantFormModalOpen(true);
+          }}
+          onOpenNewApplicantModal={() => {
+            setEditingApplicant(null);
+            setIsApplicantFormModalOpen(true);
+          }}
+        />
+      ) : currentTab === "office_online_applications" || (currentTab as string) === "online_applications_directory" ? (
         <OnlineApplicationsTab initialSubTab="directory" />
       ) : currentTab === "office_application_types" || (currentTab as string) === "online_applications_types" ? (
         <OnlineApplicationsTab initialSubTab="types" />
@@ -1053,6 +1109,21 @@ export const VasthusilpyCrmTab: React.FC<VasthusilpyCrmTabProps> = ({
           </div>
         </div>
       )}
+      {/* Applicant Form Modal (For Online Applications from Combined Pipeline) */}
+      <ApplicantFormModal
+        isOpen={isApplicantFormModalOpen}
+        onClose={() => {
+          setIsApplicantFormModalOpen(false);
+          setEditingApplicant(null);
+        }}
+        applicant={editingApplicant}
+        onSaved={() => {
+          setIsApplicantFormModalOpen(false);
+          setEditingApplicant(null);
+          // Broadcast and refresh handled reactively
+        }}
+      />
+
       {/* Offline Backup & Restore Modal */}
       <OfflineBackupRestoreModal
         isOpen={isBackupRestoreModalOpen}

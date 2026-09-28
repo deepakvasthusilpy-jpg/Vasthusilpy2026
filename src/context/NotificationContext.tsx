@@ -119,17 +119,40 @@ export const useNotifications = () => {
 
 // Helper utility to emit notification from anywhere
 export const triggerAppNotification = (
-  type: "PROJECT_STATUS" | "INVOICE_GENERATED" | "SYSTEM",
-  title: string,
-  message: string,
+  typeOrTitle: "PROJECT_STATUS" | "INVOICE_GENERATED" | "SYSTEM" | string | { type?: any; title: string; message: string; projectId?: string; invoiceId?: string },
+  titleOrMessage?: string,
+  messageOrExtra?: string | { projectId?: string; invoiceId?: string },
   extra?: { projectId?: string; invoiceId?: string }
 ) => {
+  let type: "PROJECT_STATUS" | "INVOICE_GENERATED" | "SYSTEM" = "SYSTEM";
+  let title = "";
+  let message = "";
+  let extraData: any = {};
+
+  if (typeof typeOrTitle === "object" && typeOrTitle !== null) {
+    type = typeOrTitle.type || "SYSTEM";
+    title = typeOrTitle.title || "";
+    message = typeOrTitle.message || "";
+    extraData = { projectId: typeOrTitle.projectId, invoiceId: typeOrTitle.invoiceId };
+  } else if (typeof messageOrExtra === "string") {
+    // 3 or 4 arguments: (type, title, message, extra)
+    type = (typeOrTitle as any) || "SYSTEM";
+    title = titleOrMessage || "";
+    message = messageOrExtra;
+    extraData = extra || {};
+  } else {
+    // 2 arguments: (title, message)
+    title = String(typeOrTitle || "");
+    message = titleOrMessage || "";
+    extraData = (typeof messageOrExtra === "object" ? messageOrExtra : {}) || {};
+  }
+
   const event = new CustomEvent("vasthusilpy_notify", {
     detail: {
       type,
       title,
       message,
-      ...(extra || {})
+      ...(extraData || {})
     }
   });
   window.dispatchEvent(event);

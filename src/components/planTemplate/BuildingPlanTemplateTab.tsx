@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { BuildingPlanProject, PlanSheet } from "../../types/buildingPlanTemplate";
-import { INITIAL_BUILDING_PLAN_PROJECT } from "../../data/sampleBuildingPlans";
+import { createBlankBuildingPlanProject } from "../../data/buildingPlanStore";
 import { PlanSheetCanvas } from "./PlanSheetCanvas";
 import { TitleBlockEditor } from "./TitleBlockEditor";
 import { AutosaveIndicator } from "./AutosaveIndicator";
@@ -78,7 +78,7 @@ export const BuildingPlanTemplateTab: React.FC<BuildingPlanTemplateTabProps> = (
     } catch (e) {
       console.warn("Could not load saved plan project:", e);
     }
-    return INITIAL_BUILDING_PLAN_PROJECT;
+    return createBlankBuildingPlanProject();
   });
 
   // Sync if parent passes a different project
@@ -344,12 +344,12 @@ export const BuildingPlanTemplateTab: React.FC<BuildingPlanTemplateTabProps> = (
     triggerToast("Sheet deleted");
   };
 
-  // Reset to Kerala sample project
+  // Reset to fresh blank project
   const handleResetSampleProject = () => {
-    if (window.confirm("Load sample project with 2 architectural plans, area table, and Deepak C. details?")) {
-      setProject(INITIAL_BUILDING_PLAN_PROJECT);
+    if (window.confirm("Reset to a clean blank project? Any unsaved changes will be cleared.")) {
+      setProject(createBlankBuildingPlanProject());
       setActiveSheetIndex(0);
-      triggerToast("Loaded Kerala Architectural Plan Sample!");
+      triggerToast("Created clean blank Building Plan Project");
     }
   };
 

@@ -32,7 +32,13 @@ export const PERMANENT_DEMO_TOMBSTONES = [
   "PRJ-2026-001",
   "PRJ-2026-002",
   "CW-2026-00001",
-  "CW-2026-00002"
+  "CW-2026-00002",
+  // Demo building plans & templates
+  "initial-plan-01",
+  "proj-lekha-01",
+  "proj-commercial-02",
+  "proj-sample-01",
+  "proj-sample-02"
 ];
 
 // In-memory cache for ultra-fast instantaneous lookups

@@ -18,11 +18,14 @@ import {
   sendWhatsAppNotification,
   downloadInspectionPdf,
   DEFAULT_INSPECTION_EMAIL,
-  DEFAULT_INSPECTION_WHATSAPP
+  DEFAULT_INSPECTION_WHATSAPP,
+  DEFAULT_TELEGRAM_NUMBER
 } from "../../utils/siteInspectionManager";
 import { triggerAppNotification } from "../../context/NotificationContext";
 import { InspectionEmailModal } from "./InspectionEmailModal";
+import { InspectionTelegramModal } from "./InspectionTelegramModal";
 import {
+
   MapPin,
   Camera,
   Video,
@@ -107,6 +110,7 @@ export const MobileInspectionForm: React.FC<MobileInspectionFormProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedInspection, setSubmittedInspection] = useState<SiteInspection | null>(null);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [isTelegramModalOpen, setIsTelegramModalOpen] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -434,12 +438,22 @@ export const MobileInspectionForm: React.FC<MobileInspectionFormProps> = ({
               Automated Triggers & Sharing
             </h3>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+              {/* Telegram Trigger (9747995961 RAR/ZIP Bundle) */}
+              <button
+                type="button"
+                onClick={() => setIsTelegramModalOpen(true)}
+                className="w-full py-3 px-3 bg-gradient-to-r from-sky-500 via-blue-600 to-sky-600 hover:from-sky-400 hover:to-blue-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-sky-500/30 transition cursor-pointer"
+              >
+                <Send className="w-4 h-4" />
+                <span>Telegram (+91 9747995961)</span>
+              </button>
+
               {/* WhatsApp Trigger */}
               <button
                 type="button"
                 onClick={() => sendWhatsAppNotification(submittedInspection)}
-                className="w-full py-3 px-3.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition cursor-pointer"
+                className="w-full py-3 px-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition cursor-pointer"
               >
                 <Share2 className="w-4 h-4" />
                 <span>WhatsApp (+91 8848241463)</span>
@@ -449,40 +463,58 @@ export const MobileInspectionForm: React.FC<MobileInspectionFormProps> = ({
               <button
                 type="button"
                 onClick={() => setIsEmailModalOpen(true)}
-                className="w-full py-3 px-3.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-red-600/30 transition cursor-pointer"
+                className="w-full py-3 px-3 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-red-600/30 transition cursor-pointer"
               >
                 <Mail className="w-4 h-4" />
-                <span>Send Email Report</span>
+                <span>Email Report</span>
               </button>
 
               {/* Download A4 PDF */}
               <button
                 type="button"
                 onClick={() => downloadInspectionPdf(submittedInspection)}
-                className="w-full py-3 px-3.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-cyan-600/30 transition cursor-pointer"
+                className="w-full py-3 px-3 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-cyan-600/30 transition cursor-pointer"
               >
                 <Download className="w-4 h-4" />
                 <span>Download A4 PDF</span>
               </button>
             </div>
 
-            {/* Email Notification Status */}
-            <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl text-xs flex flex-wrap items-center justify-between gap-2 text-slate-300">
-              <div className="flex items-center gap-2">
-                <Send className="w-4 h-4 text-emerald-400" />
-                <span>Email Recipient:</span>
-                <span className="font-mono text-emerald-400 font-bold text-[11px]">
-                  {DEFAULT_INSPECTION_EMAIL}
-                </span>
+            {/* Telegram & Email Notification Status Bar */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              <div className="p-2.5 bg-slate-900 border border-sky-500/30 rounded-xl flex items-center justify-between gap-2 text-slate-300">
+                <div className="flex items-center gap-2">
+                  <Send className="w-3.5 h-3.5 text-sky-400" />
+                  <span>Telegram Dispatch:</span>
+                  <span className="font-mono text-sky-400 font-bold text-[11px]">
+                    {DEFAULT_TELEGRAM_NUMBER}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsTelegramModalOpen(true)}
+                  className="text-[11px] text-sky-400 hover:text-sky-300 underline font-semibold cursor-pointer"
+                >
+                  Send RAR/ZIP
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsEmailModalOpen(true)}
-                className="text-[11px] text-indigo-400 hover:text-indigo-300 underline font-semibold flex items-center gap-1 cursor-pointer"
-              >
-                <Mail className="w-3.5 h-3.5" />
-                <span>Open Dispatch Options</span>
-              </button>
+
+              <div className="p-2.5 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-between gap-2 text-slate-300">
+                <div className="flex items-center gap-2">
+                  <Mail className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Email Recipient:</span>
+                  <span className="font-mono text-emerald-400 font-bold text-[11px] truncate max-w-[130px]">
+                    {DEFAULT_INSPECTION_EMAIL}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsEmailModalOpen(true)}
+                  className="text-[11px] text-indigo-400 hover:text-indigo-300 underline font-semibold cursor-pointer"
+                >
+                  Dispatch
+                </button>
+              </div>
             </div>
           </div>
 
@@ -511,6 +543,13 @@ export const MobileInspectionForm: React.FC<MobileInspectionFormProps> = ({
           <InspectionEmailModal
             isOpen={isEmailModalOpen}
             onClose={() => setIsEmailModalOpen(false)}
+            inspection={submittedInspection}
+          />
+
+          {/* Telegram Dispatch Modal */}
+          <InspectionTelegramModal
+            isOpen={isTelegramModalOpen}
+            onClose={() => setIsTelegramModalOpen(false)}
             inspection={submittedInspection}
           />
         </div>

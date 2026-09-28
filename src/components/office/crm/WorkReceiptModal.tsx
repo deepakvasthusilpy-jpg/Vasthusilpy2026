@@ -307,7 +307,7 @@ export const WorkReceiptModal: React.FC<WorkReceiptModalProps> = ({
                 )}
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+              <div className="grid grid-cols-3 gap-2 text-center">
                 <div className="p-2 rounded-lg bg-white border border-slate-200">
                   <span className="text-[9.5px] text-slate-500 block font-medium">TOTAL BILL</span>
                   <strong className="text-xs font-black text-slate-950 block">
@@ -323,16 +323,9 @@ export const WorkReceiptModal: React.FC<WorkReceiptModalProps> = ({
                 </div>
 
                 <div className="p-2 rounded-lg bg-teal-50 border border-teal-200">
-                  <span className="text-[9.5px] text-teal-700 block font-medium">TOTAL PAID</span>
+                  <span className="text-[9.5px] text-teal-700 block font-bold">TOTAL PAID / RECEIVED</span>
                   <strong className="text-xs font-black text-teal-700 block">
                     ₹{Number(totalPaid).toLocaleString("en-IN")}
-                  </strong>
-                </div>
-
-                <div className="p-2 rounded-lg bg-rose-50 border border-rose-200">
-                  <span className="text-[9.5px] text-rose-700 block font-bold">BALANCE DUE</span>
-                  <strong className={`text-xs font-black block ${balanceDue > 0 ? "text-rose-700" : "text-emerald-700"}`}>
-                    {balanceDue <= 0 ? "NIL (PAID)" : `₹${Number(balanceDue).toLocaleString("en-IN")}`}
                   </strong>
                 </div>
               </div>

@@ -2,30 +2,33 @@ import React, { useState } from "react";
 import { SiteInspection } from "../../types/siteInspection";
 import {
   downloadInspectionPdf,
-  sendWhatsAppNotification,
-  DEFAULT_INSPECTION_EMAIL
+  downloadInspectionArchive,
+  sendWhatsAppNotification
 } from "../../utils/siteInspectionManager";
 import { InspectionEmailModal } from "./InspectionEmailModal";
+import { InspectionTelegramModal } from "./InspectionTelegramModal";
+import { InspectionMediaViewer } from "./InspectionMediaViewer";
+import { triggerAppNotification } from "../../context/NotificationContext";
 import {
   X,
+  FileText,
   Download,
   Share2,
-  ExternalLink,
   MapPin,
   Camera,
-  Video,
+  Calendar,
+  User,
   CheckCircle2,
   XCircle,
   MinusCircle,
-  Calendar,
-  User,
-  Phone,
-  Building,
-  FileText,
-  Clock,
+  ExternalLink,
   ShieldCheck,
+  Mail,
   Send,
-  Mail
+  Archive,
+  Maximize2,
+  Trash2,
+  Video
 } from "lucide-react";
 
 interface InspectionDetailModalProps {
@@ -42,8 +45,24 @@ export const InspectionDetailModal: React.FC<InspectionDetailModalProps> = ({
   onDelete
 }) => {
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [isTelegramModalOpen, setIsTelegramModalOpen] = useState(false);
+  const [activeMediaIndex, setActiveMediaIndex] = useState<number | null>(null);
+  const [isDownloadingArchive, setIsDownloadingArchive] = useState(false);
 
   if (!isOpen || !inspection) return null;
+
+  const handleDownloadAll = async () => {
+    try {
+      setIsDownloadingArchive(true);
+      triggerAppNotification("Packaging PDF, Photos, Videos & metadata into ZIP...", "info");
+      await downloadInspectionArchive(inspection);
+      triggerAppNotification("Inspection package downloaded successfully!", "success");
+    } catch (err: any) {
+      triggerAppNotification(err?.message || "Failed to download archive package.", "error");
+    } finally {
+      setIsDownloadingArchive(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md overflow-y-auto animate-fadeIn">
@@ -78,9 +97,35 @@ export const InspectionDetailModal: React.FC<InspectionDetailModalProps> = ({
           </button>
         </div>
 
-        {/* Quick Action Bar (PDF, WhatsApp & Email) */}
+        {/* Quick Action Bar (Download Full Package, PDF, Telegram, Email, WhatsApp) */}
         <div className="p-3.5 bg-slate-950 border border-slate-800 rounded-2xl flex flex-wrap items-center justify-between gap-2.5">
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={handleDownloadAll}
+              disabled={isDownloadingArchive}
+              className="px-3.5 py-2 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-emerald-600/25 transition cursor-pointer disabled:opacity-50"
+              title="Download Complete Package (PDF + Photos + Videos + Docs)"
+            >
+              <Archive className="w-4 h-4" />
+              <span>{isDownloadingArchive ? "Packaging ZIP..." : "Download Full Package (ZIP)"}</span>
+            </button>
+
+            <button
+              onClick={() => downloadInspectionPdf(inspection)}
+              className="px-3.5 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-cyan-600/25 transition cursor-pointer"
+            >
+              <Download className="w-4 h-4" />
+              <span>Download A4 PDF</span>
+            </button>
+
+            <button
+              onClick={() => setIsTelegramModalOpen(true)}
+              className="px-3.5 py-2 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-sky-500/25 transition cursor-pointer"
+            >
+              <Send className="w-4 h-4" />
+              <span>Telegram</span>
+            </button>
+
             <button
               onClick={() => setIsEmailModalOpen(true)}
               className="px-3.5 py-2 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-red-600/25 transition cursor-pointer"
@@ -91,18 +136,10 @@ export const InspectionDetailModal: React.FC<InspectionDetailModalProps> = ({
 
             <button
               onClick={() => sendWhatsAppNotification(inspection)}
-              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-emerald-600/25 transition cursor-pointer"
+              className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-emerald-700/25 transition cursor-pointer"
             >
               <Share2 className="w-4 h-4" />
-              <span>WhatsApp (+918848241463)</span>
-            </button>
-
-            <button
-              onClick={() => downloadInspectionPdf(inspection)}
-              className="px-3.5 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-cyan-600/25 transition cursor-pointer"
-            >
-              <Download className="w-4 h-4" />
-              <span>Download A4 PDF</span>
+              <span>WhatsApp</span>
             </button>
           </div>
 
@@ -233,25 +270,52 @@ export const InspectionDetailModal: React.FC<InspectionDetailModalProps> = ({
           </div>
         )}
 
-        {/* Attached Photos / Videos */}
+        {/* Attached Photos / Videos with Click-to-View Fit-to-screen */}
         {inspection.media && inspection.media.length > 0 && (
           <div className="space-y-2">
-            <h4 className="text-xs font-bold text-slate-300 uppercase font-mono tracking-wider flex items-center gap-1.5">
-              <Camera className="w-3.5 h-3.5 text-amber-400" />
-              Attached Media ({inspection.media.length})
-            </h4>
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold text-slate-300 uppercase font-mono tracking-wider flex items-center gap-1.5">
+                <Camera className="w-3.5 h-3.5 text-amber-400" />
+                Attached Media & Documents ({inspection.media.length})
+              </h4>
+              <span className="text-[11px] text-slate-400 font-mono">
+                Click any file to view full screen (fit-to-view)
+              </span>
+            </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-              {inspection.media.map((m) => (
-                <div key={m.id} className="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden">
-                  {m.type === "photo" ? (
-                    <img src={m.url} alt={m.name} className="w-full h-24 object-cover" />
-                  ) : (
-                    <div className="w-full h-24 bg-slate-900 flex items-center justify-center text-indigo-400">
-                      <Video className="w-6 h-6" />
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {inspection.media.map((m, mIdx) => (
+                <div
+                  key={m.id || mIdx}
+                  onClick={() => setActiveMediaIndex(mIdx)}
+                  className="group bg-slate-950 border border-slate-800 hover:border-emerald-500/50 rounded-2xl overflow-hidden cursor-pointer transition shadow-md hover:shadow-xl relative"
+                  title="Click to view fit-to-screen"
+                >
+                  <div className="w-full h-28 bg-slate-900 flex items-center justify-center relative overflow-hidden">
+                    {m.type === "photo" ? (
+                      <img
+                        src={m.url}
+                        alt={m.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center text-purple-400 gap-1 bg-slate-950">
+                        <Video className="w-8 h-8" />
+                        <span className="text-[9px] font-mono font-bold text-slate-400">VIDEO</span>
+                      </div>
+                    )}
+
+                    {/* Hover Overlay with Fit-to-view Zoom Icon */}
+                    <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition backdrop-blur-[2px]">
+                      <div className="p-2 rounded-xl bg-emerald-500 text-slate-950 font-bold shadow-lg">
+                        <Maximize2 className="w-4 h-4" />
+                      </div>
                     </div>
-                  )}
-                  <p className="p-1.5 text-[10px] text-slate-400 truncate font-mono">{m.name}</p>
+                  </div>
+                  <div className="p-2 bg-slate-950/90 border-t border-slate-800/80">
+                    <p className="text-[11px] font-semibold text-slate-200 truncate font-mono">{m.name}</p>
+                    <p className="text-[9px] text-slate-400 uppercase font-mono">{m.type}</p>
+                  </div>
                 </div>
               ))}
             </div>
@@ -263,21 +327,21 @@ export const InspectionDetailModal: React.FC<InspectionDetailModalProps> = ({
           {onDelete && (
             <button
               onClick={() => {
-                if (confirm(`Delete inspection ${inspection.inspectionNumber}?`)) {
+                if (window.confirm(`Are you sure you want to permanently delete inspection ${inspection.inspectionNumber} for ${inspection.ownerName}?`)) {
                   onDelete(inspection.id);
                   onClose();
                 }
               }}
-              className="px-3 py-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-xl text-xs font-semibold flex items-center gap-1 cursor-pointer transition"
+              className="px-3.5 py-2 text-rose-400 hover:text-rose-200 hover:bg-rose-500/20 border border-rose-500/30 rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition"
             >
-              <X className="w-3.5 h-3.5" />
+              <Trash2 className="w-4 h-4" />
               <span>Delete Inspection</span>
             </button>
           )}
 
           <button
             onClick={onClose}
-            className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold transition ml-auto cursor-pointer"
+            className="px-6 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold transition ml-auto cursor-pointer"
           >
             Close
           </button>
@@ -287,6 +351,22 @@ export const InspectionDetailModal: React.FC<InspectionDetailModalProps> = ({
         <InspectionEmailModal
           isOpen={isEmailModalOpen}
           onClose={() => setIsEmailModalOpen(false)}
+          inspection={inspection}
+        />
+
+        {/* Telegram Dispatch Modal */}
+        <InspectionTelegramModal
+          isOpen={isTelegramModalOpen}
+          onClose={() => setIsTelegramModalOpen(false)}
+          inspection={inspection}
+        />
+
+        {/* Fullscreen Fit-to-View Media Lightbox */}
+        <InspectionMediaViewer
+          isOpen={activeMediaIndex !== null}
+          onClose={() => setActiveMediaIndex(null)}
+          mediaList={inspection.media || []}
+          initialIndex={activeMediaIndex ?? 0}
           inspection={inspection}
         />
       </div>

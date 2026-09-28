@@ -9,13 +9,38 @@ import {
 import { db } from "../lib/firebase";
 import { collection, doc, setDoc, deleteDoc } from "firebase/firestore";
 import jsPDF from "jspdf";
+import JSZip from "jszip";
 
 export const DEFAULT_INSPECTION_EMAIL = "deepak.vasthusilpy@gmail.com";
 export const DEFAULT_INSPECTION_WHATSAPP = "+918848241463";
 export const CLEAN_WHATSAPP_NUMBER = "918848241463";
+export const DEFAULT_TELEGRAM_NUMBER = "+91 9747995961";
+export const DEFAULT_TELEGRAM_PHONE_CLEAN = "919747995961";
+
 
 const STORAGE_KEY_INSPECTIONS = "vasthusilpy_site_inspections_v1";
 const STORAGE_KEY_TEMPLATES = "vasthusilpy_site_inspection_templates_v2";
+const STORAGE_KEY_DELETED_INSPECTIONS = "vasthusilpy_site_inspections_deleted_ids_v1";
+
+// Deleted Inspection IDs registry for persistent sync protection
+export const getDeletedInspectionIds = (): string[] => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_DELETED_INSPECTIONS);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+
+export const addDeletedInspectionId = (id: string): void => {
+  try {
+    const current = getDeletedInspectionIds();
+    if (!current.includes(id)) {
+      const updated = [...current, id];
+      localStorage.setItem(STORAGE_KEY_DELETED_INSPECTIONS, JSON.stringify(updated));
+    }
+  } catch {}
+};
 
 export const DEFAULT_INSPECTION_QUESTIONS: InspectionQuestion[] = [
   {
@@ -179,8 +204,10 @@ export const loadSiteInspections = (): SiteInspection[] => {
     const raw = localStorage.getItem(STORAGE_KEY_INSPECTIONS);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
+    const deletedIds = getDeletedInspectionIds();
     if (Array.isArray(parsed)) {
-      return parsed.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+      const active = parsed.filter((i) => i && i.id && !deletedIds.includes(i.id));
+      return active.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
     }
     return [];
   } catch (e) {
@@ -191,11 +218,13 @@ export const loadSiteInspections = (): SiteInspection[] => {
 // Save Inspections
 export const saveSiteInspections = (inspections: SiteInspection[], syncToFirebase = true): void => {
   try {
-    localStorage.setItem(STORAGE_KEY_INSPECTIONS, JSON.stringify(inspections));
+    const deletedIds = getDeletedInspectionIds();
+    const cleanInspections = inspections.filter((i) => i && i.id && !deletedIds.includes(i.id));
+    localStorage.setItem(STORAGE_KEY_INSPECTIONS, JSON.stringify(cleanInspections));
     window.dispatchEvent(new Event("vasthusilpy_site_inspections_updated"));
 
     if (syncToFirebase && db) {
-      inspections.forEach(async (item) => {
+      cleanInspections.forEach(async (item) => {
         try {
           const docRef = doc(db, "site_inspections", item.id);
           await setDoc(docRef, item, { merge: true });
@@ -211,9 +240,11 @@ export const saveSiteInspections = (inspections: SiteInspection[], syncToFirebas
 
 // Delete Inspection
 export const deleteSiteInspection = (id: string): SiteInspection[] => {
+  addDeletedInspectionId(id);
   const current = loadSiteInspections();
   const updated = current.filter((i) => i.id !== id);
-  saveSiteInspections(updated, false);
+  localStorage.setItem(STORAGE_KEY_INSPECTIONS, JSON.stringify(updated));
+  window.dispatchEvent(new Event("vasthusilpy_site_inspections_updated"));
 
   if (db) {
     try {
@@ -894,4 +925,312 @@ export const openDefaultMailClient = (
   )}&body=${encodeURIComponent(body)}`;
   window.location.href = mailtoUrl;
 };
+
+// ==========================================
+// TELEGRAM & ALL-IN-ONE ARCHIVE DISPATCH (9747995961)
+// ==========================================
+
+// Format Telegram Message for Site Inspection Dispatch
+export const formatTelegramInspectionMessage = (inspection: SiteInspection): string => {
+  const dateStr = new Date(inspection.dateTime).toLocaleString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+
+  const lines: string[] = [
+    `🏛️ *VASTHUSILPY SITE INSPECTION REPORT*`,
+    `📋 *Ref No:* \`${inspection.inspectionNumber}\``,
+    `📅 *Date & Time:* ${dateStr}`,
+    `👤 *Client / Owner:* *${inspection.ownerName}*`,
+    `📱 *Mobile:* \`${inspection.mobileNumber}\``,
+    `📍 *Place:* ${inspection.place}`,
+    inspection.panchayathMunicipality ? `🏛️ *Panchayath / Munc.:* ${inspection.panchayathMunicipality}` : ``,
+    inspection.surveyNumber ? `📐 *Survey No:* ${inspection.surveyNumber}` : ``,
+    inspection.inspectorName ? `👷 *Inspected By:* ${inspection.inspectorName}` : ``,
+    ``
+  ].filter(Boolean);
+
+  if (inspection.gps) {
+    lines.push(
+      `🌐 *LIVE GPS LOCATION:*`,
+      `• Lat: \`${inspection.gps.latitude.toFixed(6)}\` | Long: \`${inspection.gps.longitude.toFixed(6)}\``,
+      `• Accuracy: ±${inspection.gps.accuracy || 0}m ${inspection.gps.accuracy && inspection.gps.accuracy <= 10 ? "(5–10m Precision Verified ✅)" : ""}`,
+      `🗺️ *Google Maps:* ${inspection.gps.mapUrl}`,
+      ``
+    );
+  }
+
+  // Checklist Highlights
+  if (inspection.answers && inspection.answers.length > 0) {
+    lines.push(`📝 *15-POINT SITE CHECKLIST:*`);
+    inspection.answers.forEach((ans, i) => {
+      let val = "";
+      if (typeof ans.answer === "boolean") val = ans.answer ? "YES" : "NO";
+      else if (ans.answer === "YES" || ans.answer === "NO" || ans.answer === "N/A") val = ans.answer;
+      else val = `${ans.answer || "-"}`;
+      lines.push(`${i + 1}. ${ans.questionText}: *[${val}]*${ans.notes ? ` _(${ans.notes})_` : ""}`);
+    });
+    lines.push(``);
+  }
+
+  // Media Breakdown
+  const photos = inspection.media?.filter((m) => m.type === "photo") || [];
+  const videos = inspection.media?.filter((m) => m.type === "video") || [];
+  lines.push(
+    `📸 *ATTACHED MEDIA PACKAGE:*`,
+    `• Photos: ${photos.length} captured`,
+    `• Videos: ${videos.length} recorded`,
+    `• Complete Archive (.ZIP / .RAR) & A4 PDF Report generated.`,
+    ``,
+    `⚡ _Sent to Vasthusilpy Central via Telegram Field Dispatch System_`
+  );
+
+  return lines.join("\n");
+};
+
+// Open Telegram Chat directly with 9747995961
+export const openTelegramChat = (
+  inspection: SiteInspection,
+  phoneNumber: string = DEFAULT_TELEGRAM_PHONE_CLEAN
+): void => {
+  const message = formatTelegramInspectionMessage(inspection);
+  const encodedMsg = encodeURIComponent(message);
+  
+  // Try direct Telegram URL protocols
+  // 1. Direct phone link
+  const tgWebUrl = `https://t.me/+${phoneNumber}?text=${encodedMsg}`;
+  const tgShareUrl = `https://t.me/share/url?url=${encodeURIComponent(
+    window.location.origin + "/?portal=site_inspection"
+  )}&text=${encodedMsg}`;
+
+  // Open share or chat window
+  window.open(tgWebUrl, "_blank", "noopener,noreferrer");
+};
+
+// Helper: Convert Data URL / Base64 to Uint8Array for JSZip
+const dataUrlToUint8Array = (dataUrl: string): Uint8Array => {
+  const base64Index = dataUrl.indexOf(";base64,");
+  if (base64Index !== -1) {
+    const base64Data = dataUrl.substring(base64Index + 8);
+    const binaryStr = atob(base64Data);
+    const len = binaryStr.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binaryStr.charCodeAt(i);
+    }
+    return bytes;
+  }
+  return new TextEncoder().encode(dataUrl);
+};
+
+// Create Complete All-in-One Inspection Archive (.ZIP / .RAR compatible package)
+export const createInspectionArchiveBundle = async (
+  inspection: SiteInspection,
+  onProgress?: (percent: number, step: string) => void
+): Promise<Blob> => {
+  const zip = new JSZip();
+
+  // Root folder inside the archive
+  const rootFolderName = `Vasthusilpy_Inspection_${inspection.inspectionNumber.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+  const root = zip.folder(rootFolderName) || zip;
+
+  onProgress?.(15, "Generating Official A4 PDF Document...");
+
+  // 1. Generate and attach the A4 PDF Document
+  try {
+    const doc = await generateSiteInspectionPdf(inspection);
+    const pdfBlob = doc.output("blob");
+    root.file(`Vasthusilpy_Site_Inspection_${inspection.inspectionNumber}.pdf`, pdfBlob);
+  } catch (err) {
+    console.error("Failed to generate PDF for archive:", err);
+  }
+
+  onProgress?.(35, "Compiling Summary & JSON Data...");
+
+  // 2. Inspection Summary Text File
+  const emailData = formatInspectionEmail(inspection);
+  const summaryText = `${emailData.subject}\n\n${emailData.body}\n\nGenerated for Telegram & Archive Dispatch to: ${DEFAULT_TELEGRAM_NUMBER}`;
+  root.file("INSPECTION_SUMMARY.txt", summaryText);
+
+  // 3. Raw Structured JSON File
+  root.file(
+    "INSPECTION_DATA.json",
+    JSON.stringify(
+      {
+        ...inspection,
+        dispatchedToTelegram: DEFAULT_TELEGRAM_NUMBER,
+        dispatchedToEmail: DEFAULT_INSPECTION_EMAIL,
+        exportedAt: new Date().toISOString()
+      },
+      null,
+      2
+    )
+  );
+
+  // 4. Attach Photos & Videos
+  if (inspection.media && inspection.media.length > 0) {
+    const photosFolder = root.folder("Photos");
+    const videosFolder = root.folder("Videos");
+
+    const totalMedia = inspection.media.length;
+    for (let i = 0; i < totalMedia; i++) {
+      const item = inspection.media[i];
+      const progressPercent = 40 + Math.round(((i + 1) / totalMedia) * 45);
+      onProgress?.(progressPercent, `Packaging ${item.type} ${i + 1} of ${totalMedia}...`);
+
+      const cleanFileName = (item.name || `${item.type}_${i + 1}`)
+        .replace(/[^a-zA-Z0-9_.-]/g, "_");
+
+      try {
+        if (item.url && item.url.startsWith("data:")) {
+          const fileBytes = dataUrlToUint8Array(item.url);
+          if (item.type === "photo") {
+            photosFolder?.file(cleanFileName.endsWith(".jpg") || cleanFileName.endsWith(".png") ? cleanFileName : `${cleanFileName}.jpg`, fileBytes);
+          } else {
+            videosFolder?.file(cleanFileName.endsWith(".mp4") || cleanFileName.endsWith(".webm") ? cleanFileName : `${cleanFileName}.mp4`, fileBytes);
+          }
+        } else if (item.url && (item.url.startsWith("http://") || item.url.startsWith("https://") || item.url.startsWith("blob:"))) {
+          // Fetch remote/blob URL
+          const response = await fetch(item.url);
+          const blob = await response.blob();
+          if (item.type === "photo") {
+            photosFolder?.file(cleanFileName.endsWith(".jpg") || cleanFileName.endsWith(".png") ? cleanFileName : `${cleanFileName}.jpg`, blob);
+          } else {
+            videosFolder?.file(cleanFileName.endsWith(".mp4") || cleanFileName.endsWith(".webm") ? cleanFileName : `${cleanFileName}.mp4`, blob);
+          }
+        }
+      } catch (mediaErr) {
+        console.warn(`Could not add media file ${item.name} to archive:`, mediaErr);
+      }
+    }
+  }
+
+  onProgress?.(90, "Compressing All Files into Archive Package...");
+
+  // Generate ZIP Blob
+  const zipBlob = await zip.generateAsync(
+    {
+      type: "blob",
+      compression: "DEFLATE",
+      compressionOptions: { level: 6 }
+    },
+    (metadata) => {
+      onProgress?.(90 + Math.round(metadata.percent * 0.1), `Compressing: ${Math.round(metadata.percent)}%`);
+    }
+  );
+
+  onProgress?.(100, "Archive Package Ready!");
+  return zipBlob;
+};
+
+// Download Multiple/All Inspections Bundle
+export const downloadAllInspectionsArchive = async (
+  inspections: SiteInspection[],
+  onProgress?: (percent: number, step: string) => void
+): Promise<void> => {
+  if (!inspections || inspections.length === 0) {
+    throw new Error("No inspection records to download.");
+  }
+
+  const zip = new JSZip();
+  const masterFolder = zip.folder(`Vasthusilpy_All_Site_Inspections_${new Date().toISOString().slice(0, 10)}`) || zip;
+
+  const totalCount = inspections.length;
+  for (let idx = 0; idx < totalCount; idx++) {
+    const item = inspections[idx];
+    const baseProgress = Math.round((idx / totalCount) * 85);
+    onProgress?.(baseProgress, `Processing inspection ${idx + 1} of ${totalCount} (${item.inspectionNumber})...`);
+
+    const subFolderName = `${item.inspectionNumber.replace(/[^a-zA-Z0-9_-]/g, "_")}_${item.ownerName.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+    const subFolder = masterFolder.folder(subFolderName) || masterFolder;
+
+    // 1. PDF
+    try {
+      const doc = await generateSiteInspectionPdf(item);
+      const pdfBlob = doc.output("blob");
+      subFolder.file(`Report_${item.inspectionNumber}.pdf`, pdfBlob);
+    } catch (pdfErr) {
+      console.warn(`Could not add PDF for ${item.inspectionNumber}:`, pdfErr);
+    }
+
+    // 2. Summary text & JSON
+    const emailData = formatInspectionEmail(item);
+    subFolder.file("SUMMARY.txt", `${emailData.subject}\n\n${emailData.body}`);
+    subFolder.file("DATA.json", JSON.stringify(item, null, 2));
+
+    // 3. Media files
+    if (item.media && item.media.length > 0) {
+      const photosFolder = subFolder.folder("Photos");
+      const videosFolder = subFolder.folder("Videos");
+
+      for (let mIdx = 0; mIdx < item.media.length; mIdx++) {
+        const media = item.media[mIdx];
+        const cleanName = (media.name || `${media.type}_${mIdx + 1}`).replace(/[^a-zA-Z0-9_.-]/g, "_");
+        try {
+          if (media.url && media.url.startsWith("data:")) {
+            const bytes = dataUrlToUint8Array(media.url);
+            if (media.type === "photo") {
+              photosFolder?.file(cleanName.endsWith(".jpg") || cleanName.endsWith(".png") ? cleanName : `${cleanName}.jpg`, bytes);
+            } else {
+              videosFolder?.file(cleanName.endsWith(".mp4") || cleanName.endsWith(".webm") ? cleanName : `${cleanName}.mp4`, bytes);
+            }
+          } else if (media.url && (media.url.startsWith("http://") || media.url.startsWith("https://") || media.url.startsWith("blob:"))) {
+            const resp = await fetch(media.url);
+            const blob = await resp.blob();
+            if (media.type === "photo") {
+              photosFolder?.file(cleanName.endsWith(".jpg") || cleanName.endsWith(".png") ? cleanName : `${cleanName}.jpg`, blob);
+            } else {
+              videosFolder?.file(cleanName.endsWith(".mp4") || cleanName.endsWith(".webm") ? cleanName : `${cleanName}.mp4`, blob);
+            }
+          }
+        } catch (mErr) {
+          console.warn(`Could not add media file for ${item.inspectionNumber}:`, mErr);
+        }
+      }
+    }
+  }
+
+  onProgress?.(90, "Compressing master package...");
+  const zipBlob = await zip.generateAsync(
+    {
+      type: "blob",
+      compression: "DEFLATE",
+      compressionOptions: { level: 6 }
+    },
+    (meta) => {
+      onProgress?.(90 + Math.round(meta.percent * 0.1), `Compressing: ${Math.round(meta.percent)}%`);
+    }
+  );
+
+  onProgress?.(100, "Download ready!");
+  const fileName = `Vasthusilpy_Site_Inspections_Bundle_${new Date().toISOString().slice(0, 10)}.zip`;
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(zipBlob);
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(link.href), 5000);
+};
+
+// Download Complete Archive File for a single inspection (.zip / .rar bundle)
+export const downloadInspectionArchive = async (
+  inspection: SiteInspection,
+  onProgress?: (percent: number, step: string) => void
+): Promise<void> => {
+  const archiveBlob = await createInspectionArchiveBundle(inspection, onProgress);
+  const fileName = `Vasthusilpy_Inspection_${inspection.inspectionNumber.replace(/[^a-zA-Z0-9_-]/g, "_")}_All_Files.zip`;
+  
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(archiveBlob);
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(link.href), 5000);
+};
+
 

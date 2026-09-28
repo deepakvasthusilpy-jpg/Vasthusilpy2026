@@ -2,16 +2,24 @@ import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User } from 'f
 import { auth } from './firebase';
 
 const provider = new GoogleAuthProvider();
+provider.addScope('https://www.googleapis.com/auth/drive');
+provider.addScope('https://www.googleapis.com/auth/drive.file');
 provider.addScope('https://www.googleapis.com/auth/gmail.send');
 provider.addScope('https://www.googleapis.com/auth/gmail.compose');
 provider.addScope('https://www.googleapis.com/auth/documents');
 provider.addScope('https://www.googleapis.com/auth/documents.readonly');
 provider.addScope('https://www.googleapis.com/auth/spreadsheets');
 provider.addScope('https://www.googleapis.com/auth/spreadsheets.readonly');
-provider.addScope('https://www.googleapis.com/auth/drive.file');
 
 let isSigningIn = false;
 let cachedAccessToken: string | null = typeof window !== "undefined" ? localStorage.getItem("vasthusilpy_google_token") : null;
+
+export const clearCachedGoogleToken = () => {
+  cachedAccessToken = null;
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("vasthusilpy_google_token");
+  }
+};
 
 export const initGoogleAuth = (
   onAuthSuccess?: (user: User, token: string) => void,
@@ -34,13 +42,30 @@ export const initGoogleAuth = (
   });
 };
 
-export const googleSignIn = async (): Promise<{ user: User; accessToken: string } | null> => {
+export const googleSignIn = async (forceConsent: boolean = true): Promise<{ user: User; accessToken: string } | null> => {
   if (!auth) {
     throw new Error('Firebase Auth is not available in current environment.');
   }
   try {
     isSigningIn = true;
-    const result = await signInWithPopup(auth, provider);
+    const authProvider = new GoogleAuthProvider();
+    authProvider.addScope('https://www.googleapis.com/auth/drive');
+    authProvider.addScope('https://www.googleapis.com/auth/drive.file');
+    authProvider.addScope('https://www.googleapis.com/auth/gmail.send');
+    authProvider.addScope('https://www.googleapis.com/auth/gmail.compose');
+    authProvider.addScope('https://www.googleapis.com/auth/documents');
+    authProvider.addScope('https://www.googleapis.com/auth/documents.readonly');
+    authProvider.addScope('https://www.googleapis.com/auth/spreadsheets');
+    authProvider.addScope('https://www.googleapis.com/auth/spreadsheets.readonly');
+
+    if (forceConsent) {
+      authProvider.setCustomParameters({
+        prompt: 'select_account consent',
+        access_type: 'offline'
+      });
+    }
+
+    const result = await signInWithPopup(auth, authProvider);
     const credential = GoogleAuthProvider.credentialFromResult(result);
     if (!credential?.accessToken) {
       throw new Error('Failed to obtain Google OAuth Access Token.');
@@ -71,14 +96,16 @@ export const getCachedToken = (): string | null => {
   return null;
 };
 
-export const ensureGoogleAccessToken = async (): Promise<string> => {
-  const token = getCachedToken();
-  if (token) return token;
+export const ensureGoogleAccessToken = async (forceConsent: boolean = false): Promise<string> => {
+  if (!forceConsent) {
+    const token = getCachedToken();
+    if (token) return token;
+  }
 
-  // Sign in with Google to get fresh token with Gmail scopes
-  const res = await googleSignIn();
+  // Sign in with Google to get fresh token with all scopes
+  const res = await googleSignIn(true);
   if (!res?.accessToken) {
-    throw new Error('Google authorization required to send emails directly from Gmail.');
+    throw new Error('Google authorization required for cloud services.');
   }
   return res.accessToken;
 };

@@ -103,25 +103,53 @@ export const ConstructionDashboard: React.FC<ConstructionDashboardProps> = ({
     onTabChange?.(tab);
   };
 
-  // Nav Items with counts & labels
-  const navTabs: Array<{
-    id: ConstructionTabType;
-    label: string;
-    labelMl: string;
-    sub: string;
-    icon: React.FC<{ className?: string }>;
-    badge?: string;
-    count?: number;
+  // Nav Groups with counts & labels
+  const navGroups: Array<{
+    groupName: string;
+    groupNameMl: string;
+    items: Array<{
+      id: ConstructionTabType;
+      label: string;
+      labelMl: string;
+      sub: string;
+      icon: React.FC<{ className?: string }>;
+      badge?: string;
+      count?: number;
+    }>;
   }> = [
-    { id: "dashboard", label: "Dashboard", labelMl: "ഡാഷ്‌ബോർഡ്", sub: "OVERVIEW", icon: LayoutDashboard },
-    { id: "new_construction", label: "New Construction", labelMl: "പുതിയ നിർമ്മാണം & കരാർ", sub: "NEW PROJECT", icon: PlusCircle, badge: "NEW" },
-    { id: "projects", label: "Projects / Clients", labelMl: "പ്രോജക്ടുകൾ / ക്ലയന്റ്സ്", sub: "PROJECTS", icon: FolderKanban, count: projects.length },
-    { id: "agreements", label: "Agreements", labelMl: "കരാറുകൾ (Agreements)", sub: "E-STAMP & A4", icon: FileCheck2, count: agreements.length, badge: "E-STAMP" },
-    { id: "cost_calculator", label: "Cost Calculator", labelMl: "ചെലവ് കാൽക്കുലേറ്റർ", sub: "ESTIMATION", icon: Calculator },
-    { id: "payment_stages", label: "Payment Stages", labelMl: "പെയ്‌മെന്റ് സ്റ്റേജുകൾ", sub: "MILESTONES", icon: Receipt },
-    { id: "reports", label: "Reports", labelMl: "ധനകാര്യ റിപ്പോർട്ടുകൾ", sub: "FINANCIALS", icon: FileBarChart },
-    { id: "settings", label: "Settings", labelMl: "നിർമ്മാണ ക്രമീകരണങ്ങൾ", sub: "STAGES & MARGINS", icon: SettingsIcon },
-    { id: "search", label: "QR Verification", labelMl: "ക്യുആർ വെരിഫിക്കേഷൻ", sub: "ZERO-LOGIN ACCESS", icon: QrCode, badge: "ZERO-LOGIN" }
+    {
+      groupName: "MAIN",
+      groupNameMl: "പ്രധാനം",
+      items: [
+        { id: "dashboard", label: "Dashboard", labelMl: "ഡാഷ്‌ബോർഡ്", sub: "OVERVIEW & METRICS", icon: LayoutDashboard }
+      ]
+    },
+    {
+      groupName: "PROJECTS & SITES",
+      groupNameMl: "പ്രോജക്ടുകൾ",
+      items: [
+        { id: "projects", label: "Projects / Clients", labelMl: "പ്രോജക്ടുകൾ & ക്ലയന്റ്സ്", sub: "CLIENTS & TRACKING", icon: FolderKanban, count: projects.length },
+        { id: "new_construction", label: "New Construction", labelMl: "പുതിയ നിർമ്മാണം", sub: "NEW PROJECT & AGREEMENT", icon: PlusCircle, badge: "NEW" },
+        { id: "agreements", label: "Agreements", labelMl: "കരാറുകൾ (Agreements)", sub: "E-STAMP & A4 PRINT", icon: FileCheck2, count: agreements.length, badge: "E-STAMP" }
+      ]
+    },
+    {
+      groupName: "FINANCIALS & STAGES",
+      groupNameMl: "ഘട്ടങ്ങളും ധനകാര്യവും",
+      items: [
+        { id: "payment_stages", label: "Payment Stages", labelMl: "പെയ്‌മെന്റ് സ്റ്റേജുകൾ", sub: "MILESTONES & DUES", icon: Receipt },
+        { id: "cost_calculator", label: "Cost Calculator", labelMl: "ചെലവ് കാൽക്കുലേറ്റർ", sub: "ESTIMATION & BOQ", icon: Calculator },
+        { id: "reports", label: "Reports", labelMl: "ധനകാര്യ റിപ്പോർട്ടുകൾ", sub: "STATEMENTS & SUMMARY", icon: FileBarChart }
+      ]
+    },
+    {
+      groupName: "PORTAL & SETTINGS",
+      groupNameMl: "പോർട്ടൽ & ക്രമീകരണങ്ങൾ",
+      items: [
+        { id: "search", label: "QR Verification", labelMl: "ക്യുആർ വെരിഫിക്കേഷൻ", sub: "ZERO-LOGIN ACCESS", icon: QrCode, badge: "PUBLIC" },
+        { id: "settings", label: "Settings", labelMl: "ക്രമീകരണങ്ങൾ", sub: "STAGES & MARGINS", icon: SettingsIcon }
+      ]
+    }
   ];
 
   return (
@@ -219,105 +247,115 @@ export const ConstructionDashboard: React.FC<ConstructionDashboardProps> = ({
               </button>
             </div>
 
-            {/* Sub-Tabs Navigation List */}
-            <div className="space-y-1.5 max-h-[calc(100vh-220px)] overflow-y-auto scrollbar-none py-0.5">
-              {navTabs.map((tab) => {
-                const isTabActive = activeTab === tab.id;
-                const isSearchTab = tab.id === "search";
-                const TabIcon = tab.icon;
+            {/* Sub-Tabs Navigation List Grouped */}
+            <div className="space-y-3 max-h-[calc(100vh-220px)] overflow-y-auto scrollbar-none py-0.5">
+              {navGroups.map((group, groupIdx) => (
+                <div key={groupIdx} className="space-y-1">
+                  {!isSideDockCollapsed && (
+                    <div className="px-2 pt-1 pb-0.5 flex items-center justify-between text-[9px] font-mono font-bold text-slate-500 uppercase tracking-wider">
+                      <span>{group.groupNameMl}</span>
+                      <span className="text-[8px] text-slate-600">{group.groupName}</span>
+                    </div>
+                  )}
+                  {group.items.map((tab) => {
+                    const isTabActive = activeTab === tab.id;
+                    const isSearchTab = tab.id === "search";
+                    const TabIcon = tab.icon;
 
-                const baseStyles = isSideDockCollapsed
-                  ? "justify-center p-2.5"
-                  : "justify-between p-2.5 text-left";
+                    const baseStyles = isSideDockCollapsed
+                      ? "justify-center p-2.5"
+                      : "justify-between p-2.5 text-left";
 
-                const tabColorStyles = isSearchTab
-                  ? isTabActive
-                    ? "bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white font-bold shadow-xl shadow-emerald-950 border-2 border-emerald-300 ring-2 ring-emerald-400/40"
-                    : "bg-slate-900/90 text-emerald-300 hover:text-white hover:bg-emerald-950/60 border border-emerald-500/50 shadow-sm shadow-emerald-950/40"
-                  : isTabActive
-                    ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold shadow-lg shadow-emerald-950/60 border border-emerald-400/40"
-                    : "text-slate-400 hover:text-white hover:bg-slate-800/80 border border-transparent";
+                    const tabColorStyles = isSearchTab
+                      ? isTabActive
+                        ? "bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white font-bold shadow-xl shadow-emerald-950 border-2 border-emerald-300 ring-2 ring-emerald-400/40"
+                        : "bg-slate-900/90 text-emerald-300 hover:text-white hover:bg-emerald-950/60 border border-emerald-500/50 shadow-sm shadow-emerald-950/40"
+                      : isTabActive
+                        ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold shadow-lg shadow-emerald-950/60 border border-emerald-400/40"
+                        : "text-slate-400 hover:text-white hover:bg-slate-800/80 border border-transparent";
 
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => handleTabSelect(tab.id)}
-                    className={`w-full flex items-center transition-all cursor-pointer rounded-2xl ${baseStyles} ${tabColorStyles}`}
-                    title={`${tab.labelMl} (${tab.label})`}
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div
-                        className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-transform relative ${
-                          isSearchTab
-                            ? isTabActive
-                              ? "bg-slate-950/60 text-emerald-300 border border-emerald-400/50"
-                              : "bg-emerald-950/60 text-emerald-400 border border-emerald-500/40"
-                            : isTabActive
-                              ? "bg-slate-950/40 text-white"
-                              : "bg-slate-800/70 text-slate-400"
-                        }`}
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => handleTabSelect(tab.id)}
+                        className={`w-full flex items-center transition-all cursor-pointer rounded-2xl ${baseStyles} ${tabColorStyles}`}
+                        title={`${tab.labelMl} (${tab.label})`}
                       >
-                        <TabIcon className="w-4 h-4" />
-                        {isSearchTab && (
-                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse absolute -top-0.5 -right-0.5 ring-2 ring-slate-950 shadow-[0_0_8px_rgba(52,211,153,0.9)]" />
-                        )}
-                      </div>
-
-                      {!isSideDockCollapsed && (
-                        <div className="min-w-0 truncate">
-                          <div className="text-xs font-bold font-sans text-white truncate flex items-center gap-1.5">
-                            <span>{tab.labelMl}</span>
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div
+                            className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-transform relative ${
+                              isSearchTab
+                                ? isTabActive
+                                  ? "bg-slate-950/60 text-emerald-300 border border-emerald-400/50"
+                                  : "bg-emerald-950/60 text-emerald-400 border border-emerald-500/40"
+                                : isTabActive
+                                  ? "bg-slate-950/40 text-white"
+                                  : "bg-slate-800/70 text-slate-400"
+                            }`}
+                          >
+                            <TabIcon className="w-4 h-4" />
                             {isSearchTab && (
-                              <span className="text-[9px] font-mono text-emerald-400 font-normal">
-                                (സീറോ ലോഗിൻ)
+                              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse absolute -top-0.5 -right-0.5 ring-2 ring-slate-950 shadow-[0_0_8px_rgba(52,211,153,0.9)]" />
+                            )}
+                          </div>
+
+                          {!isSideDockCollapsed && (
+                            <div className="min-w-0 truncate">
+                              <div className="text-xs font-bold font-sans text-white truncate flex items-center gap-1.5">
+                                <span>{tab.labelMl}</span>
+                                {isSearchTab && (
+                                  <span className="text-[9px] font-mono text-emerald-400 font-normal">
+                                    (സീറോ ലോഗിൻ)
+                                  </span>
+                                )}
+                              </div>
+                              <div
+                                className={`text-[9px] font-mono tracking-wider truncate ${
+                                  isTabActive ? "text-emerald-100" : isSearchTab ? "text-emerald-400" : "text-slate-500"
+                                }`}
+                              >
+                                {tab.sub}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Badge or Live Count */}
+                        {!isSideDockCollapsed && (
+                          <div className="shrink-0 flex items-center gap-1">
+                            {tab.count !== undefined && tab.count > 0 && (
+                              <span
+                                className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-full ${
+                                  isTabActive
+                                    ? "bg-white text-slate-950"
+                                    : "bg-slate-800 text-emerald-400 border border-emerald-500/30"
+                                }`}
+                              >
+                                {tab.count}
+                              </span>
+                            )}
+                            {tab.badge && (
+                              <span
+                                className={`text-[8px] font-mono font-bold px-1.5 py-0.5 rounded ${
+                                  isSearchTab
+                                    ? isTabActive
+                                      ? "bg-emerald-300 text-slate-950 shadow-sm"
+                                      : "bg-emerald-500/25 text-emerald-300 border border-emerald-400/60"
+                                    : isTabActive
+                                      ? "bg-amber-400 text-slate-950"
+                                      : "bg-amber-500/20 text-amber-300 border border-amber-500/40"
+                                }`}
+                              >
+                                {tab.badge}
                               </span>
                             )}
                           </div>
-                          <div
-                            className={`text-[9px] font-mono tracking-wider truncate ${
-                              isTabActive ? "text-emerald-100" : isSearchTab ? "text-emerald-400" : "text-slate-500"
-                            }`}
-                          >
-                            {tab.sub}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Badge or Live Count */}
-                    {!isSideDockCollapsed && (
-                      <div className="shrink-0 flex items-center gap-1">
-                        {tab.count !== undefined && tab.count > 0 && (
-                          <span
-                            className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-full ${
-                              isTabActive
-                                ? "bg-white text-slate-950"
-                                : "bg-slate-800 text-emerald-400 border border-emerald-500/30"
-                            }`}
-                          >
-                            {tab.count}
-                          </span>
                         )}
-                        {tab.badge && (
-                          <span
-                            className={`text-[8px] font-mono font-bold px-1.5 py-0.5 rounded ${
-                              isSearchTab
-                                ? isTabActive
-                                  ? "bg-emerald-300 text-slate-950 shadow-sm"
-                                  : "bg-emerald-500/25 text-emerald-300 border border-emerald-400/60"
-                                : isTabActive
-                                  ? "bg-amber-400 text-slate-950"
-                                  : "bg-amber-500/20 text-amber-300 border border-amber-500/40"
-                            }`}
-                          >
-                            {tab.badge}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
 
             {/* Side Dock Quick Utilities Footer */}
@@ -361,6 +399,7 @@ export const ConstructionDashboard: React.FC<ConstructionDashboardProps> = ({
               onNavigateToAgreements={() => handleTabSelect("agreements")}
               onNavigateToProjects={() => handleTabSelect("projects")}
               onNavigateToCalculator={() => handleTabSelect("cost_calculator")}
+              onNavigateToStages={(projId) => handleTabSelect("payment_stages")}
               onViewAgreement={agr => setEditingAgreement(agr)}
               onEditAgreement={agr => setEditingAgreement(agr)}
               onPrintAgreement={(agr, mode) => setPrintingAgreement({ agreement: agr, mode })}

@@ -88,8 +88,24 @@ const STORAGE_KEYS_EXTRA = {
   CLIENT_SHARE_LINKS: "vasthusilpy_client_share_links"
 };
 
+const STORAGE_KEYS_INSPECTION = {
+  INSPECTIONS: "vasthusilpy_site_inspections_v1",
+  TEMPLATES: "vasthusilpy_site_inspection_templates_v2",
+  DELETED_IDS: "vasthusilpy_site_inspections_deleted_ids_v1"
+};
+
+const STORAGE_KEYS_ONLINE_APP = {
+  APPLICANTS: "vasthusilpy_online_applications_v1",
+  PORTAL_TYPES: "vasthusilpy_stored_application_types_v1"
+};
+
+const STORAGE_KEYS_SITES = {
+  IMPORTANT_SITES: "vasthusilpy_important_sites_v1",
+  SITE_FOLDERS: "vasthusilpy_site_folders_v1"
+};
+
 /**
- * Universal Backup Package Interface supporting all 7 Core Modules
+ * Universal Backup Package Interface supporting all 7 Core Modules & Site Inspections
  */
 export interface VasthusilpyBackupPackage {
   metadata: {
@@ -110,6 +126,9 @@ export interface VasthusilpyBackupPackage {
     totalPersonalBills: number;
     totalRegisteredTasks: number;
     totalRateItems: number;
+    totalSiteInspections?: number;
+    totalOnlineApplications?: number;
+    totalImportantSites?: number;
     userEmail?: string;
   };
 
@@ -175,6 +194,20 @@ export interface VasthusilpyBackupPackage {
     vendorBills: PersonalVendorBill[];
     staffSalary: StaffSalaryRecord[];
   };
+
+  // 8. SITE INSPECTIONS
+  siteInspections?: any[];
+  siteInspectionData?: any[];
+  siteInspectionTemplates?: any[];
+  deletedInspectionIds?: string[];
+
+  // 9. ONLINE APPLICATIONS & PORTALS
+  onlineApplications?: any[];
+  storedPortalTypes?: any[];
+
+  // 10. IMPORTANT SITES & GEO RECORDS
+  importantSites?: any[];
+  siteFolders?: any[];
 
   // Backwards compatibility root fields (for older versions)
   crmProjects: CrmProject[];
@@ -257,6 +290,19 @@ export function generateFullBackupPackage(userEmail?: string): VasthusilpyBackup
   const vendorBills: PersonalVendorBill[] = readStorageJson(STORAGE_KEYS_PERSONAL.VENDOR_BILLS, []);
   const staffSalary: StaffSalaryRecord[] = readStorageJson(STORAGE_KEYS_PERSONAL.STAFF_SALARY, []);
 
+  // 8. Site Inspections
+  const siteInspections = readStorageJson(STORAGE_KEYS_INSPECTION.INSPECTIONS, []);
+  const siteInspectionTemplates = readStorageJson(STORAGE_KEYS_INSPECTION.TEMPLATES, []);
+  const deletedInspectionIds = readStorageJson(STORAGE_KEYS_INSPECTION.DELETED_IDS, []);
+
+  // 9. Online Applications
+  const onlineApplicants = readStorageJson(STORAGE_KEYS_ONLINE_APP.APPLICANTS, []);
+  const storedPortalTypes = readStorageJson(STORAGE_KEYS_ONLINE_APP.PORTAL_TYPES, []);
+
+  // 10. Important Sites
+  const importantSites = readStorageJson(STORAGE_KEYS_SITES.IMPORTANT_SITES, []);
+  const siteFolders = readStorageJson(STORAGE_KEYS_SITES.SITE_FOLDERS, []);
+
   const deletedProjectIds = getDeletedProjectIds();
   const deletedInvoiceIds = getDeletedInvoiceIds();
   const deletedEstimateIds = getDeletedEstimateIds();
@@ -284,6 +330,9 @@ export function generateFullBackupPackage(userEmail?: string): VasthusilpyBackup
       totalPersonalBills: totalPersonalBills,
       totalRegisteredTasks: registeredTasks.length,
       totalRateItems: rateItems.length,
+      totalSiteInspections: siteInspections.length,
+      totalOnlineApplications: onlineApplicants.length,
+      totalImportantSites: importantSites.length,
       userEmail: userEmail || "deepak.vasthusilpy@gmail.com"
     },
     dataStorageVault: {
@@ -335,6 +384,16 @@ export function generateFullBackupPackage(userEmail?: string): VasthusilpyBackup
       vendorBills: vendorBills,
       staffSalary: staffSalary
     },
+    // Site Inspections, Applications & Sites
+    siteInspections: siteInspections,
+    siteInspectionData: siteInspections,
+    siteInspectionTemplates: siteInspectionTemplates,
+    deletedInspectionIds: deletedInspectionIds,
+    onlineApplications: onlineApplicants,
+    storedPortalTypes: storedPortalTypes,
+    importantSites: importantSites,
+    siteFolders: siteFolders,
+
     // Legacy flat properties for compatibility
     crmProjects: crmProjects,
     invoices: invoices,
@@ -492,6 +551,19 @@ export function validateBackupFile(fileContent: string): BackupValidationResult 
     const staffSalary: StaffSalaryRecord[] =
       data.personalBills?.staffSalary || (Array.isArray(data.staffSalary) ? data.staffSalary : []);
 
+    // Extract Site Inspections, Applications & Sites
+    const siteInspections = Array.isArray(data.siteInspections)
+      ? data.siteInspections
+      : Array.isArray(data.siteInspectionData)
+      ? data.siteInspectionData
+      : [];
+    const siteInspectionTemplates = Array.isArray(data.siteInspectionTemplates) ? data.siteInspectionTemplates : [];
+    const deletedInspectionIds = Array.isArray(data.deletedInspectionIds) ? data.deletedInspectionIds : [];
+    const onlineApplications = Array.isArray(data.onlineApplications) ? data.onlineApplications : [];
+    const storedPortalTypes = Array.isArray(data.storedPortalTypes) ? data.storedPortalTypes : [];
+    const importantSites = Array.isArray(data.importantSites) ? data.importantSites : [];
+    const siteFolders = Array.isArray(data.siteFolders) ? data.siteFolders : [];
+
     const totalPersonalBills = poovMalaRows.length + ksebBills.length + vendorBills.length + staffSalary.length;
 
     const normalizedPackage: VasthusilpyBackupPackage = {
@@ -514,6 +586,9 @@ export function validateBackupFile(fileContent: string): BackupValidationResult 
         totalPersonalBills: totalPersonalBills,
         totalRegisteredTasks: registeredTasks.length,
         totalRateItems: rateItems.length,
+        totalSiteInspections: siteInspections.length,
+        totalOnlineApplications: onlineApplications.length,
+        totalImportantSites: importantSites.length,
         userEmail: data.metadata?.userEmail
       },
       dataStorageVault: {
@@ -565,6 +640,14 @@ export function validateBackupFile(fileContent: string): BackupValidationResult 
         vendorBills: vendorBills,
         staffSalary: staffSalary
       },
+      siteInspections: siteInspections,
+      siteInspectionData: siteInspections,
+      siteInspectionTemplates: siteInspectionTemplates,
+      deletedInspectionIds: deletedInspectionIds,
+      onlineApplications: onlineApplications,
+      storedPortalTypes: storedPortalTypes,
+      importantSites: importantSites,
+      siteFolders: siteFolders,
       crmProjects: crmProjects,
       invoices: invoices,
       estimates: estimates,
@@ -605,7 +688,7 @@ export function validateBackupFile(fileContent: string): BackupValidationResult 
 }
 
 /**
- * Restore data with either CLEAN REPLACE or MERGE mode across all 7 tabs
+ * Restore data with either CLEAN REPLACE or MERGE mode across all 7 tabs & Site Inspections
  */
 export async function restoreBackupPackage(
   pkg: VasthusilpyBackupPackage,
@@ -872,6 +955,70 @@ export async function restoreBackupPackage(
     }
 
     // ----------------------------------------------------
+    // 8. SITE INSPECTIONS
+    // ----------------------------------------------------
+    const incomingInspections = pkg.siteInspections || pkg.siteInspectionData || [];
+    const incomingInspectionTemplates = pkg.siteInspectionTemplates || [];
+
+    if (incomingInspections.length > 0) {
+      if (mode === "REPLACE") {
+        localStorage.setItem(STORAGE_KEYS_INSPECTION.INSPECTIONS, JSON.stringify(incomingInspections));
+        localStorage.setItem(STORAGE_KEYS_INSPECTION.DELETED_IDS, JSON.stringify([]));
+      } else {
+        const existingInspections = readStorageJson<any[]>(STORAGE_KEYS_INSPECTION.INSPECTIONS, []);
+        const inspMap = new Map<string, any>();
+        existingInspections.forEach((item) => inspMap.set(item.id, item));
+        incomingInspections.forEach((item) => inspMap.set(item.id, item));
+        localStorage.setItem(STORAGE_KEYS_INSPECTION.INSPECTIONS, JSON.stringify(Array.from(inspMap.values())));
+      }
+    }
+    if (incomingInspectionTemplates.length > 0) {
+      localStorage.setItem(STORAGE_KEYS_INSPECTION.TEMPLATES, JSON.stringify(incomingInspectionTemplates));
+    }
+
+    // ----------------------------------------------------
+    // 9. ONLINE APPLICATIONS & PORTALS
+    // ----------------------------------------------------
+    const incomingOnlineApps = pkg.onlineApplications || [];
+    const incomingStoredPortals = pkg.storedPortalTypes || [];
+
+    if (incomingOnlineApps.length > 0) {
+      if (mode === "REPLACE") {
+        localStorage.setItem(STORAGE_KEYS_ONLINE_APP.APPLICANTS, JSON.stringify(incomingOnlineApps));
+      } else {
+        const existingApps = readStorageJson<any[]>(STORAGE_KEYS_ONLINE_APP.APPLICANTS, []);
+        const appMap = new Map<string, any>();
+        existingApps.forEach((item) => appMap.set(item.id, item));
+        incomingOnlineApps.forEach((item) => appMap.set(item.id, item));
+        localStorage.setItem(STORAGE_KEYS_ONLINE_APP.APPLICANTS, JSON.stringify(Array.from(appMap.values())));
+      }
+    }
+    if (incomingStoredPortals.length > 0) {
+      localStorage.setItem(STORAGE_KEYS_ONLINE_APP.PORTAL_TYPES, JSON.stringify(incomingStoredPortals));
+    }
+
+    // ----------------------------------------------------
+    // 10. IMPORTANT SITES & FOLDERS
+    // ----------------------------------------------------
+    const incomingSites = pkg.importantSites || [];
+    const incomingSiteFolders = pkg.siteFolders || [];
+
+    if (incomingSites.length > 0) {
+      if (mode === "REPLACE") {
+        localStorage.setItem(STORAGE_KEYS_SITES.IMPORTANT_SITES, JSON.stringify(incomingSites));
+      } else {
+        const existingSites = readStorageJson<any[]>(STORAGE_KEYS_SITES.IMPORTANT_SITES, []);
+        const siteMap = new Map<string, any>();
+        existingSites.forEach((item) => siteMap.set(item.id, item));
+        incomingSites.forEach((item) => siteMap.set(item.id, item));
+        localStorage.setItem(STORAGE_KEYS_SITES.IMPORTANT_SITES, JSON.stringify(Array.from(siteMap.values())));
+      }
+    }
+    if (incomingSiteFolders.length > 0) {
+      localStorage.setItem(STORAGE_KEYS_SITES.SITE_FOLDERS, JSON.stringify(incomingSiteFolders));
+    }
+
+    // ----------------------------------------------------
     // BACKGROUND FIRESTORE SYNC & EVENT DISPATCHING
     // ----------------------------------------------------
     try {
@@ -884,6 +1031,21 @@ export async function restoreBackupPackage(
       finalEstimates.forEach((e) => {
         safeSetDoc(doc(db, "estimates", e.id), e, { merge: true }).catch(() => {});
       });
+      incomingInspections.forEach((insp) => {
+        if (insp.id) {
+          safeSetDoc(doc(db, "site_inspections", insp.id), insp, { merge: true }).catch(() => {});
+        }
+      });
+      incomingOnlineApps.forEach((oApp) => {
+        if (oApp.id) {
+          safeSetDoc(doc(db, "online_applications", oApp.id), oApp, { merge: true }).catch(() => {});
+        }
+      });
+      incomingSites.forEach((site) => {
+        if (site.id) {
+          safeSetDoc(doc(db, "important_sites", site.id), site, { merge: true }).catch(() => {});
+        }
+      });
     } catch (e) {
       console.warn("Firestore sync during restore skipped/offline:", e);
     }
@@ -895,6 +1057,9 @@ export async function restoreBackupPackage(
     window.dispatchEvent(new Event("vasthusilpy_construction_updated"));
     window.dispatchEvent(new Event("vasthusilpy_quotations_updated"));
     window.dispatchEvent(new Event("vasthusilpy_personal_bills_updated"));
+    window.dispatchEvent(new Event("vasthusilpy_site_inspections_updated"));
+    window.dispatchEvent(new Event("vasthusilpy_online_apps_updated"));
+    window.dispatchEvent(new Event("vasthusilpy_important_sites_updated"));
     window.dispatchEvent(new Event("vasthusilpy_backup_restored"));
     window.dispatchEvent(new Event("vasthusilpy_snapshots_updated"));
 
@@ -903,7 +1068,7 @@ export async function restoreBackupPackage(
 
     return {
       success: true,
-      message: `Complete system restore finished! Restored Data Storage Vault, Construction Work, Quotations, Estimator, CRM, Invoices, and Personal Bills seamlessly.`
+      message: `Complete system restore finished! Restored Site Inspections, Data Storage Vault, Construction Work, Quotations, Estimator, CRM, Invoices, Online Applications, Important Sites, and Personal Bills seamlessly.`
     };
   } catch (err: any) {
     console.error("Failed to execute restore:", err);

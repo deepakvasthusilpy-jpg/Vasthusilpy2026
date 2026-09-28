@@ -177,6 +177,7 @@ export type SurveyTabType = "missing_side" | "land_area" | "unit_converters";
 export type CivilTabType = "brick_masonry" | "concrete_block" | "cement_concrete" | "material_quantity_bbs";
 
 export type OfficeDashboardTabType =
+  | "office_combined_dashboard"
   | "office_crm_projects"
   | "office_crm"
   | "office_tasks"
@@ -725,6 +726,12 @@ export type DataStorageVaultTabType =
   | "vault_documents"
   | "vault_settings";
 
+export type SiteInspectionTabType =
+  | "site_inspection_form"
+  | "site_inspection_dashboard"
+  | "site_inspection_builder"
+  | "site_inspection_guide";
+
 export type ApplicationFormsTabType =
   | "application_forms_dashboard"
   | "application_forms_fill"
@@ -749,6 +756,7 @@ export type TabType =
   | QuotationTabType
   | OnlineApplicationsTabType
   | ApplicationFormsTabType
+  | SiteInspectionTabType
   | ImportantSitesTabType;
 
 export interface FormFieldDefinition {

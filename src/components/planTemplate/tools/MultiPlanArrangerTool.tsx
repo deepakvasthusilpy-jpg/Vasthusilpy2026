@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { BuildingPlanProject, PlanSheet, PlanAttachment } from "../../../types/buildingPlanTemplate";
-import { SAMPLE_GROUND_FLOOR_SVG, SAMPLE_FIRST_FLOOR_SVG } from "../../../data/sampleBuildingPlans";
 import {
   Layers,
   Plus,
@@ -69,15 +68,14 @@ export const MultiPlanArrangerTool: React.FC<MultiPlanArrangerToolProps> = ({
     });
   };
 
-  // Add a sample or uploaded plan attachment
-  const handleAddPlan = (sampleType: "ground" | "first" | "custom") => {
+  // Add a plan attachment slot
+  const handleAddPlan = (customTitle?: string) => {
     const id = `att-${Date.now()}`;
-    const isFirst = sampleType === "first";
     const newAtt: PlanAttachment = {
       id,
-      title: isFirst ? "First Floor Plan" : sampleType === "ground" ? "Ground Floor Plan" : newTitle || "Proposed Floor Plan",
-      imageUrl: isFirst ? SAMPLE_FIRST_FLOOR_SVG : SAMPLE_GROUND_FLOOR_SVG,
-      fileName: isFirst ? "first_floor_plan.svg" : "ground_floor_plan.svg",
+      title: customTitle || newTitle || `Drawing Level ${attachments.length + 1}`,
+      imageUrl: "",
+      fileName: "",
       x: attachments.length === 0 ? 5 : 50,
       y: 10,
       width: attachments.length === 0 ? 90 : 44,
@@ -202,15 +200,15 @@ export const MultiPlanArrangerTool: React.FC<MultiPlanArrangerToolProps> = ({
         <div className="flex flex-wrap items-center gap-2">
           <label className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-md hover:shadow-blue-500/20 transition-all">
             <Upload className="w-3.5 h-3.5" />
-            <span>Upload Plan File</span>
-            <input type="file" accept="image/*,.svg" onChange={handleFileUpload} className="hidden" />
+            <span>Upload Plan / Drawing</span>
+            <input type="file" accept="image/*,.svg,.pdf" onChange={handleFileUpload} className="hidden" />
           </label>
           <button
-            onClick={() => handleAddPlan("first")}
-            className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 border border-slate-700 transition-colors"
+            onClick={() => handleAddPlan()}
+            className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 border border-slate-700 transition-colors cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5 text-blue-400" />
-            <span>+ First Floor SVG</span>
+            <span>+ Add Drawing Slot</span>
           </button>
         </div>
       </div>

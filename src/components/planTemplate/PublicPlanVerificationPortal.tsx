@@ -4,9 +4,9 @@ import {
   PlanSheet
 } from "../../types/buildingPlanTemplate";
 import {
-  loadBuildingPlanProjects
+  loadBuildingPlanProjects,
+  createBlankBuildingPlanProject
 } from "../../data/buildingPlanStore";
-import { INITIAL_BUILDING_PLAN_PROJECT } from "../../data/sampleBuildingPlans";
 import { VASTHUSILPY_LOGO_DATA_URL, ENGINEER_CONTACT_DETAILS } from "../../data/vasthusilpyLogo";
 import {
   generateDirectProjectVectorPdf,
@@ -51,8 +51,8 @@ interface PublicPlanVerificationPortalProps {
 export const PublicPlanVerificationPortal: React.FC<PublicPlanVerificationPortalProps> = ({
   onGoToApp
 }) => {
-  const [project, setProject] = useState<BuildingPlanProject>(INITIAL_BUILDING_PLAN_PROJECT);
-  const [sheet, setSheet] = useState<PlanSheet>(INITIAL_BUILDING_PLAN_PROJECT.sheets[0]);
+  const [project, setProject] = useState<BuildingPlanProject>(() => createBlankBuildingPlanProject());
+  const [sheet, setSheet] = useState<PlanSheet>(() => createBlankBuildingPlanProject().sheets[0]);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
   const [copiedPhone, setCopiedPhone] = useState(false);
@@ -121,7 +121,7 @@ export const PublicPlanVerificationPortal: React.FC<PublicPlanVerificationPortal
             );
           }
           if (!matchedProject) {
-            matchedProject = storedProjects[0] || INITIAL_BUILDING_PLAN_PROJECT;
+            matchedProject = storedProjects[0] || createBlankBuildingPlanProject();
           }
         }
 

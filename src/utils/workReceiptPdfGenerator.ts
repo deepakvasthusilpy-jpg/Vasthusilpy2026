@@ -285,7 +285,7 @@ function drawSingleReceipt(
   doc.setTextColor(14, 116, 144);
   doc.text(project.assignee || "DEEPAK", margin + 135, y + 17.5);
 
-  // --- FINANCIAL STATEMENT BOX (WITH ADVANCE PAYMENT PROVISION) ---
+  // --- FINANCIAL STATEMENT BOX (WITH ADVANCE PAYMENT PROVISION - NO BALANCE DUE) ---
   const finY = y + particularsHeight + 1.5;
   const finHeight = 16.5;
 
@@ -300,12 +300,9 @@ function drawSingleReceipt(
   const totalPaid = (invoice?.totalPaid !== undefined && invoice.totalPaid > 0)
     ? invoice.totalPaid
     : (advanceAmount > 0 ? advanceAmount : (invoice?.totalPaid || 0));
-  const balanceDue = invoice?.balanceDue !== undefined
-    ? invoice.balanceDue
-    : Math.max(0, billAmount - totalPaid);
 
-  // 4-Column Financial Metric Grid (Total Bill, Advance Paid, Total Paid, Balance Due)
-  const colWidth = (leftBoxWidth - 5) / 4;
+  // 3-Column Financial Metric Grid (Total Bill, Advance Paid, Total Amount Received - NO BALANCE DUE AMOUNT)
+  const colWidth = (leftBoxWidth - 4) / 3;
   const metricY = finY + 1.2;
 
   // 1. Total Bill
@@ -313,11 +310,11 @@ function drawSingleReceipt(
   doc.setDrawColor(226, 232, 240);
   doc.roundedRect(margin + 2, metricY, colWidth, 9.2, 0.6, 0.6, "FD");
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(4.6);
+  doc.setFontSize(4.8);
   doc.setTextColor(100, 116, 139);
-  doc.text("TOTAL BILL", margin + 2 + colWidth / 2, metricY + 3.0, { align: "center" });
+  doc.text("TOTAL ESTIMATED BILL", margin + 2 + colWidth / 2, metricY + 3.0, { align: "center" });
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(6.8);
+  doc.setFontSize(7.0);
   doc.setTextColor(15, 23, 42);
   doc.text(`₹${billAmount.toLocaleString("en-IN")}`, margin + 2 + colWidth / 2, metricY + 7.2, { align: "center" });
 
@@ -326,40 +323,26 @@ function drawSingleReceipt(
   doc.setDrawColor(187, 247, 208);
   doc.roundedRect(margin + 3 + colWidth, metricY, colWidth, 9.2, 0.6, 0.6, "FD");
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(4.6);
+  doc.setFontSize(4.8);
   doc.setTextColor(21, 128, 61); // emerald-700
   doc.text("ADVANCE PAID", margin + 3 + colWidth + colWidth / 2, metricY + 3.0, { align: "center" });
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(6.8);
+  doc.setFontSize(7.0);
   doc.setTextColor(21, 128, 61);
   doc.text(`₹${advanceAmount.toLocaleString("en-IN")}`, margin + 3 + colWidth + colWidth / 2, metricY + 7.2, { align: "center" });
 
-  // 3. Total Paid
+  // 3. Total Paid / Received
   doc.setFillColor(240, 253, 250); // teal-50
   doc.setDrawColor(204, 251, 241);
   doc.roundedRect(margin + 4 + colWidth * 2, metricY, colWidth, 9.2, 0.6, 0.6, "FD");
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(4.6);
-  doc.setTextColor(13, 148, 136); // teal-600
-  doc.text("TOTAL PAID", margin + 4 + colWidth * 2 + colWidth / 2, metricY + 3.0, { align: "center" });
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(6.8);
+  doc.setFontSize(4.8);
+  doc.setTextColor(13, 148, 136); // teal-600
+  doc.text("TOTAL PAID / RECEIVED", margin + 4 + colWidth * 2 + colWidth / 2, metricY + 3.0, { align: "center" });
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.0);
   doc.setTextColor(15, 118, 110);
   doc.text(`₹${totalPaid.toLocaleString("en-IN")}`, margin + 4 + colWidth * 2 + colWidth / 2, metricY + 7.2, { align: "center" });
-
-  // 4. Balance Due
-  const hasBalance = balanceDue > 0;
-  doc.setFillColor(hasBalance ? 254 : 240, hasBalance ? 242 : 253, hasBalance ? 242 : 244);
-  doc.setDrawColor(hasBalance ? 254 : 187, hasBalance ? 202 : 247, hasBalance ? 202 : 208);
-  doc.roundedRect(margin + 5 + colWidth * 3, metricY, colWidth, 9.2, 0.6, 0.6, "FD");
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(4.6);
-  doc.setTextColor(hasBalance ? 185 : 21, hasBalance ? 28 : 128, hasBalance ? 28 : 61);
-  doc.text("BALANCE DUE", margin + 5 + colWidth * 3 + colWidth / 2, metricY + 3.0, { align: "center" });
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(6.8);
-  doc.setTextColor(hasBalance ? 185 : 21, hasBalance ? 28 : 128, hasBalance ? 28 : 61);
-  doc.text(hasBalance ? `₹${balanceDue.toLocaleString("en-IN")}` : "NIL (PAID)", margin + 5 + colWidth * 3 + colWidth / 2, metricY + 7.2, { align: "center" });
 
   // Advance Payment Mode / Note
   doc.setFont("helvetica", "normal");
