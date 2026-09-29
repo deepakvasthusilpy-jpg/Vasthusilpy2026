@@ -11,7 +11,6 @@ import {
 import { generateReceiptPdfBlob, generateInvoicePdfBlob } from "../../../utils/invoicePdfGenerator";
 import { executePostPaymentPipeline } from "../../../utils/postPaymentHook";
 import { uploadReceiptPdfToStorage } from "../../../lib/firebase";
-import { uploadReceiptPdfToGoogleDrive } from "../../../utils/googleDriveStorage";
 import {
   CheckCircle2,
   X,
@@ -63,14 +62,10 @@ export const PaymentReceiptDispatchModal: React.FC<PaymentReceiptDispatchModalPr
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
   const [generatingPdf, setGeneratingPdf] = useState<boolean>(false);
   
-  // Cloud Storage Status (Firebase + Google Drive)
+  // Cloud Storage Status (Firebase Storage)
   const [isUploadingToStorage, setIsUploadingToStorage] = useState<boolean>(false);
   const [storageUrl, setStorageUrl] = useState<string | undefined>(paymentRecord?.receiptPdfUrl);
   const [storagePath, setStoragePath] = useState<string | undefined>(paymentRecord?.receiptStoragePath);
-
-  const [isUploadingToDrive, setIsUploadingToDrive] = useState<boolean>(false);
-  const [driveUrl, setDriveUrl] = useState<string | undefined>(paymentRecord?.googleDriveUrl);
-  const [driveFileId, setDriveFileId] = useState<string | undefined>(paymentRecord?.googleDriveFileId);
 
   const receiptNo = paymentRecord?.receiptNumber || `REC-${invoice.invoiceNumber}-${paymentRecord?.id ? paymentRecord.id.replace(/[^a-zA-Z0-9]/g, "").slice(-4) : "001"}`;
   const receiptDate = paymentRecord?.date || new Date().toISOString().split("T")[0];
@@ -78,11 +73,11 @@ export const PaymentReceiptDispatchModal: React.FC<PaymentReceiptDispatchModalPr
   const isClosed = (invoice.balanceDue || 0) <= 0 || invoice.paymentStatus === "PAID";
   const paymentAmount = paymentRecord ? paymentRecord.amount : invoice.totalPaid;
 
-  // Auto-trigger Firebase & Google Drive Cloud Storage archival on modal open
+  // Auto-trigger Firebase Storage archival on modal open
   useEffect(() => {
     let isMounted = true;
     if (isOpen && invoice && paymentRecord) {
-      // 1. Firebase Storage Archival
+      // Firebase Storage Archival
       if (!storageUrl && !isUploadingToStorage) {
         setIsUploadingToStorage(true);
         (async () => {
@@ -114,40 +109,6 @@ export const PaymentReceiptDispatchModal: React.FC<PaymentReceiptDispatchModalPr
             console.warn("Auto Firebase storage upload notice:", err);
           } finally {
             if (isMounted) setIsUploadingToStorage(false);
-          }
-        })();
-      }
-
-      // 2. Google Drive Cloud Storage Archival
-      if (!driveUrl && !isUploadingToDrive) {
-        setIsUploadingToDrive(true);
-        (async () => {
-          try {
-            const driveRes = await uploadReceiptPdfToGoogleDrive(invoice, { ...paymentRecord, receiptNumber: receiptNo });
-            if (!isMounted) return;
-
-            if (driveRes.success && driveRes.webViewLink) {
-              setDriveUrl(driveRes.webViewLink);
-              setDriveFileId(driveRes.fileId);
-
-              if (onUpdateInvoice) {
-                const updatedPayments = (invoice.payments || []).map((p) =>
-                  p.id === paymentRecord.id
-                    ? {
-                        ...p,
-                        googleDriveUrl: driveRes.webViewLink,
-                        googleDriveFileId: driveRes.fileId,
-                        googleDriveSyncedAt: new Date().toISOString()
-                      }
-                    : p
-                );
-                onUpdateInvoice({ ...invoice, payments: updatedPayments });
-              }
-            }
-          } catch (dErr: any) {
-            console.warn("Auto Google Drive upload notice:", dErr);
-          } finally {
-            if (isMounted) setIsUploadingToDrive(false);
           }
         })();
       }
@@ -337,63 +298,8 @@ export const PaymentReceiptDispatchModal: React.FC<PaymentReceiptDispatchModalPr
             )}
           </div>
 
-          {/* Dual Cloud Storage Status (Google Drive + Firebase Storage) */}
+          {/* Cloud Storage Status (Firebase Storage Mirror) */}
           <div className="space-y-2">
-            {/* Google Drive Cloud Storage */}
-            <div className="p-3 bg-slate-900 text-white rounded-xl border border-slate-800 flex items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-2.5 min-w-0">
-                {isUploadingToDrive ? (
-                  <Loader2 className="w-4 h-4 text-emerald-400 animate-spin shrink-0" />
-                ) : driveUrl ? (
-                  <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-                    <Check className="w-3.5 h-3.5" />
-                  </div>
-                ) : (
-                  <HardDrive className="w-4 h-4 text-emerald-400 shrink-0" />
-                )}
-                <div className="truncate">
-                  <div className="font-bold flex items-center gap-2">
-                    <span className="text-emerald-300 flex items-center gap-1.5">
-                      <HardDrive className="w-3.5 h-3.5" />
-                      Google Drive Cloud Storage
-                    </span>
-                    {driveUrl ? (
-                      <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.2 rounded font-mono font-normal border border-emerald-500/30">
-                        DRIVE ARCHIVED
-                      </span>
-                    ) : isUploadingToDrive ? (
-                      <span className="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.2 rounded font-mono font-normal">
-                        UPLOADING...
-                      </span>
-                    ) : (
-                      <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.2 rounded font-mono font-normal">
-                        AUTO-SYNC
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-[11px] text-slate-400 font-mono truncate">
-                    {isUploadingToDrive
-                      ? "Uploading receipt PDF to 'Vasthusilpy Invoices & Receipts' folder..."
-                      : driveUrl
-                      ? `Stored in Google Drive: Receipt_${receiptNo}.pdf`
-                      : "Saved automatically to Google Drive Cloud Storage"}
-                  </div>
-                </div>
-              </div>
-
-              {driveUrl && (
-                <a
-                  href={driveUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="shrink-0 px-2.5 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-semibold rounded-lg flex items-center gap-1 border border-emerald-500/30 transition text-[11px]"
-                >
-                  <ExternalLink className="w-3 h-3" />
-                  <span>Open in Drive</span>
-                </a>
-              )}
-            </div>
-
             {/* Firebase Cloud Storage */}
             <div className="p-2.5 bg-slate-900/70 text-slate-300 rounded-xl border border-slate-800 flex items-center justify-between gap-3 text-xs">
               <div className="flex items-center gap-2.5 min-w-0">

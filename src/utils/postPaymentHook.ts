@@ -1,7 +1,6 @@
 import { Invoice, PaymentRecord } from "../types";
 import { generateReceiptPdfBlob } from "./invoicePdfGenerator";
 import { uploadReceiptPdfToStorage } from "../lib/firebase";
-import { uploadReceiptPdfToGoogleDrive, uploadInvoicePdfToGoogleDrive } from "./googleDriveStorage";
 import {
   sendPaymentReceiptViaEmailAutomatically,
   sendInvoiceOrReceiptViaWhatsApp,
@@ -13,7 +12,6 @@ import { triggerAppNotification } from "../context/NotificationContext";
 
 export interface PostPaymentPipelineOptions {
   autoUploadToFirebaseStorage?: boolean;
-  autoUploadToGoogleDrive?: boolean;
   autoSendEmail?: boolean;
   autoSendWhatsApp?: boolean;
   recipientEmail?: string;
@@ -30,13 +28,6 @@ export interface PostPaymentPipelineResult {
     success: boolean;
     downloadUrl?: string;
     storagePath?: string;
-    error?: string;
-  };
-  googleDriveResult?: {
-    success: boolean;
-    fileId?: string;
-    webViewLink?: string;
-    folderViewLink?: string;
     error?: string;
   };
   emailResult?: {
@@ -137,32 +128,6 @@ export async function executePostPaymentPipeline(
     }
   }
 
-  // 2.2 Automatically Upload to Google Drive Cloud Storage
-  let googleDriveResult: PostPaymentPipelineResult["googleDriveResult"] = {
-    success: false,
-    error: "Google Drive upload skipped"
-  };
-  let receiptGoogleDriveUrl: string | undefined = paymentRecord.googleDriveUrl;
-  let receiptGoogleDriveFileId: string | undefined = paymentRecord.googleDriveFileId;
-
-  if (autoUploadToGoogleDrive !== false) {
-    onProgress?.("uploading_gdrive", "Archiving PDF receipt in Google Drive Cloud Storage...");
-    try {
-      const gdriveRes = await uploadReceiptPdfToGoogleDrive(invoice, { ...paymentRecord, receiptNumber });
-      googleDriveResult = gdriveRes;
-      if (gdriveRes.success && gdriveRes.webViewLink) {
-        receiptGoogleDriveUrl = gdriveRes.webViewLink;
-        receiptGoogleDriveFileId = gdriveRes.fileId;
-      }
-    } catch (gdriveErr: any) {
-      console.warn("[Post-Payment Hook] Google Drive receipt upload warning:", gdriveErr);
-      googleDriveResult = {
-        success: false,
-        error: gdriveErr?.message || "Google Drive upload failed"
-      };
-    }
-  }
-
   // Update working payment record with generated info
   let updatedPayment: PaymentRecord = {
     ...paymentRecord,
@@ -170,13 +135,9 @@ export async function executePostPaymentPipeline(
     receiptGeneratedAt: nowIso,
     receiptPdfUrl: receiptPdfUrl || paymentRecord.receiptPdfUrl,
     receiptStoragePath: receiptStoragePath || paymentRecord.receiptStoragePath,
-    googleDriveUrl: receiptGoogleDriveUrl || paymentRecord.googleDriveUrl,
-    googleDriveFileId: receiptGoogleDriveFileId || paymentRecord.googleDriveFileId,
-    googleDriveSyncedAt: receiptGoogleDriveUrl ? nowIso : paymentRecord.googleDriveSyncedAt,
     autoDispatched: {
       ...(paymentRecord.autoDispatched || {}),
       firebaseStorageSaved: storageResult.success,
-      googleDriveSaved: googleDriveResult?.success || false,
       timestamp: nowIso
     }
   };
@@ -302,7 +263,6 @@ export async function executePostPaymentPipeline(
     pdfBlob,
     pdfBase64,
     storageResult,
-    googleDriveResult,
     emailResult,
     whatsAppResult,
     updatedPaymentRecord: updatedPayment,

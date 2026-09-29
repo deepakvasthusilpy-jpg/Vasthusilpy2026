@@ -542,8 +542,6 @@ export function validateBackupFile(fileContent: string): BackupValidationResult 
         exportedAtFormatted:
           data.metadata?.exportedAtFormatted ||
           (data.metadata?.exportedAt ? new Date(data.metadata.exportedAt).toLocaleString("en-IN") : "Original Backup"),
-        totalVaultFiles: vaultFiles.length,
-        totalVaultFolders: vaultFolders.length,
         totalConstructionProjects: constructionProjects.length,
         totalConstructionAgreements: constructionAgreements.length,
         totalQuotations: quotations.length,
@@ -558,12 +556,6 @@ export function validateBackupFile(fileContent: string): BackupValidationResult 
         totalOnlineApplications: onlineApplications.length,
         totalImportantSites: importantSites.length,
         userEmail: data.metadata?.userEmail
-      },
-      dataStorageVault: {
-        files: vaultFiles,
-        folders: vaultFolders,
-        metadataIndex: vaultIndex,
-        settings: vaultSettings
       },
       constructionWork: {
         projects: constructionProjects,
@@ -633,8 +625,6 @@ export function validateBackupFile(fileContent: string): BackupValidationResult 
       isValid: true,
       package: normalizedPackage,
       summary: {
-        vaultFilesCount: vaultFiles.length,
-        vaultFoldersCount: vaultFolders.length,
         constructionProjectsCount: constructionProjects.length,
         constructionAgreementsCount: constructionAgreements.length,
         quotationsCount: quotations.length,
@@ -1007,7 +997,7 @@ export async function restoreBackupPackage(
 
     return {
       success: true,
-      message: `Complete system restore finished! Restored Site Inspections, Data Storage Vault, Construction Work, Quotations, Estimator, CRM, Invoices, Online Applications, Important Sites, and Personal Bills seamlessly.`
+      message: `Complete system restore finished! Restored Site Inspections, Construction Work, Quotations, Estimator, CRM, Invoices, Online Applications, Important Sites, and Personal Bills seamlessly.`
     };
   } catch (err: any) {
     console.error("Failed to execute restore:", err);

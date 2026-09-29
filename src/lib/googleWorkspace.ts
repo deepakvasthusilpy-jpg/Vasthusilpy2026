@@ -2,8 +2,6 @@ import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User } from 'f
 import { auth } from './firebase';
 
 const provider = new GoogleAuthProvider();
-provider.addScope('https://www.googleapis.com/auth/drive');
-provider.addScope('https://www.googleapis.com/auth/drive.file');
 provider.addScope('https://www.googleapis.com/auth/gmail.send');
 provider.addScope('https://www.googleapis.com/auth/gmail.compose');
 provider.addScope('https://www.googleapis.com/auth/documents');
@@ -57,8 +55,6 @@ export const googleSignIn = async (forceConsent: boolean = true): Promise<{ user
     try {
       isSigningIn = true;
       const authProvider = new GoogleAuthProvider();
-      authProvider.addScope('https://www.googleapis.com/auth/drive');
-      authProvider.addScope('https://www.googleapis.com/auth/drive.file');
       authProvider.addScope('https://www.googleapis.com/auth/gmail.send');
       authProvider.addScope('https://www.googleapis.com/auth/gmail.compose');
       authProvider.addScope('https://www.googleapis.com/auth/documents');

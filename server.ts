@@ -1703,133 +1703,8 @@ app.delete("/api/db/google-docs-sheets/:id", async (req, res) => {
   }
 });
 
-// 5. Upload File (Invoice / Receipt PDF) to Google Drive Cloud Storage
-app.post("/api/google/upload-drive-file", async (req, res) => {
-  try {
-    const { fileName, fileBase64, mimeType = "application/pdf", folderName = "Vasthusilpy Invoices & Receipts", description, accessToken } = req.body;
-
-    if (!accessToken) {
-      return res.status(401).json({ error: "Missing Google OAuth Access Token. Please sign in with Google." });
-    }
-    if (!fileName || !fileBase64) {
-      return res.status(400).json({ error: "fileName and fileBase64 are required." });
-    }
-
-    // 5.1 Locate or create designated target folder in Google Drive
-    let targetFolderId: string | null = null;
-    try {
-      const q = encodeURIComponent(`name = '${folderName.replace(/'/g, "\\'")}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`);
-      const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,webViewLink)`, {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      });
-      if (searchRes.ok) {
-        const searchData = await searchRes.json();
-        if (searchData.files && searchData.files.length > 0) {
-          targetFolderId = searchData.files[0].id;
-        }
-      }
-
-      // If folder not found, create it
-      if (!targetFolderId) {
-        const createFolderRes = await fetch("https://www.googleapis.com/drive/v3/files", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            name: folderName,
-            mimeType: "application/vnd.google-apps.folder",
-            description: "Dedicated cloud storage folder for Vasthusilpy Architectural Consultants Invoices, Estimates & Payment Receipts."
-          })
-        });
-        if (createFolderRes.ok) {
-          const newFolder = await createFolderRes.json();
-          targetFolderId = newFolder.id;
-        }
-      }
-    } catch (fErr) {
-      console.warn("Folder search/creation in Drive warning:", fErr);
-    }
-
-    // 5.2 Perform Multipart Upload to Google Drive
-    const boundary = `-------314159265358979323846_${Date.now()}`;
-    const fileMetadata: any = {
-      name: fileName,
-      mimeType: mimeType || "application/pdf",
-      description: description || "Vasthusilpy Official Document"
-    };
-    if (targetFolderId) {
-      fileMetadata.parents = [targetFolderId];
-    }
-
-    // Clean base64
-    const rawBase64 = fileBase64.replace(/^data:[^;]+;base64,/, "").trim();
-    const fileBuffer = Buffer.from(rawBase64, "base64");
-
-    const delimiter = `\r\n--${boundary}\r\n`;
-    const closeDelimiter = `\r\n--${boundary}--`;
-
-    const metadataPart = `${delimiter}Content-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(fileMetadata)}`;
-    const mediaHeader = `${delimiter}Content-Type: ${mimeType}\r\nContent-Transfer-Encoding: base64\r\n\r\n`;
-
-    const multipartRequestBody = Buffer.concat([
-      Buffer.from(metadataPart, "utf8"),
-      Buffer.from(mediaHeader, "utf8"),
-      Buffer.from(rawBase64, "utf8"),
-      Buffer.from(closeDelimiter, "utf8")
-    ]);
-
-    const uploadRes = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink,webContentLink,parents,size,createdTime", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": `multipart/related; boundary=${boundary}`,
-        "Content-Length": String(multipartRequestBody.length)
-      },
-      body: multipartRequestBody
-    });
-
-    if (!uploadRes.ok) {
-      const errData = await uploadRes.json();
-      console.error("Google Drive Upload API Error:", errData);
-      return res.status(uploadRes.status).json({ error: errData.error?.message || "Failed to upload file to Google Drive." });
-    }
-
-    const uploadedFile = await uploadRes.json();
-    const webViewLink = uploadedFile.webViewLink || `https://drive.google.com/file/d/${uploadedFile.id}/view`;
-    const folderViewLink = targetFolderId ? `https://drive.google.com/drive/folders/${targetFolderId}` : undefined;
-
-    // Optional: save reference in Cloud SQL
-    try {
-      await db.insert(googleDocsSheets).values({
-        title: fileName,
-        docType: "doc",
-        googleId: uploadedFile.id,
-        webUrl: webViewLink
-      });
-    } catch (sqlErr) {
-      // Non-blocking
-    }
-
-    return res.json({
-      success: true,
-      fileId: uploadedFile.id,
-      fileName: uploadedFile.name,
-      webViewLink: webViewLink,
-      webContentLink: uploadedFile.webContentLink,
-      folderId: targetFolderId,
-      folderViewLink: folderViewLink,
-      createdTime: uploadedFile.createdTime
-    });
-  } catch (error: any) {
-    console.error("Error in /api/google/upload-drive-file:", error);
-    return res.status(500).json({ error: error.message || "Failed to upload file to Google Drive." });
-  }
-});
-
 // =========================================================================
-// 6. Vasthusilpy Cloud Drive Plan Storage & Zero-Login Public QR API
+// 5. Vasthusilpy Plan Storage & Zero-Login Public QR API
 // =========================================================================
 
 const CLOUD_PLANS_DIR = path.join(process.cwd(), "data", "cloud_plans");
@@ -1910,84 +1785,7 @@ app.post("/api/cloud-plans/save", async (req, res) => {
       }
     }
 
-    // 3. Optional Google Drive Cloud Sync if accessToken is provided
-    let driveResult: { fileId?: string; webViewLink?: string; webContentLink?: string } | null = null;
-    if (accessToken && hasPdf && pdfBase64) {
-      try {
-        const folderName = "Vasthusilpy Architectural Plans & Blueprints";
-        let targetFolderId: string | null = null;
-
-        // Search or create folder in user's Google Drive
-        const q = encodeURIComponent(`name = '${folderName.replace(/'/g, "\\'")}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`);
-        const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,webViewLink)`, {
-          headers: { Authorization: `Bearer ${accessToken}` }
-        });
-        if (searchRes.ok) {
-          const searchData = await searchRes.json();
-          if (searchData.files && searchData.files.length > 0) {
-            targetFolderId = searchData.files[0].id;
-          }
-        }
-        if (!targetFolderId) {
-          const createFolderRes = await fetch("https://www.googleapis.com/drive/v3/files", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              name: folderName,
-              mimeType: "application/vnd.google-apps.folder",
-              description: "Vasthusilpy Cloud Drive: Architectural floor plans, blueprints, and working drawings."
-            })
-          });
-          if (createFolderRes.ok) {
-            const newFolder = await createFolderRes.json();
-            targetFolderId = newFolder.id;
-          }
-        }
-
-        // Upload PDF to Google Drive
-        const boundary = `-------314159265358979323846_${Date.now()}`;
-        const cleanBase64 = pdfBase64.replace(/^data:[^;]+;base64,/, "").trim();
-        const fileMetadata: any = {
-          name: pdfFileName,
-          mimeType: "application/pdf",
-          description: `Architectural Drawing ${sheet?.drawingNumber || ""} for ${project.clientName || "Client"} - Saved from Vasthusilpy Building Plan Templates`
-        };
-        if (targetFolderId) fileMetadata.parents = [targetFolderId];
-
-        const delimiter = `\r\n--${boundary}\r\n`;
-        const closeDelimiter = `\r\n--${boundary}--`;
-        const metadataPart = `${delimiter}Content-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(fileMetadata)}`;
-        const mediaHeader = `${delimiter}Content-Type: application/pdf\r\nContent-Transfer-Encoding: base64\r\n\r\n`;
-
-        const multipartRequestBody = Buffer.concat([
-          Buffer.from(metadataPart, "utf8"),
-          Buffer.from(mediaHeader, "utf8"),
-          Buffer.from(cleanBase64, "utf8"),
-          Buffer.from(closeDelimiter, "utf8")
-        ]);
-
-        const uploadRes = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink,webContentLink", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": `multipart/related; boundary=${boundary}`,
-            "Content-Length": String(multipartRequestBody.length)
-          },
-          body: multipartRequestBody
-        });
-
-        if (uploadRes.ok) {
-          driveResult = await uploadRes.json();
-        }
-      } catch (gErr) {
-        console.warn("Non-fatal Google Drive sync notice:", gErr);
-      }
-    }
-
-    // 4. Update Cloud Registry
+    // 3. Update Registry
     const cloudDownloadUrl = `/api/cloud-plans/download/${projectId}?sheetId=${sheetId}`;
     const registryEntry = {
       id: projectId,
@@ -2000,9 +1798,6 @@ app.post("/api/cloud-plans/save", async (req, res) => {
       drawingNumber: sheet?.drawingNumber || "DWG-1",
       hasPdf,
       cloudDownloadUrl,
-      driveFileId: driveResult?.fileId || null,
-      driveViewLink: driveResult?.webViewLink || null,
-      driveDownloadLink: driveResult?.webContentLink || null,
       lastSavedAt: new Date().toISOString()
     };
     updateCloudPlansRegistry(projectId, registryEntry);
@@ -2012,14 +1807,12 @@ app.post("/api/cloud-plans/save", async (req, res) => {
       cloudId: projectId,
       cloudDownloadUrl,
       hasPdf,
-      driveViewLink: driveResult?.webViewLink || null,
-      driveDownloadLink: driveResult?.webContentLink || null,
       savedAt: new Date().toISOString(),
-      message: "Plan automatically saved to Vasthusilpy Cloud Drive successfully."
+      message: "Plan saved successfully."
     });
   } catch (error: any) {
-    console.error("Error saving plan to Cloud Drive:", error);
-    return res.status(500).json({ error: error.message || "Failed to save plan to cloud storage." });
+    console.error("Error saving plan:", error);
+    return res.status(500).json({ error: error.message || "Failed to save plan." });
   }
 });
 
@@ -3385,8 +3178,6 @@ import { registerApplicationFormsRoutes } from "./src/server/applicationFormsSer
 import { registerCrmRoutes } from "./src/server/crmServer.ts";
 import { registerWebDataRoutes } from "./src/server/webDataServer.ts";
 import { registerRealtimeSyncRoutes } from "./src/server/realtimeSyncServer.ts";
-import { registerGoogleBackupRoutes } from "./src/server/googleBackupServer.ts";
-import { registerCloudflareRoutes } from "./src/server/cloudflareServer.ts";
 
 // Register Universal Realtime Cloud Synchronization and SSE Endpoints
 registerRealtimeSyncRoutes(app);
@@ -3399,12 +3190,6 @@ registerCrmRoutes(app);
 
 // Register Comprehensive Web Data & User Profile Synchronization Endpoints
 registerWebDataRoutes(app);
-
-// Register Google Drive Full Website Cloud Backup and Restore Endpoints
-registerGoogleBackupRoutes(app);
-
-// Register Cloudflare Workers Edge Integration Endpoints
-registerCloudflareRoutes(app);
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
@@ -3470,4 +3255,8 @@ async function startServer() {
   process.on("SIGINT", shutdown);
 }
 
-startServer();
+if (process.env.VERCEL || process.env.NODE_ENV !== "test") {
+  startServer();
+}
+
+export default app;

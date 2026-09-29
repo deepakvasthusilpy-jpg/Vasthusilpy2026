@@ -236,18 +236,6 @@ export const InspectionDashboard: React.FC<InspectionDashboardProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
-            {/* Google Drive Cloud Backup Button */}
-            <button
-              onClick={() => {
-                window.dispatchEvent(new CustomEvent("vasthusilpy_open_gdrive_backup", { detail: { tab: "backup" } }));
-              }}
-              className="px-4 py-2.5 bg-emerald-950 hover:bg-emerald-900 text-emerald-300 hover:text-white border border-emerald-500/40 font-bold rounded-2xl text-xs flex items-center gap-2 transition cursor-pointer shadow-md"
-              title="Backup all inspection reports, answers, GPS data, photos metadata & site data to Google Drive Cloud Drive"
-            >
-              <Cloud className="w-4 h-4 text-emerald-400" />
-              <span>Backup to Google Drive</span>
-            </button>
-
             {/* Download ALL Button */}
             <button
               onClick={() => handleDownloadBatch(filteredInspections)}

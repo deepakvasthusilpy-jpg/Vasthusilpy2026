@@ -81,8 +81,6 @@ export function createDailySnapshot(force: boolean = false): DailySnapshotRecord
   const formattedTime = now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
 
   const stats = {
-    vaultFiles: pkg.dataStorageVault?.files?.length || 0,
-    vaultFolders: pkg.dataStorageVault?.folders?.length || 0,
     constructionProjects: pkg.constructionWork?.projects?.length || 0,
     constructionAgreements: pkg.constructionWork?.agreements?.length || 0,
     quotations: pkg.quotation?.quotations?.length || 0,
@@ -99,8 +97,6 @@ export function createDailySnapshot(force: boolean = false): DailySnapshotRecord
   };
 
   stats.totalRecords =
-    stats.vaultFiles +
-    stats.vaultFolders +
     stats.constructionProjects +
     stats.constructionAgreements +
     stats.quotations +
@@ -222,13 +218,7 @@ export function detectPotentialDataLoss(): DataLossAuditResult {
 
   const emptyTabs: string[] = [];
 
-  // Check 1: Data Storage Vault
-  const currentVaultFiles = pkg.dataStorageVault?.files?.length || 0;
-  if (currentVaultFiles === 0 && (latestSnapshot.stats.vaultFiles || 0) > 0) {
-    emptyTabs.push("Data Storage Vault");
-  }
-
-  // Check 2: Construction Work
+  // Check 1: Construction Work
   const currentConstProjects = pkg.constructionWork?.projects?.length || 0;
   if (currentConstProjects === 0 && (latestSnapshot.stats.constructionProjects || 0) > 0) {
     emptyTabs.push("Construction Work");

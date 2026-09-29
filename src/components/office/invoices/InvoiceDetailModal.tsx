@@ -47,7 +47,6 @@ import {
   Maximize2,
   RotateCcw
 } from "lucide-react";
-import { uploadInvoicePdfToGoogleDrive } from "../../../utils/googleDriveStorage";
 import { generateInvoicePdfBlob } from "../../../utils/invoicePdfGenerator";
 
 interface InvoiceDetailModalProps {
@@ -85,8 +84,6 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
   const [copiedUpi, setCopiedUpi] = useState<boolean>(false);
   const [isSendingEmail, setIsSendingEmail] = useState<boolean>(false);
   const [emailStatusMessage, setEmailStatusMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-  const [isSyncingDrive, setIsSyncingDrive] = useState<boolean>(false);
-  const [driveStatusMsg, setDriveStatusMsg] = useState<string | null>(null);
   
   // Payment Receipt Dispatch Modal State
   const [isReceiptDispatchOpen, setIsReceiptDispatchOpen] = useState<boolean>(false);
@@ -200,40 +197,6 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
     navigator.clipboard.writeText("7012383137@okbizaxis");
     setCopiedUpi(true);
     setTimeout(() => setCopiedUpi(false), 2000);
-  };
-
-  const handleSyncToGoogleDrive = async () => {
-    setIsSyncingDrive(true);
-    setDriveStatusMsg("Syncing invoice PDF to Google Drive...");
-    try {
-      const res = await uploadInvoicePdfToGoogleDrive(invoice);
-      if (res.success && res.webViewLink) {
-        setDriveStatusMsg("Successfully archived in Google Drive!");
-        const updatedInvoice: Invoice = {
-          ...invoice,
-          googleDriveFileId: res.fileId,
-          googleDriveUrl: res.webViewLink,
-          googleDriveFolderId: res.folderId,
-          googleDriveSyncedAt: new Date().toISOString()
-        };
-        if (onUpdateInvoice) {
-          onUpdateInvoice(updatedInvoice);
-        }
-        triggerAppNotification(
-          "INVOICE_GENERATED",
-          "Google Drive Synced",
-          `Invoice #${invoice.invoiceNumber} uploaded to Google Drive.`,
-          { invoiceId: invoice.id }
-        );
-      } else {
-        setDriveStatusMsg(res.error || "Failed to sync to Google Drive.");
-      }
-    } catch (err: any) {
-      setDriveStatusMsg(err.message || "Google Drive sync error.");
-    } finally {
-      setIsSyncingDrive(false);
-      setTimeout(() => setDriveStatusMsg(null), 5000);
-    }
   };
 
   return (
@@ -383,36 +346,6 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
               <Download className="w-3.5 h-3.5" />
               <span className="hidden lg:inline">PDF</span>
             </button>
-
-            {/* Google Drive */}
-            {invoice.googleDriveUrl ? (
-              <a
-                href={invoice.googleDriveUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="px-2 py-1.5 bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 font-bold border border-emerald-700 rounded-xl text-xs transition-all flex items-center gap-1 cursor-pointer"
-                title="Open Stored PDF in Google Drive"
-              >
-                <HardDrive className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="hidden xl:inline">Drive</span>
-                <ExternalLink className="w-2.5 h-2.5 opacity-70" />
-              </a>
-            ) : (
-              <button
-                type="button"
-                onClick={handleSyncToGoogleDrive}
-                disabled={isSyncingDrive}
-                className="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold border border-slate-700 rounded-xl text-xs transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                title="Save & sync this invoice to Google Drive"
-              >
-                {isSyncingDrive ? (
-                  <Loader2 className="w-3.5 h-3.5 text-emerald-400 animate-spin" />
-                ) : (
-                  <HardDrive className="w-3.5 h-3.5 text-slate-400" />
-                )}
-                <span className="hidden xl:inline">Drive</span>
-              </button>
-            )}
 
             {/* Print */}
             <button
@@ -660,12 +593,6 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
                 {isPaid ? "Settled" : isPartial ? "Partial" : "Payment Pending"}
               </span>
             </div>
-
-            {invoice.googleDriveUrl && (
-              <span className="text-[10px] text-emerald-400 bg-emerald-950/60 border border-emerald-800/80 px-2 py-0.5 rounded flex items-center gap-1">
-                <HardDrive className="w-3 h-3" /> Drive Synced
-              </span>
-            )}
           </div>
         </div>
 
@@ -1243,42 +1170,6 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
                     <div className="text-cyan-400 font-bold">7012383137@naviaxis</div>
                   </div>
                 </div>
-              </div>
-            </div>
-
-            {/* Google Drive Archival Card */}
-            <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 space-y-2.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-950/80 border border-emerald-800/80 text-emerald-400 flex items-center justify-center">
-                    <HardDrive className="w-3.5 h-3.5" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-slate-200 font-mono">Google Drive Archival</div>
-                    <div className="text-[10px] text-slate-400 font-sans">Automatic cloud PDF storage</div>
-                  </div>
-                </div>
-                {invoice.googleDriveUrl ? (
-                  <a
-                    href={invoice.googleDriveUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="px-2.5 py-1 bg-emerald-950 hover:bg-emerald-900 border border-emerald-700 text-emerald-300 font-bold rounded-lg text-xs flex items-center gap-1 cursor-pointer"
-                  >
-                    <ExternalLink className="w-3 h-3" />
-                    <span>Open</span>
-                  </a>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleSyncToGoogleDrive}
-                    disabled={isSyncingDrive}
-                    className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold rounded-lg text-xs flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                  >
-                    {isSyncingDrive ? <Loader2 className="w-3 h-3 animate-spin" /> : <HardDrive className="w-3 h-3" />}
-                    <span>Sync Now</span>
-                  </button>
-                )}
               </div>
             </div>
 

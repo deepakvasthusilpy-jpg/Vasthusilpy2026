@@ -26,7 +26,6 @@ import { PersonalBillsDashboard } from "../personalBills/PersonalBillsDashboard"
 import { EstimateProject } from "../../data/estimateData";
 import { useLanguage } from "../../context/LanguageContext";
 import { triggerAppNotification } from "../../context/NotificationContext";
-import { uploadInvoicePdfToGoogleDrive } from "../../utils/googleDriveStorage";
 import {
   Receipt,
   Box,
@@ -206,26 +205,6 @@ export const InvoicePaymentsTab: React.FC<InvoicePaymentsTabProps> = ({
 
     updateInvoicesState(updatedInvoices, invoiceToSave);
 
-    // Automatically backup / upload invoice PDF to Google Drive cloud storage in background
-    uploadInvoicePdfToGoogleDrive(invoiceToSave)
-      .then((driveRes) => {
-        if (driveRes.success && driveRes.webViewLink) {
-          const syncedInvoice: Invoice = {
-            ...invoiceToSave,
-            googleDriveFileId: driveRes.fileId,
-            googleDriveUrl: driveRes.webViewLink,
-            googleDriveFolderId: driveRes.folderId,
-            googleDriveSyncedAt: new Date().toISOString()
-          };
-          setInvoices((prev) => prev.map((inv) => (inv.id === syncedInvoice.id ? syncedInvoice : inv)));
-          saveInvoices(invoices.map((inv) => (inv.id === syncedInvoice.id ? syncedInvoice : inv)));
-          safeSetDoc(doc(db, "invoices", syncedInvoice.id), syncedInvoice, { merge: true }).catch(() => {});
-        }
-      })
-      .catch((err) => {
-        console.warn("Background Google Drive auto-sync notice:", err);
-      });
-
     if (options?.keepOpen) {
       setEditingInvoice(invoiceToSave);
     } else {
@@ -240,7 +219,7 @@ export const InvoicePaymentsTab: React.FC<InvoicePaymentsTabProps> = ({
     triggerAppNotification(
       "INVOICE_GENERATED",
       exists ? "Invoice Updated" : "Invoice Created",
-      `Invoice #${invoiceToSave.invoiceNumber} for ${invoiceToSave.applicantName} saved successfully.${invoiceToSave.googleDriveUrl ? " Synced to Google Drive." : ""}`,
+      `Invoice #${invoiceToSave.invoiceNumber} for ${invoiceToSave.applicantName} saved successfully.`,
       { invoiceId: invoiceToSave.id }
     );
   };

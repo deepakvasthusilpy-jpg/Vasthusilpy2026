@@ -38,8 +38,6 @@ import {
   Database
 } from "lucide-react";
 import { OfflineBackupRestoreModal } from "./office/crm/OfflineBackupRestoreModal";
-import { GoogleDriveBackupModal } from "./common/GoogleDriveBackupModal";
-import { CloudflareBackendModal } from "./cloudflare/CloudflareBackendModal";
 import {
   performFullWebDataSync,
   getLastWebDataSyncTime,
@@ -82,9 +80,6 @@ export const Header: React.FC<HeaderProps> = ({
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isBackupRestoreOpen, setIsBackupRestoreOpen] = useState(false);
   const [backupInitialTab, setBackupInitialTab] = useState<"backup" | "snapshots" | "restore" | "health">("backup");
-  const [isGoogleDriveModalOpen, setIsGoogleDriveModalOpen] = useState(false);
-  const [gdriveInitialTab, setGdriveInitialTab] = useState<"backup" | "history" | "settings">("backup");
-  const [isCloudflareModalOpen, setIsCloudflareModalOpen] = useState(false);
   const [isWebSyncing, setIsWebSyncing] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
   const [lastSyncStr, setLastSyncStr] = useState<string>(() => formatSyncTimestamp(getLastWebDataSyncTime()));
@@ -159,24 +154,9 @@ export const Header: React.FC<HeaderProps> = ({
     };
     window.addEventListener("vasthusilpy_open_backup_modal", handleOpenBackupModal);
 
-    const handleOpenGdriveModal = (e: any) => {
-      if (e?.detail?.tab) {
-        setGdriveInitialTab(e.detail.tab);
-      }
-      setIsGoogleDriveModalOpen(true);
-    };
-    window.addEventListener("vasthusilpy_open_gdrive_backup", handleOpenGdriveModal);
-
-    const handleOpenCloudflareModal = () => {
-      setIsCloudflareModalOpen(true);
-    };
-    window.addEventListener("vasthusilpy_open_cloudflare_modal", handleOpenCloudflareModal);
-
     return () => {
       window.removeEventListener("vasthusilpy_web_data_synced", handleSyncEvent);
       window.removeEventListener("vasthusilpy_open_backup_modal", handleOpenBackupModal);
-      window.removeEventListener("vasthusilpy_open_gdrive_backup", handleOpenGdriveModal);
-      window.removeEventListener("vasthusilpy_open_cloudflare_modal", handleOpenCloudflareModal);
     };
   }, []);
 
@@ -503,26 +483,6 @@ export const Header: React.FC<HeaderProps> = ({
                 </span>
               </button>
 
-              {/* GOOGLE DRIVE CLOUD BACKUP BUTTON ON TOP OF WEBPAGE */}
-              <button
-                id="btn-top-gdrive-backup"
-                type="button"
-                onClick={() => {
-                  setGdriveInitialTab("backup");
-                  setIsGoogleDriveModalOpen(true);
-                }}
-                title="Google Drive Cloud Backup - One-click backup of all website data, inspections, CRM, invoices & estimates to Google Drive"
-                className="flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-full border border-emerald-500/50 hover:border-emerald-400 bg-emerald-950/70 hover:bg-emerald-900/80 text-emerald-300 hover:text-white text-xs font-mono font-bold transition-all shadow-sm cursor-pointer backdrop-blur-md group"
-              >
-                <Cloud className="w-3.5 h-3.5 text-emerald-400 group-hover:animate-bounce shrink-0" />
-                <span className="uppercase text-[11px] font-black tracking-wider hidden sm:inline text-emerald-200 group-hover:text-white">
-                  G-DRIVE CLOUD
-                </span>
-                <span className="uppercase text-[10px] font-black tracking-wider sm:hidden">
-                  DRIVE
-                </span>
-              </button>
-
               {/* BACKUP & RESTORE BUTTON ON TOP OF WEBPAGE */}
               <button
                 id="btn-top-backup-restore"
@@ -531,7 +491,7 @@ export const Header: React.FC<HeaderProps> = ({
                   setBackupInitialTab("backup");
                   setIsBackupRestoreOpen(true);
                 }}
-                title="Vasthusilpy Backup & Restore Center - Data Storage Vault, Construction, Quotation, Estimator, CRM, Invoice Payments & Personal Bills"
+                title="Vasthusilpy Backup & Restore Center - Construction, Quotation, Estimator, CRM, Invoice Payments & Personal Bills"
                 className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full border border-purple-500/50 hover:border-purple-400 bg-purple-950/70 hover:bg-purple-900/80 text-purple-200 hover:text-white text-xs font-mono font-bold transition-all shadow-sm cursor-pointer backdrop-blur-md"
               >
                 <Database className="w-3.5 h-3.5 text-purple-300 shrink-0" />
@@ -540,22 +500,6 @@ export const Header: React.FC<HeaderProps> = ({
                 </span>
                 <span className="uppercase text-[10px] font-black tracking-wider sm:hidden">
                   BKUP
-                </span>
-              </button>
-
-              {/* CLOUDFLARE BACKEND SUPPORT BUTTON */}
-              <button
-                type="button"
-                onClick={() => setIsCloudflareModalOpen(true)}
-                title="Cloudflare Edge Backend, Workers & KV Configuration"
-                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full border border-amber-500/50 hover:border-amber-400 bg-amber-950/70 hover:bg-amber-900/80 text-amber-200 hover:text-amber-100 text-xs font-mono font-bold transition-all shadow-sm cursor-pointer backdrop-blur-md"
-              >
-                <Globe className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                <span className="uppercase text-[11px] font-black tracking-wider hidden sm:inline">
-                  CLOUDFLARE
-                </span>
-                <span className="uppercase text-[10px] font-black tracking-wider sm:hidden">
-                  CF
                 </span>
               </button>
 
@@ -640,17 +584,6 @@ export const Header: React.FC<HeaderProps> = ({
         isOpen={isBackupRestoreOpen}
         onClose={() => setIsBackupRestoreOpen(false)}
         initialTab={backupInitialTab}
-      />
-
-      <GoogleDriveBackupModal
-        isOpen={isGoogleDriveModalOpen}
-        onClose={() => setIsGoogleDriveModalOpen(false)}
-        initialTab={gdriveInitialTab}
-      />
-
-      <CloudflareBackendModal
-        isOpen={isCloudflareModalOpen}
-        onClose={() => setIsCloudflareModalOpen(false)}
       />
     </>
   );
