@@ -2,6 +2,8 @@ import { Invoice, PaymentRecord } from "../types";
 import { generateInvoicePdfBlob, generateReceiptPdfBlob } from "./invoicePdfGenerator";
 import { getCachedToken, ensureGoogleAccessToken } from "../lib/googleWorkspace";
 
+import { safeJsonResponse } from "./safeFetch";
+
 export interface GoogleDriveUploadResult {
   success: boolean;
   fileId?: string;
@@ -65,14 +67,16 @@ export async function uploadInvoicePdfToGoogleDrive(
     });
 
     if (!res.ok) {
-      const errData = await res.json();
+      const parsedErr = await safeJsonResponse(res);
+      const errData = parsedErr.data || {};
       return {
         success: false,
-        error: errData.error || "Failed to upload invoice to Google Drive."
+        error: (errData as any).error || "Failed to upload invoice to Google Drive."
       };
     }
 
-    const data = await res.json();
+    const parsedData = await safeJsonResponse(res);
+    const data = parsedData.data || {};
     return {
       success: true,
       fileId: data.fileId,
@@ -131,14 +135,16 @@ export async function uploadReceiptPdfToGoogleDrive(
     });
 
     if (!res.ok) {
-      const errData = await res.json();
+      const parsedErr = await safeJsonResponse(res);
+      const errData = parsedErr.data || {};
       return {
         success: false,
-        error: errData.error || "Failed to upload receipt to Google Drive."
+        error: (errData as any).error || "Failed to upload receipt to Google Drive."
       };
     }
 
-    const data = await res.json();
+    const parsedData = await safeJsonResponse(res);
+    const data = parsedData.data || {};
     return {
       success: true,
       fileId: data.fileId,

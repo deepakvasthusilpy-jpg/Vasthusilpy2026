@@ -1,4 +1,5 @@
 import { Invoice, PaymentRecord } from "../types";
+import { safeJsonResponse } from "./safeFetch";
 import { generateUpiPaymentUri, generateInvoicePdfBlob, generateReceiptPdfBlob } from "./invoicePdfGenerator";
 import { getCachedToken, ensureGoogleAccessToken } from "../lib/googleWorkspace";
 
@@ -330,8 +331,9 @@ export const sendInvoiceViaEmailAutomatically = async (
         }),
       });
 
-      const data = await res.json();
-      if (res.ok && data.success) {
+      const parsed = await safeJsonResponse(res);
+      const data = parsed.data || {};
+      if (res.ok && parsed.ok && data.success) {
         return {
           success: true,
           message: `Invoice #${invoice.invoiceNumber} successfully emailed to ${recipientEmail} from deepak.vasthusilpy@gmail.com with PDF attachment and Payment QR Code!`,
@@ -396,8 +398,9 @@ export const sendPaymentReceiptViaEmailAutomatically = async (
         }),
       });
 
-      const data = await res.json();
-      if (res.ok && data.success) {
+      const parsed = await safeJsonResponse(res);
+      const data = parsed.data || {};
+      if (res.ok && parsed.ok && data.success) {
         return {
           success: true,
           message: `Payment Receipt for Invoice #${invoice.invoiceNumber} successfully emailed to ${recipientEmail} from deepak.vasthusilpy@gmail.com with PDF attachment!`,
@@ -625,8 +628,9 @@ async function sendInvoiceViaGmailApi(
       const freshToken = await ensureGoogleAccessToken();
       return sendInvoiceViaGmailApi(invoice, recipientEmail, freshToken, pdfBase64, customNotes, true);
     }
-    const errorData = await response.json();
-    throw new Error(errorData.error?.message || "Failed to send email via Gmail API");
+    const parsedErr = await safeJsonResponse(response);
+    const errorData = parsedErr.data || {};
+    throw new Error((errorData as any).error?.message || "Failed to send email via Gmail API");
   }
 
   return {
@@ -810,8 +814,9 @@ async function sendReceiptViaGmailApi(
       const freshToken = await ensureGoogleAccessToken();
       return sendReceiptViaGmailApi(invoice, payment, recipientEmail, freshToken, pdfBase64, customNotes, true);
     }
-    const errorData = await response.json();
-    throw new Error(errorData.error?.message || "Failed to send receipt email via Gmail API");
+    const parsedErr = await safeJsonResponse(response);
+    const errorData = parsedErr.data || {};
+    throw new Error((errorData as any).error?.message || "Failed to send receipt email via Gmail API");
   }
 
   return {

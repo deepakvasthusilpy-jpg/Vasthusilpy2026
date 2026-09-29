@@ -1,4 +1,5 @@
 import React, { useState, useRef } from "react";
+import { safeJsonResponse } from "../../utils/safeFetch";
 import {
   FileCode,
   UploadCloud,
@@ -67,7 +68,8 @@ Provide the full analysis in clear, well-structured Malayalam with English archi
         })
       });
 
-      const data = await res.json();
+      const parsed = await safeJsonResponse(res);
+      const data = parsed.data || {};
       setVisionReport(data.text || "പ്ലാൻ വിഷൻ പരിശോധന പൂർത്തിയായി.");
     } catch {
       setVisionReport(

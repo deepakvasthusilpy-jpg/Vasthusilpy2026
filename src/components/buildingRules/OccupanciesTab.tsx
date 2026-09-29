@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { safeJsonResponse } from "../../utils/safeFetch";
 import { OCCUPANCY_GROUPS, OccupancyGroup } from "../../data/buildingRulesData";
 import {
   OCCUPANCY_COMPARISON_DATA,
@@ -79,8 +80,9 @@ export const OccupanciesTab: React.FC<OccupanciesTabProps> = ({ onAskAIWithConte
         })
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "AI query failed");
+      const parsed = await safeJsonResponse(res);
+      const data = parsed.data || {};
+      if (!res.ok || !parsed.ok) throw new Error((data as any).error || "AI query failed");
 
       setAiResponses((prev) => ({ ...prev, [group.id]: data.text }));
     } catch (err: any) {

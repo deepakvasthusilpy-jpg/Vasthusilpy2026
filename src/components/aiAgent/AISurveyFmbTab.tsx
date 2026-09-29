@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { safeJsonResponse } from "../../utils/safeFetch";
 import {
   MapPin,
   Sparkles,
@@ -44,7 +45,8 @@ Please provide an expert Kerala Land Survey consultation in Malayalam and Englis
         body: JSON.stringify({ prompt })
       });
 
-      const data = await res.json();
+      const parsed = await safeJsonResponse(res);
+      const data = parsed.data || {};
       setSurveyReport(data.text || data.reply || "സർവ്വേ പരിശോധന റിപ്പോർട്ട് തയ്യാറാക്കി.");
     } catch {
       setSurveyReport(

@@ -355,8 +355,12 @@ interface GenerateAiOptions {
 }
 
 const DEFAULT_TEXT_MODELS = [
-  "gemini-3.8-flash",
+  "gemini-2.5-flash",
+  "gemini-2.5-flash-lite",
   "gemini-3.1-flash-lite",
+  "gemini-3.8-flash",
+  "gemini-1.5-flash",
+  "gemini-1.5-flash-8b",
   "gemini-flash-latest"
 ];
 
@@ -441,20 +445,25 @@ async function generateWithRetryAndFallback(options: GenerateAiOptions): Promise
   }
 
   // Secondary Fallback Attempt after short pause if all primary models had capacity spikes
-  console.warn("[Gemini AI] All cascade models experienced spikes. Performing rapid recovery pass on 'gemini-3.1-flash-lite'...");
+  console.warn("[Gemini AI] All cascade models experienced spikes. Performing rapid recovery pass on 'gemini-2.5-flash'...");
   try {
     await new Promise((r) => setTimeout(r, 1000 + Math.floor(Math.random() * 500)));
     const recoveryRes = await ai.models.generateContent({
-      model: "gemini-3.1-flash-lite",
+      model: "gemini-2.5-flash",
       contents: options.contents,
       config: options.config,
     });
     if (recoveryRes) {
-      return { response: recoveryRes, modelUsed: "gemini-3.1-flash-lite (recovery)" };
+      return { response: recoveryRes, modelUsed: "gemini-2.5-flash (recovery)" };
     }
   } catch (recErr: any) {
     lastError = recErr;
     console.error("[Gemini AI] Final recovery pass failed:", recErr?.message || recErr);
+  }
+
+  const lastMsg = (lastError?.message || String(lastError)).toLowerCase();
+  if (lastMsg.includes("resource_exhausted") || lastMsg.includes("quota") || lastMsg.includes("429")) {
+    throw new Error("AI quota or rate limit temporarily exceeded on API key. Please wait 1-2 minutes or try again shortly.");
   }
 
   throw lastError || new Error("All AI models are currently busy. Please try again shortly.");
@@ -593,12 +602,16 @@ app.post("/api/ai-agent/chat", async (req, res) => {
   } catch (error: any) {
     console.error("Error in AI Agent endpoint:", error);
     const errMsg = (error?.message || "").toLowerCase();
-    let userFriendlyError = error.message || "Internal server error while processing AI response.";
+    let userFriendlyError = "AI മറുപടി തയ്യാറാക്കുന്നതിൽ സാങ്കേതിക തടസ്സം നേരിട്ടു.";
     if (errMsg.includes("503") || errMsg.includes("unavailable") || errMsg.includes("high demand")) {
       userFriendlyError = "AI സെർവറുകളിൽ ഇപ്പോൾ ഉയർന്ന തിരക്ക് അനുഭവപ്പെടുന്നു. ദയവായി അല്പം കഴിഞ്ഞ് വീണ്ടും ശ്രമിക്കുക (AI Model is experiencing high demand. Please try again in a few moments).";
+    } else if (errMsg.includes("quota") || errMsg.includes("resource_exhausted") || errMsg.includes("429") || errMsg.includes("rate limit") || errMsg.includes("exceeded")) {
+      userFriendlyError = "AI ക്വാട്ട പരിധി താൽക്കാലികമായി പൂർത്തിയായി. ദയവായി 1-2 മിനിറ്റ് കഴിഞ്ഞ് വീണ്ടും ശ്രമിക്കുക (AI quota limit temporarily reached. Please retry in a few moments).";
     }
-    return res.status(error.status && error.status !== 500 ? error.status : 500).json({
-      error: userFriendlyError,
+    return res.json({
+      text: userFriendlyError,
+      isFallback: true,
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     });
   }
 });
@@ -732,12 +745,16 @@ app.post("/api/building-rules/chat", async (req, res) => {
   } catch (error: any) {
     console.error("Error in Building Rules AI Agent endpoint:", error);
     const errMsg = (error?.message || "").toLowerCase();
-    let userFriendlyError = error.message || "Internal server error while processing Building Rules AI response.";
+    let userFriendlyError = "കെട്ടിട നിർമ്മാണ ചട്ടങ്ങൾ അവലോകനം ചെയ്യുന്നതിൽ സാങ്കേതിക തടസ്സം നേരിട്ടു.";
     if (errMsg.includes("503") || errMsg.includes("unavailable") || errMsg.includes("high demand")) {
       userFriendlyError = "AI സെർവറുകളിൽ ഇപ്പോൾ ഉയർന്ന തിരക്ക് അനുഭവപ്പെടുന്നു. ദയവായി അല്പം കഴിഞ്ഞ് വീണ്ടും ശ്രമിക്കുക (AI Model is experiencing high demand. Please try again in a few moments).";
+    } else if (errMsg.includes("quota") || errMsg.includes("resource_exhausted") || errMsg.includes("429") || errMsg.includes("rate limit") || errMsg.includes("exceeded")) {
+      userFriendlyError = "AI ക്വാട്ട പരിധി താൽക്കാലികമായി പൂർത്തിയായി. ദയവായി 1-2 മിനിറ്റ് കഴിഞ്ഞ് വീണ്ടും ശ്രമിക്കുക (AI quota limit temporarily reached. Please retry in a few moments).";
     }
-    return res.status(error.status && error.status !== 500 ? error.status : 500).json({
-      error: userFriendlyError,
+    return res.json({
+      text: userFriendlyError,
+      isFallback: true,
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     });
   }
 });
@@ -863,12 +880,16 @@ app.post("/api/survey/chat", async (req, res) => {
   } catch (error: any) {
     console.error("Error in Survey AI Agent endpoint:", error);
     const errMsg = (error?.message || "").toLowerCase();
-    let userFriendlyError = error.message || "Internal server error while processing Survey AI response.";
+    let userFriendlyError = "സർവ്വേ ഡാറ്റ പരിശോധിക്കുന്നതിൽ സാങ്കേതിക തടസ്സം നേരിട്ടു.";
     if (errMsg.includes("503") || errMsg.includes("unavailable") || errMsg.includes("high demand")) {
       userFriendlyError = "AI സെർവറുകളിൽ ഇപ്പോൾ ഉയർന്ന തിരക്ക് അനുഭവപ്പെടുന്നു. ദയവായി അല്പം കഴിഞ്ഞ് വീണ്ടും ശ്രമിക്കുക (AI Model is experiencing high demand. Please try again in a few moments).";
+    } else if (errMsg.includes("quota") || errMsg.includes("resource_exhausted") || errMsg.includes("429") || errMsg.includes("rate limit") || errMsg.includes("exceeded")) {
+      userFriendlyError = "AI ക്വാട്ട പരിധി താൽക്കാലികമായി പൂർത്തിയായി. ദയവായി 1-2 മിനിറ്റ് കഴിഞ്ഞ് വീണ്ടും ശ്രമിക്കുക (AI quota limit temporarily reached. Please retry in a few moments).";
     }
-    return res.status(error.status && error.status !== 500 ? error.status : 500).json({
-      error: userFriendlyError,
+    return res.json({
+      text: userFriendlyError,
+      isFallback: true,
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     });
   }
 });
@@ -1414,12 +1435,17 @@ app.post("/api/free-chat/ai-reply", async (req, res) => {
   } catch (error: any) {
     console.error("Error in Free Chat AI Reply endpoint:", error);
     const errMsg = (error?.message || "").toLowerCase();
-    let userFriendlyError = error.message || "Failed to process chat message with AI.";
+    let userFriendlyError = "മറുപടി അയക്കുന്നതിൽ തടസ്സം നേരിട്ടു.";
     if (errMsg.includes("503") || errMsg.includes("unavailable") || errMsg.includes("high demand")) {
       userFriendlyError = "AI സെർവറുകളിൽ ഇപ്പോൾ ഉയർന്ന തിരക്ക് അനുഭവപ്പെടുന്നു. ദയവായി അല്പം കഴിഞ്ഞ് വീണ്ടും ശ്രമിക്കുക (AI Model is busy. Please try again in a few moments).";
+    } else if (errMsg.includes("quota") || errMsg.includes("resource_exhausted") || errMsg.includes("429") || errMsg.includes("rate limit") || errMsg.includes("exceeded")) {
+      userFriendlyError = "AI ക്വാട്ട പരിധി താൽക്കാലികമായി പൂർത്തിയായി. ദയവായി 1-2 മിനിറ്റ് കഴിഞ്ഞ് വീണ്ടും ശ്രമിക്കുക (AI quota limit temporarily reached. Please retry in a few moments).";
     }
-    return res.status(error.status && error.status !== 500 ? error.status : 500).json({
-      error: userFriendlyError,
+    return res.json({
+      success: true,
+      text: userFriendlyError,
+      isFallback: true,
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     });
   }
 });

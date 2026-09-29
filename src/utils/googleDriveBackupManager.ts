@@ -1,3 +1,4 @@
+import { safeJsonResponse } from "./safeFetch";
 import {
   generateFullBackupPackage,
   restoreBackupPackage,
@@ -146,12 +147,14 @@ export async function backupAllWebsiteDataToGoogleDrive(
       }
 
       if (!res.ok) {
-        const finalErrData = await res.json().catch(() => ({}));
-        throw new Error(finalErrData.error || `Google Drive backup failed with status ${res.status}`);
+        const parsedErr = await safeJsonResponse(res);
+        const finalErrData = parsedErr.data || {};
+        throw new Error((finalErrData as any).error || `Google Drive backup failed with status ${res.status}`);
       }
     }
 
-    const result: GoogleDriveBackupResult = await res.json();
+    const parsedResult = await safeJsonResponse<GoogleDriveBackupResult>(res);
+    const result: GoogleDriveBackupResult = parsedResult.data || { success: false, error: "Invalid backup response" };
 
     if (result.success) {
       const nowIso = new Date().toISOString();
@@ -256,7 +259,8 @@ export async function ensureGoogleDriveRootFolder(
       return { success: false, error: errMsg || "Failed to create folder on Google Drive." };
     }
 
-    const data = await res.json();
+    const parsedData = await safeJsonResponse(res);
+    const data = parsedData.data || {};
     return {
       success: true,
       folderId: data.folderId,
@@ -301,8 +305,9 @@ export async function fetchGoogleDriveBackupsList(
 
     const res = await fetch(`/api/google/drive/list-backups?accessToken=${encodeURIComponent(token)}`);
     if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      const errMsg = errData.error || "";
+      const parsedErr = await safeJsonResponse(res);
+      const errData = parsedErr.data || {};
+      const errMsg = (errData as any).error || "";
       if (
         res.status === 401 ||
         res.status === 403 ||
@@ -331,7 +336,8 @@ export async function fetchGoogleDriveBackupsList(
       };
     }
 
-    const data = await res.json();
+    const parsedData = await safeJsonResponse(res);
+    const data = parsedData.data || {};
     return {
       success: true,
       backups: data.backups || [],
@@ -386,11 +392,13 @@ export async function restoreBackupFromGoogleDrive(
     });
 
     if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.error || "Failed to download backup file from Drive.");
+      const parsedErr = await safeJsonResponse(res);
+      const errData = parsedErr.data || {};
+      throw new Error((errData as any).error || "Failed to download backup file from Drive.");
     }
 
-    const { package: backupPackage } = await res.json();
+    const parsedPackage = await safeJsonResponse(res);
+    const backupPackage = parsedPackage.data?.package || parsedPackage.data;
 
     if (onProgress) onProgress("Validating backup dataset integrity...");
     const validation = validateBackupFile(JSON.stringify(backupPackage));

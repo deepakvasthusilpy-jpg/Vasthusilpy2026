@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { safeJsonResponse } from "../../../utils/safeFetch";
 import { CrmProject, ProjectAttachment, SubTask } from "../../../types";
 import { loadCrmProjects } from "../../../utils/storageManager";
 import { db } from "../../../lib/firebase";
@@ -103,7 +104,8 @@ export const PublicProjectSharePortal: React.FC<PublicProjectSharePortalProps> =
       try {
         const res = await fetch(`/api/crm/projects/${encodeURIComponent(cleanId)}`);
         if (res.ok) {
-          const data = await res.json();
+          const parsed = await safeJsonResponse(res);
+          const data = parsed.data || {};
           if (data && data.success && data.project && isMounted) {
             setProject(data.project);
             setLoading(false);
@@ -118,7 +120,8 @@ export const PublicProjectSharePortal: React.FC<PublicProjectSharePortalProps> =
       try {
         const resAll = await fetch("/api/crm/projects");
         if (resAll.ok) {
-          const dataAll = await resAll.json();
+          const parsedAll = await safeJsonResponse(resAll);
+          const dataAll = parsedAll.data || {};
           if (dataAll && Array.isArray(dataAll.projects)) {
             if (isMounted) setAllKnownProjects(dataAll.projects);
             const lowerId = cleanId.toLowerCase();

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { safeJsonResponse } from "../../utils/safeFetch";
 import {
   Building2,
   Search,
@@ -180,8 +181,9 @@ export const AIKpbrRulesTab: React.FC = () => {
         })
       });
 
-      const data = await res.json();
-      if (res.ok && (data.text || data.reply)) {
+      const parsed = await safeJsonResponse(res);
+      const data = parsed.data || {};
+      if (res.ok && parsed.ok && (data.text || data.reply)) {
         const replyText = data.text || data.reply;
         const aiMsg: ChatMessage = {
           id: `ai_${Date.now()}`,

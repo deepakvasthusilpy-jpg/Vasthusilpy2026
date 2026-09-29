@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
+import { safeJsonResponse } from "../utils/safeFetch";
 import {
   User,
   signOut as firebaseSignOut,
@@ -806,8 +807,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         })
       });
 
-      const data = await response.json();
-      if (!response.ok || data.error) {
+      const parsed = await safeJsonResponse(response);
+      const data = parsed.data || {};
+      if (!response.ok || !parsed.ok || data.error) {
         setLoading(false);
         throw new Error(data.error || "നൽകിയ 6 അക്ക OTP തെറ്റാണ്. ദയവായി പരിശോധിക്കുക.");
       }
@@ -1071,8 +1073,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       body: JSON.stringify({ email: cleanEmail })
     });
 
-    const data = await response.json();
-    if (!response.ok || data.error) {
+    const parsed = await safeJsonResponse(response);
+    const data = parsed.data || {};
+    if (!response.ok || !parsed.ok || data.error) {
       throw new Error(data.error || "OTP അയക്കുന്നതിൽ പിശക് സംഭവിച്ചു.");
     }
 
@@ -1103,8 +1106,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
     });
 
-    const data = await response.json();
-    if (!response.ok || data.error) {
+    const parsedVerify = await safeJsonResponse(response);
+    const data = parsedVerify.data || {};
+    if (!response.ok || !parsedVerify.ok || data.error) {
       throw new Error(data.error || "നൽകിയ OTP തെറ്റാണ്. ദയവായി ശരിയായ 6 അക്ക OTP നൽകുക.");
     }
 
@@ -2052,9 +2056,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         })
       });
 
-      const data = await res.json();
+      const parsed = await safeJsonResponse(res);
+      const data = parsed.data || {};
       return {
-        success: res.ok && data.success,
+        success: res.ok && parsed.ok && data.success,
         message: data.message || (data.success ? "ഇമെയിൽ വിജയകരമായി അയച്ചു." : data.error)
       };
     } catch (err: any) {

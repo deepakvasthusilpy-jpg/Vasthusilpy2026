@@ -518,11 +518,14 @@ export function loadCrmProjects(): CrmProject[] {
   return [];
 }
 
+import { safeJsonResponse } from "./safeFetch";
+
 export async function fetchServerCrmProjects(): Promise<CrmProject[]> {
   try {
     const res = await fetch("/api/crm/projects");
     if (res.ok) {
-      const data = await res.json();
+      const parsed = await safeJsonResponse(res);
+      const data = parsed.data || {};
       if (data && Array.isArray(data.projects)) {
         return data.projects;
       }
@@ -563,7 +566,8 @@ export async function syncCrmProjectsWithServer(projects: CrmProject[]): Promise
       body: JSON.stringify({ projects })
     });
     if (res.ok) {
-      const data = await res.json();
+      const parsed = await safeJsonResponse(res);
+      const data = parsed.data || {};
       if (data && Array.isArray(data.projects)) {
         return data.projects;
       }
@@ -600,7 +604,8 @@ export async function fetchServerInvoices(): Promise<Invoice[]> {
   try {
     const res = await fetch("/api/crm/invoices");
     if (res.ok) {
-      const data = await res.json();
+      const parsed = await safeJsonResponse(res);
+      const data = parsed.data || {};
       if (data && Array.isArray(data.invoices)) {
         return data.invoices;
       }
@@ -641,7 +646,8 @@ export async function syncInvoicesWithServer(invoices: Invoice[]): Promise<Invoi
       body: JSON.stringify({ invoices })
     });
     if (res.ok) {
-      const data = await res.json();
+      const parsed = await safeJsonResponse(res);
+      const data = parsed.data || {};
       if (data && Array.isArray(data.invoices)) {
         return data.invoices;
       }

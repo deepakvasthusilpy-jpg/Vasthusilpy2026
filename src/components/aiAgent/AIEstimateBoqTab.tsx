@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { safeJsonResponse } from "../../utils/safeFetch";
 import {
   FileSpreadsheet,
   Calculator,
@@ -52,7 +53,8 @@ Please generate an exhaustive Quantity Surveying & Cost Estimation Report in Mal
         body: JSON.stringify({ prompt })
       });
 
-      const data = await res.json();
+      const parsed = await safeJsonResponse(res);
+      const data = parsed.data || {};
       setEstimateReport(data.text || "എസ്റ്റിമേറ്റ് റിപ്പോർട്ട് തയ്യാറാക്കി.");
     } catch {
       setEstimateReport(

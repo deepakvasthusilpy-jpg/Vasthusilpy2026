@@ -1,3 +1,4 @@
+import { safeJsonResponse } from "./safeFetch";
 import { broadcastMessage } from "./broadcastSync";
 import { db } from "../lib/firebase";
 import { collection, getDocs, setDoc, doc } from "firebase/firestore";
@@ -136,7 +137,8 @@ export async function performFullWebDataSync(): Promise<{
     });
 
     if (res.ok) {
-      const result = await res.json();
+      const parsed = await safeJsonResponse(res);
+      const result = parsed.data || {};
       if (result.success && result.merged) {
         serverMerged = result.merged;
         syncedAt = result.syncedAt || syncedAt;
@@ -538,7 +540,8 @@ export async function resolveAccountDetails(
     });
     clearTimeout(timeoutId);
     if (res.ok) {
-      const data = await res.json();
+      const parsed = await safeJsonResponse(res);
+      const data = parsed.data || {};
       if (data.success && data.account) {
         return data.account;
       }
@@ -571,7 +574,8 @@ export async function verifySubscriptionLoginOnServer(
     });
     clearTimeout(timeoutId);
 
-    const data = await res.json().catch(() => null);
+    const parsed = await safeJsonResponse(res);
+    const data = parsed.data;
     if (res.ok && data && data.success) {
       return {
         success: true,
@@ -608,7 +612,8 @@ export async function changeSubscriptionPasswordOnServer(
         newPassword: newPassword.trim()
       })
     });
-    const data = await res.json().catch(() => null);
+    const parsed = await safeJsonResponse(res);
+    const data = parsed.data;
     if (res.ok && data && data.success) {
       return { success: true, message: data.message };
     }
@@ -626,7 +631,8 @@ export async function fetchServerSubscriptionRequests(): Promise<any[]> {
   try {
     const res = await fetch("/api/web-data/subscriptions");
     if (res.ok) {
-      const data = await res.json();
+      const parsed = await safeJsonResponse(res);
+      const data = parsed.data || {};
       if (data.success && Array.isArray(data.subscriptions)) {
         return data.subscriptions;
       }

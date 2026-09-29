@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { safeJsonResponse } from "../../utils/safeFetch";
 import {
   Compass,
   Sparkles,
@@ -214,8 +215,9 @@ export const AIVastuAuditTab: React.FC = () => {
         })
       });
 
-      const data = await res.json();
-      if (res.ok && data.text) {
+      const parsed = await safeJsonResponse(res);
+      const data = parsed.data || {};
+      if (res.ok && parsed.ok && data.text) {
         const aiMsg: ChatMessage = {
           id: `ai_${Date.now()}`,
           role: "model",

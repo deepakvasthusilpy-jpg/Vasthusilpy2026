@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { safeJsonResponse } from "../../utils/safeFetch";
 import {
   Send,
   Sparkles,
@@ -252,9 +253,10 @@ export const UnifiedAIChatTab: React.FC<{
         })
       });
 
-      const data = await res.json();
+      const parsed = await safeJsonResponse(res);
+      const data = parsed.data || {};
 
-      if (res.ok && data.text) {
+      if (res.ok && parsed.ok && data.text) {
         const aiMessage: Message = {
           id: `ai_${Date.now()}`,
           role: "model",

@@ -1,3 +1,5 @@
+import { safeJsonResponse } from "./safeFetch";
+
 export interface CloudflareConfig {
   workerUrl: string;
   accountId: string;
@@ -61,9 +63,10 @@ export async function pingCloudflareBackend(workerUrl?: string): Promise<{
     });
     
     const latencyMs = Math.round(performance.now() - startTime);
-    const result = await res.json();
+    const parsed = await safeJsonResponse(res);
+    const result = parsed.data || {};
     
-    if (res.ok && result.success) {
+    if (res.ok && parsed.ok && result.success) {
       return {
         success: true,
         latencyMs,
@@ -102,8 +105,9 @@ export async function syncAppDataToCloudflareKV(dataKey: string, payload: any): 
       })
     });
     
-    const json = await res.json();
-    if (res.ok && json.success) {
+    const parsed = await safeJsonResponse(res);
+    const json = parsed.data || {};
+    if (res.ok && parsed.ok && json.success) {
       return { success: true, message: json.message || "Data successfully synced to Cloudflare KV Edge." };
     }
     return { success: false, message: json.error || json.message || "Failed to sync to Cloudflare KV." };
@@ -120,8 +124,9 @@ export async function fetchAppDataFromCloudflareKV(dataKey: string): Promise<{ s
       headers: { "Content-Type": "application/json" }
     });
     
-    const json = await res.json();
-    if (res.ok && json.success) {
+    const parsed = await safeJsonResponse(res);
+    const json = parsed.data || {};
+    if (res.ok && parsed.ok && json.success) {
       return { success: true, data: json.data, message: "Data loaded from Cloudflare Edge KV." };
     }
     return { success: false, message: json.error || json.message || "Key not found on Cloudflare KV." };

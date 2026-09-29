@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { safeJsonResponse } from "../../utils/safeFetch";
 import {
   HardHat,
   Calculator,
@@ -54,7 +55,8 @@ Please provide an expert Civil & Structural Engineer Consultation report in Mala
         body: JSON.stringify({ prompt })
       });
 
-      const data = await res.json();
+      const parsed = await safeJsonResponse(res);
+      const data = parsed.data || {};
       setCivilReport(data.text || "സിവിൽ എൻജിനീയറിങ് റിപ്പോർട്ട് തയ്യാറാക്കി.");
     } catch {
       setCivilReport(
