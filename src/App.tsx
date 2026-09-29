@@ -13,6 +13,7 @@ import { FullTableTab } from "./components/FullTableTab";
 import { AttachmentTab } from "./components/AttachmentTab";
 import { GuideTab } from "./components/GuideTab";
 import { RowDetailModal } from "./components/RowDetailModal";
+import { OfflineBanner } from "./components/common/OfflineBanner";
 
 // Building Rules Components
 import { AIKpbrRulesTab } from "./components/aiAgent/AIKpbrRulesTab";
@@ -1035,6 +1036,9 @@ export default function App() {
         row={selectedRowModal}
         onClose={() => setSelectedRowModal(null)}
       />
+
+      {/* Floating Offline Connectivity Banner */}
+      <OfflineBanner />
     </div>
   );
 }

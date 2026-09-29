@@ -38,6 +38,7 @@ import {
   Database
 } from "lucide-react";
 import { OfflineBackupRestoreModal } from "./office/crm/OfflineBackupRestoreModal";
+import { PWAInstallButton } from "./common/PWAInstallButton";
 import {
   performFullWebDataSync,
   getLastWebDataSyncTime,
@@ -482,6 +483,9 @@ export const Header: React.FC<HeaderProps> = ({
                   </span>
                 </span>
               </button>
+
+              {/* INSTALL DESKTOP/MOBILE SOFTWARE PWA BUTTON */}
+              <PWAInstallButton />
 
               {/* BACKUP & RESTORE BUTTON ON TOP OF WEBPAGE */}
               <button
