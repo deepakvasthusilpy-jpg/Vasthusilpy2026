@@ -1,1 +1,50 @@
-[]
+[
+  {
+    "notes": "NAME :  DEEPAK C        ACCOUNT NO : 1062 5047 526        IFSC CODE :SBIN0007624\nBANK : SBI , KERALASSERY\nUPI PAYMENT :\n9567627277@naviaxis\n7012383137@naviaxis",
+    "applicantAddress": "Keralassery, Palakkad",
+    "balanceDue": 4500,
+    "paymentStatus": "PARTIALLY PAID",
+    "grandTotal": 5000,
+    "invoiceNumber": "246",
+    "invoiceDate": "2026-09-12",
+    "id": "inv_1789207699995",
+    "totalPaid": 500,
+    "subTotal": 5000,
+    "lastSentDate": "2026-09-12",
+    "projectId": "crm_proj_1789207368393",
+    "taxRate": 0,
+    "applicantName": "ER",
+    "createdAt": "2026-09-12",
+    "projectTitle": "E Residence Plan",
+    "discount": 0,
+    "upiId": "7012383137@naviaxis",
+    "applicantMobile": "9747995961",
+    "items": [
+      {
+        "unit": "1",
+        "quantity": 1,
+        "amount": 5000,
+        "rate": 5000,
+        "id": "item_1789207198528",
+        "description": "KSMART - REGULARISATION COMPLETION OCCUPANCY + FORM 2"
+      }
+    ],
+    "dueDate": "2026-09-27",
+    "taxAmount": 0,
+    "payments": [
+      {
+        "notes": "DEEPAK",
+        "date": "2026-09-12",
+        "createdAt": "2026-09-12T11:19:36.003Z",
+        "memo": "DEEPAK",
+        "paymentMode": "Bank payment",
+        "amount": 500,
+        "account": "UPI (INR)",
+        "method": "BANK_PAYMENT",
+        "id": "pay_1789211976003_s8ya"
+      }
+    ],
+    "currency": "INR",
+    "terms": "Thank you for choosing Vasthusilpy. All plans comply with KPBR norms."
+  }
+]

@@ -171,7 +171,7 @@ export type KsmartTabType =
   | "ksmart_quick_certificates"
   | "ksmart_property_tax";
 
-export type SurveyTabType = "missing_side" | "land_area" | "unit_converters";
+export type SurveyTabType = "missing_side" | "land_area" | "unit_converters" | "survey_ai_agent";
 
 export type CivilTabType = "brick_masonry" | "concrete_block" | "cement_concrete" | "material_quantity_bbs";
 
@@ -488,7 +488,8 @@ export type EstimateTabType =
   | "stage_completion_certificate"
   | "items_of_work"
   | "engineer_seals"
-  | "valuation";
+  | "valuation"
+  | "estimate_ai_agent";
 
 export type StaffName = "DEEPAK" | "VISHNU" | "DIBIN";
 
@@ -968,8 +969,8 @@ export interface BuildingLocation {
 export interface FloorAreaEntry {
   id: string;
   floorName: string; // "Basement", "Ground Floor", "First Floor", "Second Floor", "Roof Terrace / Other"
-  existingAreaSqFt: number;
-  proposedAreaSqFt: number;
+  existingAreaSqFt?: number;
+  proposedAreaSqFt?: number;
   areaSqFt: number;
   ratePerSqFt?: number;
   floorCost?: number;
@@ -993,6 +994,7 @@ export interface ConstructionStageDefinition {
   nameMl: string;
   description: string;
   percentage: number; // e.g. 10 for 10%
+  defaultPercentage?: number;
   fixedAmount?: number;
   ratePerSqFt?: number;
   calculationMode: "percentage" | "fixed" | "area_rate";
@@ -1282,6 +1284,8 @@ export interface ConstructionSettings {
     baseRatePerSqFt: number;
     flooringRates: Record<string, number>;
     electricalPointRate: number;
+    tileRateLimitPerSqFt?: number;
+    graniteRateLimitPerSqFt?: number;
   };
   agreementTemplate: {
     defaultCompletionMonths: number;
@@ -1423,7 +1427,7 @@ export interface RdDepositMonth {
 export interface RdAccount {
   id: string;
   accountNumber: string;
-  institutionType: "POST_OFFICE" | "BANK";
+  institutionType: "POST_OFFICE" | "BANK" | "COOPERATIVE_SOCIETY";
   bankOrPostOfficeName: string;
   accountHolderName: string;
   monthlyInstallment: number;

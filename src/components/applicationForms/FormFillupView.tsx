@@ -475,7 +475,7 @@ export const FormFillupView: React.FC<FormFillupViewProps> = ({
                     ഡോക്യുമെന്റിൽ ക്ലിക്ക് ചെയ്തു ടൈപ്പ് ചെയ്യുക
                   </span>
                   {(() => {
-                    const maxP = Math.max(form.pageCount || 1, ...form.fields.map((f) => f.pageNumber || 1));
+                    const maxP = Math.max((form as any).pageCount || form.pdfPageCount || 1, ...form.fields.map((f) => f.pageNumber || 1));
                     if (maxP <= 1) return null;
                     return (
                       <div className="flex items-center gap-1 bg-[#1a1f2b] px-2 py-1 rounded-lg border border-[#2b3345]">
@@ -546,7 +546,7 @@ export const FormFillupView: React.FC<FormFillupViewProps> = ({
                   <div className="p-6 border-b border-slate-200 bg-slate-50/80">
                     <div className="text-center space-y-1">
                       <span className="text-[10px] tracking-widest uppercase font-bold text-amber-800">
-                        {form.department || "ഗവൺമെന്റ് / തദ്ദേശ സ്വയംഭരണ വകുപ്പ്"}
+                        {(form as any).department || form.category || "ഗവൺമെന്റ് / തദ്ദേശ സ്വയംഭരണ വകുപ്പ്"}
                       </span>
                       <h3 className="text-lg font-serif font-bold text-slate-900 leading-tight">
                         {form.nameMl || form.name}

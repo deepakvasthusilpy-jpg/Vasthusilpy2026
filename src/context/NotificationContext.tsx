@@ -57,7 +57,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   useEffect(() => {
     const handleNotifyEvent = (e: CustomEvent) => {
       if (e.detail) {
-        addNotification(e.detail);
+        setTimeout(() => {
+          addNotification(e.detail);
+        }, 0);
       }
     };
     window.addEventListener("vasthusilpy_notify" as any, handleNotifyEvent);
@@ -147,13 +149,17 @@ export const triggerAppNotification = (
     extraData = (typeof messageOrExtra === "object" ? messageOrExtra : {}) || {};
   }
 
-  const event = new CustomEvent("vasthusilpy_notify", {
-    detail: {
-      type,
-      title,
-      message,
-      ...(extraData || {})
-    }
-  });
-  window.dispatchEvent(event);
+  setTimeout(() => {
+    try {
+      const event = new CustomEvent("vasthusilpy_notify", {
+        detail: {
+          type,
+          title,
+          message,
+          ...(extraData || {})
+        }
+      });
+      window.dispatchEvent(event);
+    } catch (e) {}
+  }, 0);
 };

@@ -181,7 +181,7 @@ export const ProkeralaKeralaCalendar: React.FC<ProkeralaKeralaCalendarProps> = (
         <div className="lg:col-span-4 bg-slate-900/90 border border-slate-800 p-5 rounded-3xl space-y-4 text-white">
           <div>
             <div className="flex items-center justify-between text-xs text-amber-400 font-mono">
-              <span>{selectedAstro.dayOfWeekMl} ({selectedAstro.dayOfWeekEn})</span>
+              <span>{(selectedAstro as any).dayOfWeekMl || selectedDate.toLocaleDateString("ml-IN", { weekday: "long" })} ({(selectedAstro as any).dayOfWeekEn || selectedDate.toLocaleDateString("en-US", { weekday: "long" })})</span>
               <span>IST UTC+5:30</span>
             </div>
             <h4 className="text-xl font-bold font-serif text-white mt-1">

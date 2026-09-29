@@ -429,8 +429,10 @@ export const AgreementVerificationModal: React.FC<AgreementVerificationModalProp
                     </div>
                     <div className="font-bold text-white">{agreement.client.clientName}</div>
                     <div className="text-slate-400 text-[11px]">{agreement.client.houseName}</div>
-                    {agreement.client.phone && (
-                      <div className="text-slate-400 text-[11px] font-mono">{agreement.client.phone}</div>
+                    {(agreement.client.mobileNumber || (agreement.client as any).phone) && (
+                      <div className="text-slate-400 text-[11px] font-mono">
+                        {agreement.client.mobileNumber || (agreement.client as any).phone}
+                      </div>
                     )}
                   </div>
 

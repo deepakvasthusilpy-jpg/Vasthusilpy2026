@@ -78,7 +78,7 @@ export const SurveyCoordinateInputModal: React.FC<SurveyCoordinateInputModalProp
       x: Number(newX.toFixed(3)),
       y: Number(newY.toFixed(3)),
       code,
-      description: `From ${basePt.name || "origin"} @ ${deg}° / ${dist}m`,
+      description: `From ${(basePt as any).name || "origin"} @ ${deg}° / ${dist}m`,
       layer: "SURVEY_POINTS"
     });
 

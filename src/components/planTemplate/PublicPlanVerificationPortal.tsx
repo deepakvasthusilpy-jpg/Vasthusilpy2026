@@ -519,7 +519,7 @@ export const PublicPlanVerificationPortal: React.FC<PublicPlanVerificationPortal
                   project={project}
                   sheet={sheet}
                   sheetIndex={0}
-                  isEditable={false}
+                  totalSheets={project.sheets?.length || 1}
                 />
               </div>
             </div>

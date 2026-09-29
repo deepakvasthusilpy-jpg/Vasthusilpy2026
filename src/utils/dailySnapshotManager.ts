@@ -8,8 +8,8 @@ export interface DailySnapshotRecord {
   formattedTime: string;
   sizeKb: number;
   stats: {
-    vaultFiles: number;
-    vaultFolders: number;
+    vaultFiles?: number;
+    vaultFolders?: number;
     constructionProjects: number;
     constructionAgreements: number;
     quotations: number;

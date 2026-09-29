@@ -139,6 +139,7 @@ export interface BuildingPlanProject {
   sheetOrientation: "landscape" | "portrait";
   paperSize: "A4" | "A3";
   titleBlockPosition: "right" | "bottom";
+  templateDesign?: string;
   stripWidthMm: number; // 70mm standard right strip or 45mm bottom strip
   bottomStripHeightPct?: number; // 18% - 38% adjustable bottom title block height
   marginConfig?: SheetMarginConfig;

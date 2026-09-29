@@ -12,6 +12,7 @@ import { triggerAppNotification } from "../context/NotificationContext";
 
 export interface PostPaymentPipelineOptions {
   autoUploadToFirebaseStorage?: boolean;
+  autoUploadToGoogleDrive?: boolean;
   autoSendEmail?: boolean;
   autoSendWhatsApp?: boolean;
   recipientEmail?: string;

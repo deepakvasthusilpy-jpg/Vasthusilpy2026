@@ -1599,10 +1599,6 @@ export const UnifiedBuildingRulesCalculator: React.FC = () => {
           onOccupancyChange={(v) => handleChange("occupancy", v)}
           category={data.category}
           onCategoryChange={(v) => handleChange("category", v)}
-          isMultipleOccupancy={data.isMultipleOccupancy}
-          onIsMultipleOccupancyChange={(v) => handleChange("isMultipleOccupancy", v)}
-          occupancyBlocks={data.occupancyBlocks}
-          onOccupancyBlocksChange={(v) => handleChange("occupancyBlocks", v)}
         />
       )}
 

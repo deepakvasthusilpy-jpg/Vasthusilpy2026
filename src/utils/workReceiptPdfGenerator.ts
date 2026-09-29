@@ -123,37 +123,11 @@ function drawSingleReceipt(
   doc.setLineWidth(0.3);
   doc.line(margin, startY + headerBandHeight, margin + contentWidth, startY + headerBandHeight);
 
-  // 2. Logo & Office Branding
-  const logoSize = 7.2;
-  const logoX = margin + 2.2;
-  const logoY = startY + 0.8;
-
-  if (logoPng) {
-    try {
-      doc.addImage(logoPng, "PNG", logoX, logoY, logoSize, logoSize);
-    } catch {
-      // Fallback vector emblem
-      doc.setFillColor(185, 28, 28);
-      doc.circle(logoX + logoSize / 2, logoY + logoSize / 2, logoSize / 2, "F");
-      doc.setTextColor(255, 255, 255);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(6);
-      doc.text("VS", logoX + logoSize / 2, logoY + 4.8, { align: "center" });
-    }
-  } else {
-    doc.setFillColor(185, 28, 28);
-    doc.circle(logoX + logoSize / 2, logoY + logoSize / 2, logoSize / 2, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(6);
-    doc.text("VS", logoX + logoSize / 2, logoY + 4.8, { align: "center" });
-  }
-
-  // Office Details Text
-  const textX = logoX + logoSize + 2.5;
+  // 2. Office Branding Details (Without Logo)
+  const textX = margin + 2.5;
   doc.setTextColor(185, 28, 28); // Vasthusilpy Red
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(7.2);
+  doc.setFontSize(7.5);
   doc.text("VASTHUSILPY ARCHITECTURAL & ENGINEERING CONSULTANTS", textX, startY + 3.2);
 
   doc.setFont("helvetica", "bold");

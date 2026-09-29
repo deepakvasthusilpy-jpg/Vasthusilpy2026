@@ -456,7 +456,7 @@ export const ConstructionOverviewTab: React.FC<ConstructionOverviewTabProps> = (
 
                         <div className="flex items-center gap-1.5">
                           <button
-                            onClick={() => shareProjectOnWhatsApp(project, matchingAgreement)}
+                            onClick={() => shareProjectOnWhatsApp(project, matchingAgreement?.client?.mobileNumber)}
                             className="p-1.5 bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-500/40 rounded-lg transition cursor-pointer"
                             title="Share Project Summary via WhatsApp"
                           >

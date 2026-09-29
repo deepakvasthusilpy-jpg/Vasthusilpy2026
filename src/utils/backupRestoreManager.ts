@@ -409,8 +409,8 @@ export interface BackupValidationResult {
   error?: string;
   package?: VasthusilpyBackupPackage;
   summary?: {
-    vaultFilesCount: number;
-    vaultFoldersCount: number;
+    vaultFilesCount?: number;
+    vaultFoldersCount?: number;
     constructionProjectsCount: number;
     constructionAgreementsCount: number;
     quotationsCount: number;
@@ -450,14 +450,6 @@ export function validateBackupFile(fileContent: string): BackupValidationResult 
         error: "Invalid file format: Not a recognized Vasthusilpy ERP backup file."
       };
     }
-
-    // Extract Data Storage Vault
-    const vaultFiles: CADDrawingRecord[] =
-      data.dataStorageVault?.files || (Array.isArray(data.cadFiles) ? data.cadFiles : []);
-    const vaultFolders: CADFolder[] =
-      data.dataStorageVault?.folders || (Array.isArray(data.cadFolders) ? data.cadFolders : []);
-    const vaultIndex: CADMetadataIndexItem[] = data.dataStorageVault?.metadataIndex || [];
-    const vaultSettings = data.dataStorageVault?.settings || null;
 
     // Extract Construction Work
     const constructionProjects: ConstructionProject[] =

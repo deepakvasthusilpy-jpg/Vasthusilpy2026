@@ -146,7 +146,7 @@ export const NewEditInvoiceModal: React.FC<NewEditInvoiceModalProps> = ({
     invoiceToEdit?.advancePaymentDate || new Date().toISOString().split("T")[0]
   );
   const [advancePaymentMode, setAdvancePaymentMode] = useState<"CASH" | "UPI" | "BANK_TRANSFER" | "CHEQUE">(
-    invoiceToEdit?.advancePaymentMode || "UPI"
+    (invoiceToEdit?.advancePaymentMode as "CASH" | "UPI" | "BANK_TRANSFER" | "CHEQUE") || "UPI"
   );
   const [advancePaymentRef, setAdvancePaymentRef] = useState<string>(invoiceToEdit?.advancePaymentRef || "");
 
@@ -198,7 +198,7 @@ export const NewEditInvoiceModal: React.FC<NewEditInvoiceModalProps> = ({
         if (invoiceToEdit.discount && invoiceToEdit.discount > 0) setShowDiscount(true);
         setAdvancePayment(invoiceToEdit.advancePayment ?? 0);
         setAdvancePaymentDate(invoiceToEdit.advancePaymentDate || new Date().toISOString().split("T")[0]);
-        setAdvancePaymentMode(invoiceToEdit.advancePaymentMode || "UPI");
+        setAdvancePaymentMode((invoiceToEdit.advancePaymentMode as "CASH" | "UPI" | "BANK_TRANSFER" | "CHEQUE") || "UPI");
         setAdvancePaymentRef(invoiceToEdit.advancePaymentRef || "");
         setNotes(
           invoiceToEdit.notes ||
@@ -243,7 +243,7 @@ export const NewEditInvoiceModal: React.FC<NewEditInvoiceModalProps> = ({
             if (matchedProj.advancePayment && matchedProj.advancePayment > 0) {
               setAdvancePayment(matchedProj.advancePayment);
               if (matchedProj.advancePaymentDate) setAdvancePaymentDate(matchedProj.advancePaymentDate);
-              if (matchedProj.advancePaymentMode) setAdvancePaymentMode(matchedProj.advancePaymentMode);
+              if (matchedProj.advancePaymentMode) setAdvancePaymentMode((matchedProj.advancePaymentMode as "CASH" | "UPI" | "BANK_TRANSFER" | "CHEQUE") || "UPI");
               if (matchedProj.advancePaymentRef) setAdvancePaymentRef(matchedProj.advancePaymentRef);
             }
           }
@@ -267,7 +267,7 @@ export const NewEditInvoiceModal: React.FC<NewEditInvoiceModalProps> = ({
       if (matched.advancePayment && matched.advancePayment > 0 && advancePayment === 0) {
         setAdvancePayment(matched.advancePayment);
         if (matched.advancePaymentDate) setAdvancePaymentDate(matched.advancePaymentDate);
-        if (matched.advancePaymentMode) setAdvancePaymentMode(matched.advancePaymentMode);
+        if (matched.advancePaymentMode) setAdvancePaymentMode((matched.advancePaymentMode as "CASH" | "UPI" | "BANK_TRANSFER" | "CHEQUE") || "UPI");
         if (matched.advancePaymentRef) setAdvancePaymentRef(matched.advancePaymentRef);
       }
     }

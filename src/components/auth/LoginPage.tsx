@@ -6,7 +6,10 @@ import {
   getTotpRemainingSeconds,
   generateTotpQrCode,
   getOrCreateTotpSecret,
-  formatSecretFormatted
+  formatSecretFormatted,
+  getClientTotpCountdown,
+  ClientTotpCountdown,
+  CLIENT_TOTP_INTERVAL_DAYS
 } from "../../utils/totp";
 import {
   UPI_ID,
@@ -178,27 +181,20 @@ export const LoginPage: React.FC = () => {
   // Effective Email for TOTP
   const effectiveEmail = isCustomEmail ? customEmail.trim().toLowerCase() : selectedEmail;
 
-  // TOTP Setup QR Code Modal State for Subscriber / User
-  const [showTotpSetupModal, setShowTotpSetupModal] = useState<boolean>(false);
-  const [totpQrUrl, setTotpQrUrl] = useState<string>("");
-  const [totpSecretFormatted, setTotpSecretFormatted] = useState<string>("");
-  const [loadingTotpQr, setLoadingTotpQr] = useState<boolean>(false);
-  const [copiedTotpSecret, setCopiedTotpSecret] = useState<boolean>(false);
+  // 7-Day Client / Subscriber TOTP Countdown & Rule State
+  const [clientCountdown, setClientCountdown] = useState<ClientTotpCountdown>(() => {
+    return getClientTotpCountdown(subLoginId);
+  });
 
-  const handleOpenTotpSetup = async () => {
-    try {
-      setLoadingTotpQr(true);
-      const secret = getOrCreateTotpSecret(effectiveEmail);
-      const qr = await generateTotpQrCode(effectiveEmail, secret, "Vasthusilpy");
-      setTotpQrUrl(qr);
-      setTotpSecretFormatted(formatSecretFormatted(secret));
-      setShowTotpSetupModal(true);
-    } catch (e) {
-      console.error("Failed to generate TOTP setup QR:", e);
-    } finally {
-      setLoadingTotpQr(false);
-    }
-  };
+  // Keep 7-day countdown clock ticking every second
+  useEffect(() => {
+    const updateClientClock = () => {
+      setClientCountdown(getClientTotpCountdown(subLoginId));
+    };
+    updateClientClock();
+    const interval = setInterval(updateClientClock, 1000);
+    return () => clearInterval(interval);
+  }, [subLoginId]);
 
   // Selected payment amount
   const effectiveAmount = isCustomAmount
@@ -325,14 +321,18 @@ export const LoginPage: React.FC = () => {
     try {
       await loginWithSubscription(cleanId, cleanPass);
     } catch (err: any) {
-      if (err?.code === "SUBSCRIBER_DAILY_TOTP_REQUIRED" || err?.message?.includes("SUBSCRIBER_DAILY_TOTP_REQUIRED")) {
+      if (
+        err?.code === "CLIENT_WEEKLY_TOTP_REQUIRED" ||
+        err?.code === "SUBSCRIBER_DAILY_TOTP_REQUIRED" ||
+        err?.message?.includes("CLIENT_WEEKLY_TOTP_REQUIRED")
+      ) {
         const subEmail = err.subscriberEmail || (cleanId.includes("@") ? cleanId : `${cleanId}@vasthusilpy.local`);
         setSelectedEmail(subEmail);
         setCustomEmail(subEmail);
         setIsCustomEmail(true);
         setLoginMode("authenticator");
         setLocalSuccess(
-          "പാസ്‌വേഡ് സ്ഥിരീകരിച്ചു! ഇന്നത്തെ ആദ്യ ലോഗിൻ ആയതിനാൽ Google Authenticator-ലെ 6 അക്ക കോഡ് നൽകുക (Daily Security Check)."
+          "പാസ്‌വേഡ് സ്ഥിരീകരിച്ചു! 7-ദിവസത്തെ സുരക്ഷാ ഇടവേള ആയതിനാൽ Google Authenticator-ലെ 6 അക്ക കോഡ് നൽകുക (Mandatory 7-Day 2FA Client Login)."
         );
         return;
       }
@@ -713,7 +713,50 @@ export const LoginPage: React.FC = () => {
           {/* 1. SUBSCRIPTION / USER LOGIN (Primary View matching mockup) */}
           {/* ============================================================ */}
           {loginMode === "subscription" && subMode === "login" && (
-            <form onSubmit={handleSubscriptionLogin} className="space-y-5">
+            <form onSubmit={handleSubscriptionLogin} className="space-y-4">
+
+              {/* 7-DAY MANDATORY CLIENT TOTP COUNTDOWN CLOCK */}
+              <div className="p-3 rounded-2xl bg-gradient-to-r from-purple-950/70 via-pink-950/50 to-slate-950/80 border border-pink-500/30 text-xs font-mono shadow-inner space-y-2">
+                <div className="flex items-center justify-between text-[11px]">
+                  <div className="flex items-center gap-1.5 text-pink-300 font-bold">
+                    <ShieldCheck className="w-4 h-4 text-pink-400 shrink-0" />
+                    <span>7-Day Client TOTP Rule</span>
+                  </div>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      clientCountdown.isDue
+                        ? "bg-rose-500/30 text-rose-200 border border-rose-400/40 animate-pulse"
+                        : "bg-emerald-500/30 text-emerald-200 border border-emerald-400/40"
+                    }`}
+                  >
+                    {clientCountdown.isDue ? "Verification Due" : "Active 2FA"}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between bg-black/40 px-3 py-2 rounded-xl border border-white/10">
+                  <div className="text-[10px] text-white/70">
+                    {clientCountdown.isDue ? "7-Day Re-Verification:" : "Next TOTP Re-verification in:"}
+                  </div>
+                  <div className="text-xs font-bold text-white tracking-wider flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-pink-400" />
+                    <span className="text-pink-200 font-mono">
+                      {clientCountdown.isDue ? "Due on Login" : clientCountdown.formatted}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Progress bar of 7-day interval */}
+                <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-1000 ${
+                      clientCountdown.isDue
+                        ? "bg-rose-500 w-full"
+                        : "bg-gradient-to-r from-emerald-400 via-purple-400 to-pink-400"
+                    }`}
+                    style={{ width: clientCountdown.isDue ? "100%" : `${clientCountdown.percentRemaining}%` }}
+                  />
+                </div>
+              </div>
               
               {/* Email / Mobile Field (Clean Glass Underline Style) */}
               <div className="space-y-1">
@@ -1093,7 +1136,9 @@ export const LoginPage: React.FC = () => {
                   {totpDigits.map((digit, idx) => (
                     <input
                       key={idx}
-                      ref={(el) => (inputRefs.current[idx] = el)}
+                      ref={(el) => {
+                        inputRefs.current[idx] = el;
+                      }}
                       type="text"
                       inputMode="numeric"
                       pattern="[0-9]*"
@@ -1123,18 +1168,8 @@ export const LoginPage: React.FC = () => {
                 </button>
               </div>
 
-              {/* Setup QR Code Helper Button */}
-              <div className="flex items-center justify-between pt-1">
-                <button
-                  type="button"
-                  onClick={handleOpenTotpSetup}
-                  disabled={loadingTotpQr}
-                  className="text-xs text-pink-200 hover:text-white font-mono flex items-center gap-1.5 cursor-pointer"
-                >
-                  <QrCode className="w-3.5 h-3.5" />
-                  <span>{loadingTotpQr ? "Loading QR..." : "Setup QR / Secret Key"}</span>
-                </button>
-
+              {/* Back to Login Button (Clean Admin Login, No QR/Secret displayed) */}
+              <div className="flex items-center justify-end pt-1">
                 <button
                   type="button"
                   onClick={() => {
@@ -1245,81 +1280,6 @@ export const LoginPage: React.FC = () => {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* 4.1 GOOGLE AUTHENTICATOR SETUP QR MODAL */}
-      {showTotpSetupModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="w-full max-w-sm bg-purple-950/90 border border-white/25 rounded-3xl p-5 sm:p-6 shadow-2xl backdrop-blur-2xl text-white space-y-4">
-            <div className="flex items-center justify-between border-b border-white/15 pb-3">
-              <div className="flex items-center gap-2 font-bold text-sm">
-                <ShieldCheck className="w-4 h-4 text-pink-300" />
-                <span>Google Authenticator Setup</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowTotpSetupModal(false)}
-                className="p-1 rounded-full text-white/60 hover:text-white hover:bg-white/10 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="text-center space-y-3">
-              <p className="text-[11px] text-white/80 leading-relaxed">
-                Google Authenticator ആപ്പ് തുറന്ന് '+' ക്ലിക്ക് ചെയ്ത് താഴെ കാണുന്ന QR കോഡ് സ്കാൻ ചെയ്യുക:
-              </p>
-
-              {/* QR Code Container */}
-              <div className="p-3 bg-white rounded-2xl inline-block shadow-xl">
-                {totpQrUrl ? (
-                  <img
-                    src={totpQrUrl}
-                    alt="Google Authenticator QR"
-                    className="w-44 h-44 object-contain"
-                  />
-                ) : (
-                  <div className="w-44 h-44 flex items-center justify-center text-slate-500 text-xs">
-                    Loading QR...
-                  </div>
-                )}
-              </div>
-
-              {/* Account details & manual key */}
-              <div className="p-2.5 rounded-xl bg-black/40 border border-white/10 text-left space-y-1.5 font-mono text-[10px]">
-                <div className="text-white/60">Account: <span className="text-white font-bold">{effectiveEmail}</span></div>
-                <div className="flex items-center justify-between gap-1">
-                  <span className="text-pink-300 font-bold tracking-wider truncate">
-                    {totpSecretFormatted || "SECRET"}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (totpSecretFormatted) {
-                        navigator.clipboard.writeText(totpSecretFormatted.replace(/\s+/g, ""));
-                        setCopiedTotpSecret(true);
-                        setTimeout(() => setCopiedTotpSecret(false), 2000);
-                      }
-                    }}
-                    className="px-2 py-0.5 rounded bg-white/20 hover:bg-white/30 text-white font-bold cursor-pointer shrink-0"
-                  >
-                    {copiedTotpSecret ? "Copied!" : "Copy Key"}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-1">
-              <button
-                type="button"
-                onClick={() => setShowTotpSetupModal(false)}
-                className="w-full py-2.5 rounded-full bg-white hover:bg-white/90 text-slate-950 font-bold text-xs uppercase tracking-wider shadow-lg transition-all cursor-pointer"
-              >
-                I Have Scanned QR • Enter 6-Digit Code
-              </button>
-            </div>
           </div>
         </div>
       )}

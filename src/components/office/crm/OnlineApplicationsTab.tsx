@@ -1123,7 +1123,7 @@ export const OnlineApplicationsTab: React.FC<OnlineApplicationsTabProps> = ({
           setIsQrModalOpen(false);
           setSelectedApplicantForQr(null);
         }}
-        onPaymentRecorded={(updatedRecord) => {
+        onPaymentSuccess={(updatedRecord) => {
           const current = loadOnlineApplicants();
           setApplicants(current);
           showToast(`Payment recorded for "${updatedRecord.applicantName}"`);

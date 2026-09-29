@@ -43,6 +43,7 @@ export const ProjectActivityHistoryView: React.FC<ProjectActivityHistoryViewProp
   const allActivities: AggregatedActivity[] = projects.flatMap((p) =>
     (p.activities || []).map((act) => ({
       ...act,
+      actor: (act.actor as StaffName | "SYSTEM") || "SYSTEM",
       projectId: p.id,
       projectTitle: p.title,
       projectClient: p.clientName

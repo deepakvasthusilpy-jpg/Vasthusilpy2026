@@ -148,8 +148,8 @@ export const PaymentStagesTrackerTab: React.FC<PaymentStagesTrackerTabProps> = (
         paymentSchedule: updatedSchedule,
         updatedAt: new Date().toISOString()
       };
-      const savedAgr = ConstructionStorageManager.saveAgreement(updatedAgr);
-      onAgreementUpdated(savedAgr);
+      ConstructionStorageManager.saveAgreement(updatedAgr);
+      onAgreementUpdated(updatedAgr);
     }
 
     if (activeProject) {
@@ -173,8 +173,8 @@ export const PaymentStagesTrackerTab: React.FC<PaymentStagesTrackerTabProps> = (
         paymentSchedule: updatedSchedule,
         updatedAt: new Date().toISOString()
       };
-      const savedAgr = ConstructionStorageManager.saveAgreement(updatedAgr);
-      onAgreementUpdated(savedAgr);
+      ConstructionStorageManager.saveAgreement(updatedAgr);
+      onAgreementUpdated(updatedAgr);
     }
 
     if (activeProject) {
@@ -234,8 +234,8 @@ export const PaymentStagesTrackerTab: React.FC<PaymentStagesTrackerTabProps> = (
         finalContractAmount: newFinalContract,
         updatedAt: new Date().toISOString()
       };
-      const savedAgr = ConstructionStorageManager.saveAgreement(updatedAgr);
-      onAgreementUpdated(savedAgr);
+      ConstructionStorageManager.saveAgreement(updatedAgr);
+      onAgreementUpdated(updatedAgr);
     }
 
     setShowAddExtraModal(false);

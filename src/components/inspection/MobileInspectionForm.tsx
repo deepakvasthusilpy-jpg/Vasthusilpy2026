@@ -305,7 +305,7 @@ export const MobileInspectionForm: React.FC<MobileInspectionFormProps> = ({
     setCustomQuestions((prev) => [...prev, newQ]);
     setAnswers((prev) => ({
       ...prev,
-      [newQ.id]: { answer: newQuestionType === "yes_no" ? true : "" }
+      [newQ.id]: { answer: newQuestionType === "yes_no_na" ? "YES" : "" }
     }));
     setNewQuestionText("");
     setShowAddCustomQuestion(false);

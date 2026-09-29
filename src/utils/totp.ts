@@ -512,6 +512,125 @@ export function clearSubscriberDailyTotp(emailOrPhone?: string | null): void {
 }
 
 /**
+ * Client 7-Day (1 Week) TOTP Interval Enforcements
+ * Mandatory to verify TOTP once every 7 days (604,800,000 ms).
+ */
+export const CLIENT_TOTP_INTERVAL_DAYS = 7;
+export const CLIENT_TOTP_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
+
+export interface ClientTotpCountdown {
+  totalMsRemaining: number;
+  days: number;
+  hours: number;
+  minutes: number;
+  seconds: number;
+  isDue: boolean;
+  formatted: string;
+  percentRemaining: number;
+}
+
+/**
+ * Retrieves the last Client TOTP verification timestamp from local storage
+ */
+export function getLastClientTotpVerified(emailOrPhone?: string | null): number | null {
+  try {
+    const clean = emailOrPhone ? emailOrPhone.trim().toLowerCase() : null;
+    const specificKey = clean ? `vasthusilpy_client_totp_verified_at_${clean}` : null;
+    const val =
+      (specificKey ? localStorage.getItem(specificKey) : null) ||
+      localStorage.getItem("vasthusilpy_last_client_totp_verified_at") ||
+      localStorage.getItem("vasthusilpy_last_totp_verified_at");
+    if (val) {
+      const num = parseInt(val, 10);
+      if (!isNaN(num) && num > 0) return num;
+    }
+  } catch (e) {}
+  return null;
+}
+
+/**
+ * Records a successful 7-Day Client TOTP verification timestamp locally
+ */
+export function recordClientTotpVerified(emailOrPhone?: string | null, timestamp = Date.now()): void {
+  try {
+    const clean = emailOrPhone ? emailOrPhone.trim().toLowerCase() : null;
+    localStorage.setItem("vasthusilpy_last_client_totp_verified_at", timestamp.toString());
+    localStorage.setItem("vasthusilpy_last_totp_verified_at", timestamp.toString());
+    if (clean) {
+      localStorage.setItem(`vasthusilpy_client_totp_verified_at_${clean}`, timestamp.toString());
+      localStorage.setItem(`vasthusilpy_sub_totp_verified_at_${clean}`, timestamp.toString());
+    }
+  } catch (e) {}
+}
+
+/**
+ * Checks whether 7-day Client TOTP 2FA verification is currently required
+ */
+export function isClientWeeklyTotpRequired(emailOrPhone?: string | null): boolean {
+  const lastVerified = getLastClientTotpVerified(emailOrPhone);
+  if (!lastVerified || typeof lastVerified !== "number" || isNaN(lastVerified)) {
+    return true; // Never verified -> required
+  }
+  const elapsed = Date.now() - lastVerified;
+  return elapsed >= CLIENT_TOTP_INTERVAL_MS;
+}
+
+/**
+ * Calculates countdown time remaining in the 7-day Client TOTP interval
+ */
+export function getClientTotpCountdown(emailOrPhone?: string | null): ClientTotpCountdown {
+  const lastVerified = getLastClientTotpVerified(emailOrPhone);
+  if (!lastVerified || typeof lastVerified !== "number" || isNaN(lastVerified)) {
+    return {
+      totalMsRemaining: 0,
+      days: 0,
+      hours: 0,
+      minutes: 0,
+      seconds: 0,
+      isDue: true,
+      formatted: "0d 00h 00m 00s",
+      percentRemaining: 0
+    };
+  }
+
+  const elapsed = Date.now() - lastVerified;
+  const remaining = CLIENT_TOTP_INTERVAL_MS - elapsed;
+
+  if (remaining <= 0) {
+    return {
+      totalMsRemaining: 0,
+      days: 0,
+      hours: 0,
+      minutes: 0,
+      seconds: 0,
+      isDue: true,
+      formatted: "0d 00h 00m 00s",
+      percentRemaining: 0
+    };
+  }
+
+  const days = Math.floor(remaining / (24 * 60 * 60 * 1000));
+  const hours = Math.floor((remaining % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+  const minutes = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
+  const seconds = Math.floor((remaining % (60 * 1000)) / 1000);
+
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  const formatted = `${days}d ${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`;
+  const percentRemaining = Math.max(0, Math.min(100, Math.round((remaining / CLIENT_TOTP_INTERVAL_MS) * 100)));
+
+  return {
+    totalMsRemaining: remaining,
+    days,
+    hours,
+    minutes,
+    seconds,
+    isDue: false,
+    formatted,
+    percentRemaining
+  };
+}
+
+/**
  * Checks whether Admin TOTP 2FA verification is currently required (30-day recurring window).
  */
 export function isAdminTotpRequired(

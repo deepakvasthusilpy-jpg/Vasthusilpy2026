@@ -663,7 +663,7 @@ export const EstimateSideDock: React.FC<EstimateSideDockProps> = ({
 
                     <div className="space-y-0.5 font-mono text-[11px]">
                       <div className="text-slate-300">
-                        <strong>Location:</strong> {currentBlock?.title || "Main Building"} &gt; {currentApp?.title || "Floor"}
+                        <strong>Location:</strong> {currentBlock?.blockTitle || (currentBlock as any)?.title || "Main Building"} &gt; {currentApp?.title || "Floor"}
                       </div>
                       <div className="text-indigo-300">
                         <strong>Coordinates:</strong> Row {minRow + 1}{minRow !== maxRow ? ` → ${maxRow + 1}` : ""} | Cols: {COLUMN_NAMES[minCol]} → {COLUMN_NAMES[maxCol]}
@@ -1178,7 +1178,7 @@ export const EstimateSideDock: React.FC<EstimateSideDockProps> = ({
                       className="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl font-bold flex items-center justify-center gap-2 cursor-pointer shadow-sm"
                     >
                       <Paperclip className="w-4 h-4 text-cyan-400" />
-                      <span>Attachments ({project.attachments?.length || 0})</span>
+                      <span>Attachments ({(project as any).attachments?.length || 0})</span>
                     </button>
                   )}
 

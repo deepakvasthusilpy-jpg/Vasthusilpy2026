@@ -47,7 +47,7 @@ export const EditProjectModal: React.FC<EditProjectModalProps> = ({
       setEstimatedAmount(project.estimatedAmount || 0);
       setAdvancePayment(project.advancePayment || 0);
       setAdvancePaymentDate(project.advancePaymentDate || new Date().toISOString().split("T")[0]);
-      setAdvancePaymentMode(project.advancePaymentMode || "UPI");
+      setAdvancePaymentMode((project.advancePaymentMode as "CASH" | "UPI" | "BANK_TRANSFER" | "CHEQUE") || "UPI");
       setAdvancePaymentRef(project.advancePaymentRef || "");
       setEditError(null);
     }

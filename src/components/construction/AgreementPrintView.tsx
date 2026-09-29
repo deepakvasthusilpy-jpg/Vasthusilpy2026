@@ -839,7 +839,7 @@ export const AgreementPrintView: React.FC<AgreementPrintViewProps> = ({
                     <div className="grid grid-cols-2 gap-1.5 text-slate-800 text-[10px]">
                       {agreement.specifications.customSpecs.map((cs, idx) => (
                         <div key={idx} className="border-b border-slate-200 pb-0.5">
-                          <strong>{cs.nameMl || cs.titleMl || cs.name || cs.title}:</strong> {cs.value || cs.specification}
+                          <strong>{cs.titleMl || cs.title || (cs as any).nameMl || (cs as any).name}:</strong> {cs.specification || (cs as any).value}
                         </div>
                       ))}
                     </div>

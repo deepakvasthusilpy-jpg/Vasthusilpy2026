@@ -221,6 +221,7 @@ export interface SurveyTitleBlock {
   taluk: string;
   village: string;
   reSurveyNo: string;
+  oldSurveyNo?: string;
   blockNo: string;
   wardNo: string;
   sheetSize: "A4" | "A3" | "A2" | "A1" | "A0";

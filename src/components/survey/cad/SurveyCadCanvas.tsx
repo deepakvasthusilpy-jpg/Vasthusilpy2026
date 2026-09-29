@@ -394,8 +394,8 @@ export const SurveyCadCanvas: React.FC<SurveyCadCanvasProps> = ({
           }
           if (ent.type === "POLYGON_PARCEL" || (ent as any).closed) {
             ctx.closePath();
-            if (ent.fillColor && !isEraseHover) {
-              ctx.fillStyle = ent.fillColor;
+            if ((ent as any).fillColor && !isEraseHover) {
+              ctx.fillStyle = (ent as any).fillColor;
               ctx.fill();
             } else if (isEraseHover) {
               ctx.fillStyle = "rgba(239, 68, 68, 0.15)";
@@ -854,7 +854,7 @@ export const SurveyCadCanvas: React.FC<SurveyCadCanvasProps> = ({
     const targetPt = snap || worldPt;
 
     // Pan via Middle click or Pan tool
-    if (e.button === 1 || currentTool === "PAN" || e.spaceKey) {
+    if (e.button === 1 || currentTool === "PAN" || (e as any).spaceKey) {
       setIsPanning(true);
       setPanStart(screenPt);
       return;
@@ -1125,12 +1125,20 @@ export const SurveyCadCanvas: React.FC<SurveyCadCanvasProps> = ({
         const newPts = [...ent.points];
         newPts[draggingVertex.pointIndex] = activePt;
         const newArea = calculatePolygonAreaSqM(newPts);
-        onUpdateEntity({
-          ...ent,
-          points: newPts,
-          areaSqM: Number(newArea.toFixed(2)),
-          areaCents: Number((newArea * SQM_TO_CENTS).toFixed(3))
-        });
+        if (ent.type === "POLYGON_PARCEL") {
+          onUpdateEntity({
+            ...ent,
+            points: newPts,
+            areaSqM: Number(newArea.toFixed(2)),
+            areaCents: Number((newArea * SQM_TO_CENTS).toFixed(3))
+          });
+        } else {
+          onUpdateEntity({
+            ...ent,
+            points: newPts,
+            areaSqM: Number(newArea.toFixed(2))
+          });
+        }
       }
     }
 

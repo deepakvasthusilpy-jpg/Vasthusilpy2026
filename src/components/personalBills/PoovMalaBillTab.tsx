@@ -295,7 +295,7 @@ export const PoovMalaBillTab: React.FC<PoovMalaBillTabProps> = () => {
     if (!payingRow) return;
     const addedPaid = Number(payAmountInput) || 0;
     const newPaidTotal = (payingRow.paidAmount || 0) + addedPaid;
-    const status = newPaidTotal >= payingRow.amount ? "PAYMENT COMPLETED" : newPaidTotal > 0 ? "PARTIAL" : "PENDING";
+    const status: "PENDING" | "PARTIAL" | "PAYMENT COMPLETED" = newPaidTotal >= payingRow.amount ? "PAYMENT COMPLETED" : newPaidTotal > 0 ? "PARTIAL" : "PENDING";
     
     const formattedDate = new Date(payDateInput).toLocaleDateString("en-GB");
 

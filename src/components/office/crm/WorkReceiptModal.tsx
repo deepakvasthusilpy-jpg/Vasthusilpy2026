@@ -7,7 +7,6 @@ import {
   getClientProjectPortalUrl
 } from "../../../utils/workReceiptPdfGenerator";
 import { getOrAssignReceiptNumber } from "../../../utils/receiptNumberManager";
-import { VASTHUSILPY_LOGO_SVG } from "../../../data/vasthusilpyLogo";
 import {
   X,
   QrCode,
@@ -194,22 +193,16 @@ export const WorkReceiptModal: React.FC<WorkReceiptModalProps> = ({
       <div className="p-4 bg-white space-y-3 text-slate-900 font-sans border border-slate-200 rounded-xl shadow-xs">
         {/* Top Header & Copy Type Badge */}
         <div className="flex items-start justify-between border-b border-slate-200 pb-2.5">
-          <div className="flex items-center gap-2.5">
-            <div
-              className="w-10 h-10 shrink-0"
-              dangerouslySetInnerHTML={{ __html: VASTHUSILPY_LOGO_SVG }}
-            />
-            <div>
-              <h3 className="text-xs md:text-sm font-black text-red-700 tracking-tight leading-tight">
-                VASTHUSILPY ARCHITECTURAL & ENGINEERING CONSULTANTS
-              </h3>
-              <p className="text-[10px] text-slate-700 font-semibold leading-tight">
-                Architectural Plans • 3D Elevation • KPBR & K-SMART Approvals • Valuation • Estimates
-              </p>
-              <p className="text-[9.5px] text-slate-500 leading-tight">
-                Near Panchayath Office, Keralassery, Palakkad - 678641 | Ph: +91 7012383137, 9747995961 | deepak.vasthusilpy@gmail.com
-              </p>
-            </div>
+          <div>
+            <h3 className="text-xs md:text-sm font-black text-red-700 tracking-tight leading-tight">
+              VASTHUSILPY ARCHITECTURAL & ENGINEERING CONSULTANTS
+            </h3>
+            <p className="text-[10px] text-slate-700 font-semibold leading-tight">
+              Architectural Plans • 3D Elevation • KPBR & K-SMART Approvals • Valuation • Estimates
+            </p>
+            <p className="text-[9.5px] text-slate-500 leading-tight">
+              Near Panchayath Office, Keralassery, Palakkad - 678641 | Ph: +91 7012383137, 9747995961 | deepak.vasthusilpy@gmail.com
+            </p>
           </div>
 
           <div

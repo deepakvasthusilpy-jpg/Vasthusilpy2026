@@ -220,7 +220,7 @@ export const ValuationTab: React.FC = () => {
           )}
 
           <button
-            onClick={handlePrint}
+            onClick={() => handlePrint()}
             className="px-3 py-1.5 bg-slate-900 hover:bg-slate-850 text-slate-200 border border-slate-800 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
           >
             <Printer className="w-3.5 h-3.5 text-cyan-400" />
@@ -228,7 +228,7 @@ export const ValuationTab: React.FC = () => {
           </button>
 
           <button
-            onClick={handleDownloadPdf}
+            onClick={() => handleDownloadPdf()}
             className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow"
           >
             <Download className="w-3.5 h-3.5" />

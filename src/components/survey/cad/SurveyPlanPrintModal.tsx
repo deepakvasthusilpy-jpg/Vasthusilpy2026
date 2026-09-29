@@ -42,7 +42,7 @@ export const SurveyPlanPrintModal: React.FC<SurveyPlanPrintModalProps> = ({
   onUpdateTitleBlock
 }) => {
   const [titleBlock, setTitleBlock] = useState(project.titleBlock);
-  const [activePaper, setActivePaper] = useState<"A4" | "A3" | "A2">(project.titleBlock.sheetSize || "A4");
+  const [activePaper, setActivePaper] = useState<"A4" | "A3" | "A2" | "A1" | "A0">(project.titleBlock.sheetSize || "A4");
   const [orientation, setOrientation] = useState<"LANDSCAPE" | "PORTRAIT">(project.titleBlock.orientation || "LANDSCAPE");
   const [drawingScale, setDrawingScale] = useState<string>(project.titleBlock.drawingScale || "1:200");
 

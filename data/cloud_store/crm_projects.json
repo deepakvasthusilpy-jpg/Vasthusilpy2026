@@ -1,1 +1,55 @@
-[]
+[
+  {
+    "activities": [
+      {
+        "id": "act_1790661376584",
+        "actor": "DIBIN",
+        "action": "Added comment: \"moved...\"",
+        "timestamp": "9/29/2026, 11:26:16 AM"
+      },
+      {
+        "id": "act_1790661342168",
+        "actor": "DEEPAK",
+        "action": "Added task: \"plan\" assigned to DEEPAK",
+        "timestamp": "9/29/2026, 11:25:42 AM"
+      },
+      {
+        "id": "act_create_1790337624015",
+        "actor": "DEEPAK",
+        "action": "Created new project entry: LIFE PLAN X 2 for BABU",
+        "timestamp": "9/25/2026, 5:30:24 PM"
+      }
+    ],
+    "advancePayment": 0,
+    "assignee": "DEEPAK",
+    "attachments": [],
+    "clientName": "BABU",
+    "clientPhone": "",
+    "comments": [
+      {
+        "id": "c_1790661376584",
+        "author": "DIBIN",
+        "text": "moved",
+        "timestamp": "9/29/2026, 11:26:16 AM"
+      }
+    ],
+    "createdAt": "2026-09-25",
+    "description": "• Vasthu Compliant",
+    "dueDate": "2026-09-25",
+    "estimatedAmount": 0,
+    "id": "crm_proj_1790337624015",
+    "location": "8943906765",
+    "receiptNumber": "VS000005",
+    "status": "PENDING",
+    "subTasks": [
+      {
+        "id": "st_1790661342168_qrhd",
+        "title": "plan",
+        "completed": false,
+        "assignee": "DEEPAK"
+      }
+    ],
+    "title": "LIFE PLAN X 2",
+    "workReceiptGeneratedAt": "2026-09-25T12:00:24.016Z"
+  }
+]

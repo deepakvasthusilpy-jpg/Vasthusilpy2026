@@ -36,7 +36,12 @@ import {
   recordAdminTotpVerified,
   ADMIN_TOTP_RECURRING_WINDOW_MS,
   isSubscriberDailyTotpRequired,
-  recordSubscriberDailyTotpVerified
+  recordSubscriberDailyTotpVerified,
+  isClientWeeklyTotpRequired,
+  recordClientTotpVerified,
+  getClientTotpCountdown,
+  CLIENT_TOTP_INTERVAL_DAYS,
+  CLIENT_TOTP_INTERVAL_MS
 } from "../utils/totp";
 import {
   SubscriptionRequest,
@@ -1772,34 +1777,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const hasExpired = foundSub.status === "expired" || isSubscriptionExpired(foundSub);
 
-    // Daily TOTP Enforcement: "totp must ask for every day starting once on subscriber login"
+    // 7-Day Client TOTP Interval Enforcement:
+    // "MANDATORY TO ENTER TOTP ON EVERY CLIENT LOGIN WITH 1 WEEK INTERVAL (ONCE EVERY 7 DAYS)"
     const subIdentifier = foundSub.email || foundSub.phone || cleanInput;
-    const isDailyTotpNeeded = isSubscriberDailyTotpRequired(subIdentifier);
+    const isWeeklyTotpNeeded = isClientWeeklyTotpRequired(subIdentifier);
 
-    if (isDailyTotpNeeded) {
+    if (isWeeklyTotpNeeded) {
       if (totpCode && totpCode.trim().length === 6) {
         const userEmail = foundSub.email || (cleanInput.includes("@") ? cleanInput : `${cleanPhoneDigits}@vasthusilpy.local`);
         const secret = getOrCreateTotpSecret(userEmail);
         const verification = await verifyTotpCode(secret, totpCode.trim(), 1);
         if (!verification.valid) {
           setLoading(false);
-          throw new Error("നൽകിയ 6 അക്ക Google Authenticator കോഡ് തെറ്റാണ് അല്ലെങ്കിൽ കാലഹരണപ്പെട്ടു (Invalid or expired Authenticator code).");
+          throw new Error("നൽകിയ 6 അക്ക Google Authenticator കോഡ് തെറ്റാണ് അല്ലെങ്കിൽ കാലഹരണപ്പെട്ടു (Invalid or expired 6-digit Authenticator code).");
         }
-        recordSubscriberDailyTotpVerified(foundSub.email);
-        if (foundSub.phone) recordSubscriberDailyTotpVerified(foundSub.phone);
-        if (cleanInput) recordSubscriberDailyTotpVerified(cleanInput);
+        recordClientTotpVerified(foundSub.email);
+        if (foundSub.phone) recordClientTotpVerified(foundSub.phone);
+        if (cleanInput) recordClientTotpVerified(cleanInput);
       } else {
         setLoading(false);
-        const err: any = new Error("SUBSCRIBER_DAILY_TOTP_REQUIRED");
-        err.code = "SUBSCRIBER_DAILY_TOTP_REQUIRED";
+        const err: any = new Error("CLIENT_WEEKLY_TOTP_REQUIRED");
+        err.code = "CLIENT_WEEKLY_TOTP_REQUIRED";
         err.subscriberEmail = foundSub.email || (cleanInput.includes("@") ? cleanInput : `${cleanPhoneDigits}@vasthusilpy.local`);
         err.subscriberPhone = foundSub.phone || cleanPhoneDigits;
         err.displayName = foundSub.fullName || cleanInput;
         throw err;
       }
     } else {
-      recordSubscriberDailyTotpVerified(foundSub.email);
-      if (foundSub.phone) recordSubscriberDailyTotpVerified(foundSub.phone);
+      if (totpCode && totpCode.trim().length === 6) {
+        const userEmail = foundSub.email || (cleanInput.includes("@") ? cleanInput : `${cleanPhoneDigits}@vasthusilpy.local`);
+        const secret = getOrCreateTotpSecret(userEmail);
+        const verification = await verifyTotpCode(secret, totpCode.trim(), 1);
+        if (verification.valid) {
+          recordClientTotpVerified(foundSub.email);
+          if (foundSub.phone) recordClientTotpVerified(foundSub.phone);
+        }
+      }
     }
 
     // Instant session construction

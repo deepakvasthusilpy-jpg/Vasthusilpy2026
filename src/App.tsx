@@ -258,8 +258,11 @@ export default function App() {
     window.addEventListener("focus", handleWindowFocusOrVisibility);
 
     const handleStorageUpdate = () => {
-      const reloaded = loadSavedEstimates();
-      setEstimateProjects(reloaded);
+      setTimeout(() => {
+        if (!isMounted) return;
+        const reloaded = loadSavedEstimates();
+        setEstimateProjects(reloaded);
+      }, 0);
     };
     window.addEventListener("vasthusilpy_storage_update", handleStorageUpdate);
     window.addEventListener("vasthusilpy_backup_restored", handleStorageUpdate);

@@ -22,7 +22,23 @@ import {
   Ruler
 } from "lucide-react";
 import { CADDrawingRecord } from "../../types/dataStorageTypes";
-import { getStoredCADFiles, formatBytes } from "../../utils/dataStorageManager";
+
+function formatBytes(bytes: number, decimals = 2) {
+  if (!+bytes) return "0 Bytes";
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ["Bytes", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+}
+
+function getStoredCADFiles(): CADDrawingRecord[] {
+  try {
+    const raw = localStorage.getItem("vasthusilpy_cad_vault_files");
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return [];
+}
 
 export const KsmartPlanScrutinyTab: React.FC = () => {
   const KSMART_SCRUTINY_URL = "https://ksmart.lsgkerala.gov.in/ui/building-permit/scrutinize-your-building-plan";

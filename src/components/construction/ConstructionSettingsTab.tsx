@@ -42,8 +42,8 @@ export const ConstructionSettingsTab: React.FC<ConstructionSettingsTabProps> = (
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   const handleSave = () => {
-    const saved = ConstructionStorageManager.saveSettings(settings);
-    onSettingsUpdated(saved);
+    ConstructionStorageManager.saveSettings(settings);
+    onSettingsUpdated(settings);
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 3000);
   };

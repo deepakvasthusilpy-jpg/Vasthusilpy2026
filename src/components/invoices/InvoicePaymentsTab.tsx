@@ -700,9 +700,7 @@ export const InvoicePaymentsTab: React.FC<InvoicePaymentsTabProps> = ({
       <OfflineBackupRestoreModal
         isOpen={isBackupRestoreModalOpen}
         onClose={() => setIsBackupRestoreModalOpen(false)}
-        projects={projects}
-        invoices={invoices}
-        onImportSuccess={() => {
+        onRestoreSuccess={() => {
           setInvoices(loadInvoices());
           setProjects(loadCrmProjects());
           setIsBackupRestoreModalOpen(false);

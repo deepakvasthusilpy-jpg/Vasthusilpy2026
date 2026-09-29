@@ -340,7 +340,7 @@ export const PublicAgreementVerificationPortal: React.FC<PublicAgreementVerifica
                           <div className="text-base font-bold text-white">{agreement.client.clientName}</div>
                           <div className="text-slate-300 font-mono">വീട്ടുപേര്: {agreement.client.houseName}</div>
                           <div className="text-slate-400">
-                            {agreement.client.localBody}, {agreement.client.district}, PIN: {agreement.client.pincode}
+                            {agreement.client.localBody}, {agreement.client.district}, PIN: {agreement.client.pinCode || (agreement.client as any).pincode}
                           </div>
                           {agreement.client.mobileNumber && (
                             <div className="text-slate-400 pt-1 flex items-center gap-1.5 font-mono">
@@ -444,40 +444,43 @@ export const PublicAgreementVerificationPortal: React.FC<PublicAgreementVerifica
                     </div>
 
                     <div className="divide-y divide-slate-800/80">
-                      {agreement.paymentSchedule.map((stage, idx) => (
-                        <div key={stage.id || idx} className="py-3.5 flex items-center justify-between gap-4 text-xs">
-                          <div className="flex items-center gap-3">
-                            <div className="w-7 h-7 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center font-mono font-bold text-slate-300 shrink-0">
-                              {stage.stageOrder || idx + 1}
-                            </div>
-                            <div>
-                              <div className="font-bold text-white font-sans text-xs sm:text-sm">
-                                {stage.stageNameMl || stage.stageName}
+                      {agreement.paymentSchedule.map((stage, idx) => {
+                        const isPartial = stage.status === "PARTIALLY_PAID" || (stage.status as string) === "PARTIAL";
+                        return (
+                          <div key={stage.id || idx} className="py-3.5 flex items-center justify-between gap-4 text-xs">
+                            <div className="flex items-center gap-3">
+                              <div className="w-7 h-7 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center font-mono font-bold text-slate-300 shrink-0">
+                                {(stage as any).stageOrder || (stage as any).order || idx + 1}
                               </div>
-                              <div className="text-[11px] text-slate-400 font-mono">
-                                {stage.stageName} • {stage.percentage}%
+                              <div>
+                                <div className="font-bold text-white font-sans text-xs sm:text-sm">
+                                  {stage.stageNameMl || stage.stageName}
+                                </div>
+                                <div className="text-[11px] text-slate-400 font-mono">
+                                  {stage.stageName} • {stage.percentage}%
+                                </div>
                               </div>
                             </div>
-                          </div>
 
-                          <div className="text-right font-mono shrink-0">
-                            <div className="font-bold text-white text-xs sm:text-sm">
-                              {formatIndianCurrency(stage.amount)}
+                            <div className="text-right font-mono shrink-0">
+                              <div className="font-bold text-white text-xs sm:text-sm">
+                                {formatIndianCurrency(stage.amount)}
+                              </div>
+                              <span
+                                className={`inline-block px-2 py-0.5 rounded text-[9.5px] font-bold ${
+                                  stage.status === "PAID"
+                                    ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                                    : isPartial
+                                    ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
+                                    : "bg-slate-800 text-slate-400 border border-slate-700"
+                                }`}
+                              >
+                                {stage.status === "PAID" ? "അടച്ചു (PAID)" : isPartial ? "ഭാഗികം" : "ബാക്കി (PENDING)"}
+                              </span>
                             </div>
-                            <span
-                              className={`inline-block px-2 py-0.5 rounded text-[9.5px] font-bold ${
-                                stage.status === "PAID"
-                                  ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
-                                  : stage.status === "PARTIAL"
-                                  ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
-                                  : "bg-slate-800 text-slate-400 border border-slate-700"
-                              }`}
-                            >
-                              {stage.status === "PAID" ? "അടച്ചു (PAID)" : stage.status === "PARTIAL" ? "ഭാഗികം" : "ബാക്കി (PENDING)"}
-                            </span>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -497,42 +500,74 @@ export const PublicAgreementVerificationPortal: React.FC<PublicAgreementVerifica
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                       <div className="bg-slate-950/60 p-4 rounded-2xl border border-slate-800 space-y-1">
                         <span className="font-bold text-amber-400">1. ഫൗണ്ടേഷൻ & ബേസ്‌മെന്റ്:</span>
-                        <p className="text-slate-300">{agreement.specifications.foundation || "റൂബിൾ കൊത്തുപണി, ബെൽറ്റ് കോൺക്രീറ്റ്."}</p>
+                        <p className="text-slate-300">
+                          {typeof (agreement.specifications as any)?.foundation === "object"
+                            ? JSON.stringify((agreement.specifications as any)?.foundation)
+                            : (agreement.specifications as any)?.foundation || "റൂബിൾ കൊത്തുപണി, ബെൽറ്റ് കോൺക്രീറ്റ്."}
+                        </p>
                       </div>
 
                       <div className="bg-slate-950/60 p-4 rounded-2xl border border-slate-800 space-y-1">
                         <span className="font-bold text-amber-400">2. സൂപ്പർ സ്ട്രക്ചർ (ഭിത്തികൾ):</span>
-                        <p className="text-slate-300">{agreement.specifications.superstructure || "ഫസ്റ്റ് ക്ലാസ് റെഡ് ബ്രിക്സ് / സോളിഡ് ബ്ലോക്കുകൾ."}</p>
+                        <p className="text-slate-300">
+                          {typeof (agreement.specifications as any)?.superstructure === "object"
+                            ? JSON.stringify((agreement.specifications as any)?.superstructure)
+                            : (agreement.specifications as any)?.superstructure || "ഫസ്റ്റ് ക്ലാസ് റെഡ് ബ്രിക്സ് / സോളിഡ് ബ്ലോക്കുകൾ."}
+                        </p>
                       </div>
 
                       <div className="bg-slate-950/60 p-4 rounded-2xl border border-slate-800 space-y-1">
                         <span className="font-bold text-amber-400">3. മേൽക്കൂര (Roofing & Concrete):</span>
-                        <p className="text-slate-300">{agreement.specifications.roofing || "ആർ.സി.സി സ്ലാബ് കോൺക്രീറ്റ് (M20 ഗ്രേഡ്)."}</p>
+                        <p className="text-slate-300">
+                          {typeof (agreement.specifications as any)?.roofing === "object"
+                            ? JSON.stringify((agreement.specifications as any)?.roofing)
+                            : (agreement.specifications as any)?.roofing || "ആർ.സി.സി സ്ലാബ് കോൺക്രീറ്റ് (M20 ഗ്രേഡ്)."}
+                        </p>
                       </div>
 
                       <div className="bg-slate-950/60 p-4 rounded-2xl border border-slate-800 space-y-1">
                         <span className="font-bold text-amber-400">4. പ്ലാസ്റ്ററിംഗ് (Plastering):</span>
-                        <p className="text-slate-300">{agreement.specifications.plastering || "സിമന്റ് ചാന്തുപയോഗിച്ച് മിനുസമാർന്ന പ്ലാസ്റ്ററിംഗ്."}</p>
+                        <p className="text-slate-300">
+                          {typeof (agreement.specifications as any)?.plastering === "object"
+                            ? JSON.stringify((agreement.specifications as any)?.plastering)
+                            : (agreement.specifications as any)?.plastering || "സിമന്റ് ചാന്തുപയോഗിച്ച് മിനുസമാർന്ന പ്ലാസ്റ്ററിംഗ്."}
+                        </p>
                       </div>
 
                       <div className="bg-slate-950/60 p-4 rounded-2xl border border-slate-800 space-y-1">
                         <span className="font-bold text-amber-400">5. ഫ്ലോറിംഗ് (Flooring):</span>
-                        <p className="text-slate-300">{agreement.specifications.flooring || "പ്രീമിയം വിട്രിഫൈഡ് ടൈലുകൾ (₹60/sqft അടിസ്ഥാന നിരക്ക്)."}</p>
+                        <p className="text-slate-300">
+                          {typeof (agreement.specifications as any)?.flooring === "object"
+                            ? JSON.stringify((agreement.specifications as any)?.flooring)
+                            : (agreement.specifications as any)?.flooring || "പ്രീമിയം വിട്രിഫൈഡ് ടൈലുകൾ (₹60/sqft അടിസ്ഥാന നിരക്ക്)."}
+                        </p>
                       </div>
 
                       <div className="bg-slate-950/60 p-4 rounded-2xl border border-slate-800 space-y-1">
                         <span className="font-bold text-amber-400">6. വാതിലുകളും ജനലുകളും:</span>
-                        <p className="text-slate-300">{agreement.specifications.woodwork || "തേക്കിൻ തടി മുൻവാതിൽ, മറ്റു വാതിലുകൾ ഗുണനിലവാരമുള്ള തടി."}</p>
+                        <p className="text-slate-300">
+                          {typeof (agreement.specifications as any)?.woodwork === "object"
+                            ? JSON.stringify((agreement.specifications as any)?.woodwork)
+                            : (agreement.specifications as any)?.woodwork || "തേക്കിൻ തടി മുൻവാതിൽ, മറ്റു വാതിലുകൾ ഗുണനിലവാരമുള്ള തടി."}
+                        </p>
                       </div>
 
                       <div className="bg-slate-950/60 p-4 rounded-2xl border border-slate-800 space-y-1">
                         <span className="font-bold text-amber-400">7. ഇലക്ട്രിക്കൽ & പ്ലംബിംഗ്:</span>
-                        <p className="text-slate-300">{agreement.specifications.electrical || "Finolex / RR Kabel വയറിംഗ്, Cera / Jaquar ഫിറ്റിംഗ്സ്."}</p>
+                        <p className="text-slate-300">
+                          {typeof (agreement.specifications as any)?.electrical === "object"
+                            ? JSON.stringify((agreement.specifications as any)?.electrical)
+                            : (agreement.specifications as any)?.electrical || "Finolex / RR Kabel വയറിംഗ്, Cera / Jaquar ഫിറ്റിംഗ്സ്."}
+                        </p>
                       </div>
 
                       <div className="bg-slate-950/60 p-4 rounded-2xl border border-slate-800 space-y-1">
                         <span className="font-bold text-amber-400">8. പെയിന്റിംഗ് (Painting):</span>
-                        <p className="text-slate-300">{agreement.specifications.painting || "Asian Paints പ്രീമിയം എമൽഷൻ & വാട്ടർപ്രൂഫ് കോട്ടിംഗ്."}</p>
+                        <p className="text-slate-300">
+                          {typeof (agreement.specifications as any)?.painting === "object"
+                            ? JSON.stringify((agreement.specifications as any)?.painting)
+                            : (agreement.specifications as any)?.painting || "Asian Paints പ്രീമിയം എമൽഷൻ & വാട്ടർപ്രൂഫ് കോട്ടിംഗ്."}
+                        </p>
                       </div>
                     </div>
                   </div>

@@ -142,6 +142,24 @@ export const BuildingPlanTemplateMaster: React.FC<BuildingPlanTemplateMasterProp
     setProjects((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
   };
 
+  const handleDeleteProject = (id: string) => {
+    setProjects((prev) => prev.filter((p) => p.id !== id));
+    triggerToast("Project removed.");
+  };
+
+  const handleDuplicateProject = (p: BuildingPlanProject) => {
+    const dup: BuildingPlanProject = {
+      ...p,
+      id: `plan-${Date.now()}`,
+      projectTitle: `${p.projectTitle} (Copy)`,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    setProjects((prev) => [dup, ...prev]);
+    setActiveProjectId(dup.id);
+    triggerToast("Project duplicated.");
+  };
+
   // Update active sheet
   const handleUpdateActiveSheet = (updatedSheet: PlanSheet) => {
     const updatedSheets = activeProject.sheets.map((s, idx) =>
@@ -383,7 +401,7 @@ export const BuildingPlanTemplateMaster: React.FC<BuildingPlanTemplateMasterProp
               >
                 <span>{s.drawingNumber || `DWG-${idx + 1}`}</span>
                 <span className="text-[10px] opacity-75 hidden sm:inline">
-                  {s.sheetTitle ? `(${s.sheetTitle.slice(0, 16)})` : ""}
+                  {s.drawingName ? `(${s.drawingName.slice(0, 16)})` : ""}
                 </span>
               </button>
             ))}
@@ -665,7 +683,6 @@ export const BuildingPlanTemplateMaster: React.FC<BuildingPlanTemplateMasterProp
                       onApplyToAllSheets={() => {
                         const updatedSheets = activeProject.sheets.map((s) => ({
                           ...s,
-                          areaTable: activeSheet.areaTable,
                           marginConfig: activeSheet.marginConfig
                         }));
                         handleUpdateActiveProject({ ...activeProject, sheets: updatedSheets });
@@ -735,13 +752,30 @@ export const BuildingPlanTemplateMaster: React.FC<BuildingPlanTemplateMasterProp
                   {/* 7. PLANS DASHBOARD (Full Width) */}
                   {currentSubtab === "dashboard" && (
                     <PlanProjectsDashboard
-                      onSelectProject={(p) => {
+                      projects={projects}
+                      onSelectProjectForEdit={(p) => {
                         setCurrentActiveProjectId(p.id);
                         setActiveProjectId(p.id);
                         setActiveSheetIndex(0);
                         setSelectedTarget(null);
                         setCurrentSubtab("editor");
                         triggerToast(`Loaded project "${p.clientName}"`);
+                      }}
+                      onSelectProjectForView={(p) => {
+                        setCurrentActiveProjectId(p.id);
+                        setActiveProjectId(p.id);
+                        setActiveSheetIndex(0);
+                        setSelectedTarget(null);
+                        setCurrentSubtab("editor");
+                      }}
+                      onDeleteProject={(id) => {
+                        handleDeleteProject(id);
+                      }}
+                      onDuplicateProject={(p) => {
+                        handleDuplicateProject(p);
+                      }}
+                      onCreateNewProject={() => {
+                        handleCreateNewProject();
                       }}
                       onQuickExportPdf={(p) => {
                         exportAllSheetsToPdf(p, async () => mainCanvasRef.current);
