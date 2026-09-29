@@ -18,12 +18,17 @@ export const SYNC_KEYS = {
   ESTIMATES: "vasthusilpy_estimates",
   CUSTOMERS: "vasthusilpy_customers",
   RATE_ITEMS: "vasthusilpy_rate_items",
+  BUILDING_PLANS: "vasthusilpy_building_plan_projects_master_v1",
+  CONSTRUCTION_PROJECTS: "vasthusilpy_construction_projects",
+  CONSTRUCTION_AGREEMENTS: "vasthusilpy_construction_agreements",
+  QUOTATIONS: "vasthusilpy_quotations_list_v1",
+  AUTHORIZED_EMAILS: "vasthusilpy_authorized_emails_v2",
+  CAD_VAULT_FILES: "vasthusilpy_cad_vault_files",
   IMPORTANT_SITES: "vasthusilpy_important_sites_v1",
   SITE_FOLDERS: "vasthusilpy_site_folders_v1",
   SITE_INSPECTIONS: "vasthusilpy_site_inspections_v1",
   INSPECTION_TEMPLATES: "vasthusilpy_site_inspection_templates_v1",
   ONLINE_APPLICATIONS: "vasthusilpy_online_applications_v1",
-  CONSTRUCTION_AGREEMENTS: "vasthusilpy_construction_agreements",
   SUBSCRIPTIONS: "vasthusilpy_subscription_requests",
   LAST_CLOUD_SYNC: "vasthusilpy_last_cloud_autosync_time",
   CLOUD_SYNC_STATUS: "vasthusilpy_cloud_sync_status"
@@ -60,6 +65,21 @@ export function dispatchAllSyncEvents(targetKey?: string) {
   }
   if (!targetKey || targetKey === SYNC_KEYS.SUBSCRIPTIONS) {
     window.dispatchEvent(new Event("vasthusilpy_subscription_update"));
+  }
+  if (!targetKey || targetKey === SYNC_KEYS.BUILDING_PLANS) {
+    window.dispatchEvent(new Event("vasthusilpy_building_plans_updated"));
+  }
+  if (!targetKey || targetKey === SYNC_KEYS.CONSTRUCTION_PROJECTS || targetKey === SYNC_KEYS.CONSTRUCTION_AGREEMENTS) {
+    window.dispatchEvent(new Event("vasthusilpy_construction_updated"));
+  }
+  if (!targetKey || targetKey === SYNC_KEYS.QUOTATIONS) {
+    window.dispatchEvent(new Event("vasthusilpy_quotations_updated"));
+  }
+  if (!targetKey || targetKey === SYNC_KEYS.AUTHORIZED_EMAILS) {
+    window.dispatchEvent(new Event("vasthusilpy_authorized_emails_updated"));
+  }
+  if (!targetKey || targetKey === SYNC_KEYS.CAD_VAULT_FILES) {
+    window.dispatchEvent(new Event("vasthusilpy_cad_storage_updated"));
   }
   if (!targetKey || targetKey === SYNC_KEYS.IMPORTANT_SITES) {
     window.dispatchEvent(new Event("vasthusilpy_important_sites_updated"));
@@ -237,12 +257,17 @@ export function initializeCloudRealtimeSync(): () => void {
     { collection: "estimates", storageKey: SYNC_KEYS.ESTIMATES },
     { collection: "customers", storageKey: SYNC_KEYS.CUSTOMERS },
     { collection: "rate_items", storageKey: SYNC_KEYS.RATE_ITEMS },
+    { collection: "building_plans", storageKey: SYNC_KEYS.BUILDING_PLANS },
+    { collection: "construction_projects", storageKey: SYNC_KEYS.CONSTRUCTION_PROJECTS },
+    { collection: "construction_agreements", storageKey: SYNC_KEYS.CONSTRUCTION_AGREEMENTS },
+    { collection: "quotations", storageKey: SYNC_KEYS.QUOTATIONS },
+    { collection: "authorized_emails", storageKey: SYNC_KEYS.AUTHORIZED_EMAILS },
+    { collection: "cad_vault_files", storageKey: SYNC_KEYS.CAD_VAULT_FILES },
     { collection: "important_sites", storageKey: SYNC_KEYS.IMPORTANT_SITES },
     { collection: "site_folders", storageKey: SYNC_KEYS.SITE_FOLDERS },
     { collection: "site_inspections", storageKey: SYNC_KEYS.SITE_INSPECTIONS },
     { collection: "inspection_templates", storageKey: SYNC_KEYS.INSPECTION_TEMPLATES },
     { collection: "online_applications", storageKey: SYNC_KEYS.ONLINE_APPLICATIONS },
-    { collection: "construction_agreements", storageKey: SYNC_KEYS.CONSTRUCTION_AGREEMENTS },
     { collection: "subscription_requests", storageKey: SYNC_KEYS.SUBSCRIPTIONS }
   ];
 
@@ -392,6 +417,30 @@ export async function pullFullCloudDatabaseState(): Promise<boolean> {
         }
         if (Array.isArray(store.rateItems) && store.rateItems.length > 0) {
           writeLocalList(SYNC_KEYS.RATE_ITEMS, store.rateItems);
+          hasHydrated = true;
+        }
+        if (Array.isArray(store.buildingPlans) && store.buildingPlans.length > 0) {
+          writeLocalList(SYNC_KEYS.BUILDING_PLANS, store.buildingPlans);
+          hasHydrated = true;
+        }
+        if (Array.isArray(store.constructionProjects) && store.constructionProjects.length > 0) {
+          writeLocalList(SYNC_KEYS.CONSTRUCTION_PROJECTS, store.constructionProjects);
+          hasHydrated = true;
+        }
+        if (Array.isArray(store.constructionAgreements) && store.constructionAgreements.length > 0) {
+          writeLocalList(SYNC_KEYS.CONSTRUCTION_AGREEMENTS, store.constructionAgreements);
+          hasHydrated = true;
+        }
+        if (Array.isArray(store.quotations) && store.quotations.length > 0) {
+          writeLocalList(SYNC_KEYS.QUOTATIONS, store.quotations);
+          hasHydrated = true;
+        }
+        if (Array.isArray(store.authorizedEmails) && store.authorizedEmails.length > 0) {
+          writeLocalList(SYNC_KEYS.AUTHORIZED_EMAILS, store.authorizedEmails);
+          hasHydrated = true;
+        }
+        if (Array.isArray(store.subscriptions) && store.subscriptions.length > 0) {
+          writeLocalList(SYNC_KEYS.SUBSCRIPTIONS, store.subscriptions);
           hasHydrated = true;
         }
         if (Array.isArray(store.importantSites) && store.importantSites.length > 0) {

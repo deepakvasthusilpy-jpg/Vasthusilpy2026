@@ -111,10 +111,33 @@ export const BuildingPlanTemplateMaster: React.FC<BuildingPlanTemplateMasterProp
   const mainCanvasRef = useRef<HTMLDivElement>(null);
   const offscreenCanvasRef = useRef<HTMLDivElement>(null);
 
-  // Sync projects to localStorage
+  // Sync projects to localStorage & server
   useEffect(() => {
-    saveBuildingPlanProjects(projects);
+    if (projects && projects.length > 0) {
+      saveBuildingPlanProjects(projects);
+    }
   }, [projects]);
+
+  // Realtime multi-browser & cloud sync listener
+  useEffect(() => {
+    const handleRemoteUpdate = () => {
+      const fresh = loadBuildingPlanProjects();
+      if (fresh && fresh.length > 0) {
+        setProjects(fresh);
+        setCurrentActiveProjectId((prev) => {
+          if (prev && fresh.some((p) => p.id === prev)) return prev;
+          return getActiveProjectId(fresh);
+        });
+      }
+    };
+
+    window.addEventListener("vasthusilpy_building_plans_updated", handleRemoteUpdate);
+    window.addEventListener("vasthusilpy_storage_update", handleRemoteUpdate);
+    return () => {
+      window.removeEventListener("vasthusilpy_building_plans_updated", handleRemoteUpdate);
+      window.removeEventListener("vasthusilpy_storage_update", handleRemoteUpdate);
+    };
+  }, []);
 
   const activeProject =
     projects.find((p) => p.id === activeProjectId) || projects[0] || createBlankBuildingPlanProject();

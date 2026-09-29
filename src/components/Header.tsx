@@ -6,7 +6,6 @@ import { useLanguage } from "../context/LanguageContext";
 import { useNotifications } from "../context/NotificationContext";
 import { ManageUsersModal } from "./auth/ManageUsersModal";
 import { UserProfileModal } from "./auth/UserProfileModal";
-import { ThemeSelectorModal } from "./theme/ThemeSelectorModal";
 import { Logo } from "./Logo";
 import { isOnamThemeActive } from "../utils/onamTheme";
 import { OnamFestiveBadge } from "./common/OnamFestiveElements";
@@ -56,13 +55,8 @@ interface HeaderProps {
   onOpenMobileSidebar?: () => void;
 }
 
-const THEME_HEADER_ICONS: Record<Theme, React.FC<{ className?: string }>> = {
-  corporate: Building2,
-  tech_startup: Zap,
-  dark: Moon,
-  ai_platform: Cpu,
-  baroque: Crown,
-  anthropomorphic: Trees
+const THEME_HEADER_ICONS: Record<string, React.FC<{ className?: string }>> = {
+  tech_startup: Zap
 };
 
 export const Header: React.FC<HeaderProps> = ({
@@ -347,118 +341,6 @@ export const Header: React.FC<HeaderProps> = ({
                 )}
               </div>
 
-              {/* ARCHITECTURAL THEME SELECTOR & STUDIO */}
-              <div className="relative" ref={themeMenuRef}>
-                <div className="flex items-center bg-white/10 border border-white/20 rounded-full shadow-sm overflow-hidden backdrop-blur-md">
-                  <button
-                    onClick={() => setIsThemeMenuOpen(!isThemeMenuOpen)}
-                    className="flex items-center gap-2 px-3 py-1.5 text-xs font-mono font-bold text-white hover:bg-white/15 transition-colors cursor-pointer group"
-                    title={`Current Theme: ${currentThemeMeta.name} - Click to choose from 6 themes`}
-                  >
-                    <div
-                      className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] shrink-0"
-                      style={{ color: currentThemeMeta.primaryColor }}
-                    >
-                      <CurrentThemeIcon className="w-3.5 h-3.5 transform group-hover:scale-110 transition-transform" />
-                    </div>
-                    <span className="hidden sm:inline uppercase text-[11px] font-black tracking-wider text-purple-100 truncate max-w-[110px]">
-                      {currentThemeMeta.name.split(" ")[0]}
-                    </span>
-                    <ChevronDown className="w-3 h-3 text-purple-300 group-hover:text-white transition-colors" />
-                  </button>
-
-                  <button
-                    onClick={cycleNextTheme}
-                    className="px-2.5 py-1.5 border-l border-white/20 text-purple-200 hover:text-white hover:bg-white/15 text-[10px] font-mono font-bold transition-colors cursor-pointer"
-                    title="Cycle to next architectural theme"
-                  >
-                    NEXT
-                  </button>
-                </div>
-
-                {/* Theme Fast Selection Dropdown */}
-                {isThemeMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-72 glass-card border border-white/20 rounded-3xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-150 backdrop-blur-2xl">
-                    <div className="px-3.5 py-2.5 bg-white/10 border-b border-white/15 flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-white uppercase tracking-wider font-mono">
-                        <Palette className="w-3.5 h-3.5 text-purple-300" />
-                        <span>Select Theme</span>
-                      </div>
-                      <span className="text-[9px] font-mono bg-purple-500/20 text-purple-200 border border-purple-400/40 px-2 py-0.5 rounded-full font-bold">
-                        6 STYLES
-                      </span>
-                    </div>
-
-                    <div className="p-1.5 space-y-1 max-h-72 overflow-y-auto">
-                      {THEME_OPTIONS.map((opt) => {
-                        const isSelected = theme === opt.id;
-                        const OptIcon = THEME_HEADER_ICONS[opt.id] || Sparkle;
-
-                        return (
-                          <button
-                            key={opt.id}
-                            onClick={() => {
-                              setTheme(opt.id);
-                              setIsThemeMenuOpen(false);
-                            }}
-                            className={`w-full flex items-center justify-between p-2 rounded-2xl text-left transition-all cursor-pointer ${
-                              isSelected
-                                ? "bg-white/20 border border-white/40 text-white font-bold shadow-sm"
-                                : "text-purple-100 hover:text-white hover:bg-white/10 border border-transparent"
-                            }`}
-                          >
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <div
-                                className="w-6 h-6 rounded-xl flex items-center justify-center shrink-0 shadow-inner"
-                                style={{
-                                  backgroundColor: opt.cardPreview,
-                                  border: `1px solid ${opt.borderPreview}`,
-                                  color: opt.primaryColor
-                                }}
-                              >
-                                <OptIcon className="w-3.5 h-3.5" />
-                              </div>
-                              <div className="truncate">
-                                <div className="text-xs leading-tight font-semibold truncate text-white">
-                                  {opt.name}
-                                </div>
-                                <div className="text-[9.5px] text-purple-200/60 font-mono truncate">
-                                  {opt.nameMl}
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-1 shrink-0 ml-2">
-                              <span
-                                className="w-2.5 h-2.5 rounded-full"
-                                style={{ backgroundColor: opt.primaryColor }}
-                              />
-                              <span
-                                className="w-2.5 h-2.5 rounded-full"
-                                style={{ backgroundColor: opt.bgPreview, border: `1px solid ${opt.borderPreview}` }}
-                              />
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    <div className="p-2 bg-white/5 border-t border-white/10">
-                      <button
-                        onClick={() => {
-                          setIsThemeMenuOpen(false);
-                          setIsThemeModalOpen(true);
-                        }}
-                        className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-mono font-bold text-white border border-white/20 transition-colors cursor-pointer"
-                      >
-                        <Palette className="w-3.5 h-3.5" />
-                        <span>Open Theme Studio (Full Gallery)</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-
               {/* AUTO SYNC BUTTON ON TOP OF WEBPAGE */}
               <button
                 id="btn-top-auto-sync"
@@ -577,11 +459,6 @@ export const Header: React.FC<HeaderProps> = ({
       <ManageUsersModal
         isOpen={isManageUsersOpen}
         onClose={() => setIsManageUsersOpen(false)}
-      />
-
-      <ThemeSelectorModal
-        isOpen={isThemeModalOpen}
-        onClose={() => setIsThemeModalOpen(false)}
       />
 
       <OfflineBackupRestoreModal

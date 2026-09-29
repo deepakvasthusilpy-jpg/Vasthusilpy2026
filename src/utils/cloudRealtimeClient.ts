@@ -5,43 +5,144 @@ import {
   getGlobalDeletedIds
 } from "./deletionRegistry";
 import { broadcastMessage, getBroadcastChannel } from "./broadcastSync";
+import { pullAndHydrateWebDataFromServer } from "./webDataSyncManager";
 
 let isClientInitialized = false;
 let sseConnection: EventSource | null = null;
 let reconnectTimer: any = null;
 
-const COLLECTION_STORAGE_MAP: Record<string, { storageKey: string; eventName: string }> = {
-  online_applications: {
-    storageKey: "vasthusilpy_online_applications_v1",
-    eventName: "vasthusilpy_online_applications_updated"
-  },
+export interface CollectionConfig {
+  storageKeys: string[];
+  events: string[];
+}
+
+const COLLECTION_STORAGE_MAP: Record<string, CollectionConfig> = {
+  // CRM & Work Orders
   crm_projects: {
-    storageKey: "vasthusilpy_crm_projects",
-    eventName: "vasthusilpy_storage_update"
+    storageKeys: ["vasthusilpy_crm_projects", "vasthusilpy_projects"],
+    events: ["vasthusilpy_storage_update", "vasthusilpy_projects_updated", "vasthusilpy_crm_updated"]
   },
+  projects: {
+    storageKeys: ["vasthusilpy_crm_projects", "vasthusilpy_projects"],
+    events: ["vasthusilpy_storage_update", "vasthusilpy_projects_updated", "vasthusilpy_crm_updated"]
+  },
+
+  // Invoices & Payments
   crm_invoices: {
-    storageKey: "vasthusilpy_crm_invoices",
-    eventName: "vasthusilpy_storage_update"
+    storageKeys: ["vasthusilpy_crm_invoices", "vasthusilpy_invoices"],
+    events: ["vasthusilpy_storage_update", "vasthusilpy_invoices_updated"]
   },
+  invoices: {
+    storageKeys: ["vasthusilpy_invoices", "vasthusilpy_crm_invoices"],
+    events: ["vasthusilpy_storage_update", "vasthusilpy_invoices_updated"]
+  },
+
+  // Estimates & Cost Calculations
   estimates: {
-    storageKey: "vasthusilpy_estimates",
-    eventName: "vasthusilpy_storage_update"
+    storageKeys: ["vasthusilpy_estimates"],
+    events: ["vasthusilpy_storage_update", "vasthusilpy_estimates_updated"]
   },
-  valuations: {
-    storageKey: "vasthusilpy_valuation_certificates_v1",
-    eventName: "vasthusilpy_valuations_updated"
-  },
+
+  // Quotations & Rate Schedule
   quotations: {
-    storageKey: "vasthusilpy_quotations_v1",
-    eventName: "vasthusilpy_storage_update"
+    storageKeys: ["vasthusilpy_quotations_v1", "vasthusilpy_quotations"],
+    events: ["vasthusilpy_storage_update", "vasthusilpy_quotations_updated"]
   },
   rate_items: {
-    storageKey: "vasthusilpy_rate_items",
-    eventName: "vasthusilpy_storage_update"
+    storageKeys: ["vasthusilpy_rate_items"],
+    events: ["vasthusilpy_storage_update", "vasthusilpy_rate_items_updated"]
   },
+
+  // Customers & Client Directory
   customers: {
-    storageKey: "vasthusilpy_customers",
-    eventName: "vasthusilpy_storage_update"
+    storageKeys: ["vasthusilpy_customers"],
+    events: ["vasthusilpy_storage_update", "vasthusilpy_customers_updated"]
+  },
+
+  // Construction Works Management
+  construction_projects: {
+    storageKeys: ["vasthusilpy_construction_projects_v1"],
+    events: ["vasthusilpy_construction_projects_updated", "vasthusilpy_storage_update"]
+  },
+  construction_agreements: {
+    storageKeys: ["vasthusilpy_construction_agreements_v1", "vasthusilpy_construction_agreements"],
+    events: ["vasthusilpy_construction_agreements_updated", "vasthusilpy_storage_update"]
+  },
+  construction_settings: {
+    storageKeys: ["vasthusilpy_construction_settings_v1"],
+    events: ["vasthusilpy_construction_settings_updated", "vasthusilpy_storage_update"]
+  },
+
+  // Site Inspections & Field Reports
+  site_inspections: {
+    storageKeys: ["vasthusilpy_site_inspections_v1", "vasthusilpy_inspections"],
+    events: ["vasthusilpy_site_inspections_updated", "vasthusilpy_storage_update"]
+  },
+  inspection_templates: {
+    storageKeys: ["vasthusilpy_site_inspection_templates_v1"],
+    events: ["vasthusilpy_inspection_templates_updated", "vasthusilpy_storage_update"]
+  },
+
+  // Building Plans & Drafting Projects
+  building_plans: {
+    storageKeys: ["vasthusilpy_building_plan_projects_master_v1", "VAS_BUILDING_PLAN_PROJECTS_LIST"],
+    events: ["vasthusilpy_building_plans_updated", "vasthusilpy_storage_update"]
+  },
+  building_plan_projects: {
+    storageKeys: ["vasthusilpy_building_plan_projects_master_v1", "VAS_BUILDING_PLAN_PROJECTS_LIST"],
+    events: ["vasthusilpy_building_plans_updated", "vasthusilpy_storage_update"]
+  },
+
+  // CAD Vault Files & Folders
+  cad_files: {
+    storageKeys: ["vasthusilpy_cad_vault_files"],
+    events: ["vasthusilpy_cad_vault_updated", "vasthusilpy_storage_update"]
+  },
+  cad_vault_files: {
+    storageKeys: ["vasthusilpy_cad_vault_files"],
+    events: ["vasthusilpy_cad_vault_updated", "vasthusilpy_storage_update"]
+  },
+  cad_vault_folders: {
+    storageKeys: ["vasthusilpy_cad_vault_folders"],
+    events: ["vasthusilpy_cad_vault_updated", "vasthusilpy_storage_update"]
+  },
+
+  // Online Applications & Valuation
+  online_applications: {
+    storageKeys: ["vasthusilpy_online_applications_v1", "vasthusilpy_online_applications"],
+    events: ["vasthusilpy_online_applications_updated", "vasthusilpy_storage_update"]
+  },
+  valuations: {
+    storageKeys: ["vasthusilpy_valuation_certificates_v1"],
+    events: ["vasthusilpy_valuations_updated", "vasthusilpy_storage_update"]
+  },
+  application_entries: {
+    storageKeys: ["vasthusilpy_application_entries_v1"],
+    events: ["vasthusilpy_applications_updated", "vasthusilpy_storage_update"]
+  },
+
+  // Subscriptions & User Access
+  subscription_requests: {
+    storageKeys: ["vasthusilpy_subscription_requests_v1", "vasthusilpy_subscription_requests"],
+    events: ["vasthusilpy_subscription_update", "vasthusilpy_storage_update"]
+  },
+  user_profiles: {
+    storageKeys: ["vasthusilpy_user_profiles_v1"],
+    events: ["vasthusilpy_user_profiles_updated", "vasthusilpy_storage_update"]
+  },
+  authorized_emails: {
+    storageKeys: ["vasthusilpy_authorized_emails_v1"],
+    events: ["vasthusilpy_authorized_emails_updated", "vasthusilpy_storage_update"]
+  },
+
+  // Important Sites & Folders
+  important_sites: {
+    storageKeys: ["vasthusilpy_important_sites_v1"],
+    events: ["vasthusilpy_important_sites_updated", "vasthusilpy_storage_update"]
+  },
+  important_folders: {
+    storageKeys: ["vasthusilpy_site_folders_v1", "vasthusilpy_important_folders_v1"],
+    events: ["vasthusilpy_site_folders_updated", "vasthusilpy_storage_update"]
   }
 };
 
@@ -76,20 +177,25 @@ export async function deleteCloudRecord(collectionName: string, id: string): Pro
     data: { collection: collectionName, id }
   });
 
-  // 3. Remove from localStorage immediately
+  // 3. Remove from all local storage keys immediately
   const config = COLLECTION_STORAGE_MAP[collectionName];
   if (config && typeof localStorage !== "undefined") {
-    try {
-      const raw = localStorage.getItem(config.storageKey);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          const filtered = parsed.filter((item: any) => item && item.id !== id);
-          localStorage.setItem(config.storageKey, JSON.stringify(filtered));
-          window.dispatchEvent(new CustomEvent(config.eventName, { detail: filtered }));
+    config.storageKeys.forEach((key) => {
+      try {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            const filtered = parsed.filter((item: any) => item && (item.id !== id && item.fileNumber !== id));
+            localStorage.setItem(key, JSON.stringify(filtered));
+          }
         }
-      }
-    } catch {}
+      } catch {}
+    });
+
+    config.events.forEach((eventName) => {
+      window.dispatchEvent(new Event(eventName));
+    });
   }
 
   // 4. Send to server deletion registry & cloud store
@@ -113,10 +219,15 @@ export async function pullCloudSync(): Promise<void> {
   if (typeof window === "undefined" || typeof fetch === "undefined") return;
 
   try {
-    const res = await fetch("/api/cloud-sync/pull");
-    if (!res.ok) return;
+    // Parallel pull from both sync endpoints
+    const [cloudRes] = await Promise.all([
+      fetch("/api/cloud-sync/pull").catch(() => null),
+      pullAndHydrateWebDataFromServer().catch(() => null)
+    ]);
 
-    const body = await res.json();
+    if (!cloudRes || !cloudRes.ok) return;
+
+    const body = await cloudRes.json();
     if (!body?.success || !body?.data) return;
 
     const data = body.data;
@@ -128,7 +239,7 @@ export async function pullCloudSync(): Promise<void> {
       });
     }
 
-    // Now reconcile each collection
+    // Reconcile each collection
     for (const [colName, cloudRecords] of Object.entries(data)) {
       if (colName === "deleted_records" || !Array.isArray(cloudRecords)) continue;
 
@@ -137,34 +248,41 @@ export async function pullCloudSync(): Promise<void> {
 
       const filtered = filterOutDeletedRecords(cloudRecords);
 
-      // Compare with local data - take the newer or merged set
-      const raw = localStorage.getItem(config.storageKey);
-      let localRecords: any[] = [];
-      if (raw) {
-        try {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed)) localRecords = filterOutDeletedRecords(parsed);
-        } catch {}
-      }
-
-      // Merge map by ID
-      const mergedMap = new Map<string, any>();
-      filtered.forEach((r) => {
-        if (r?.id && !isRecordDeleted(r.id)) mergedMap.set(r.id, r);
-      });
-      localRecords.forEach((r) => {
-        if (r?.id && !isRecordDeleted(r.id) && !mergedMap.has(r.id)) {
-          mergedMap.set(r.id, r);
+      config.storageKeys.forEach((key) => {
+        const raw = localStorage.getItem(key);
+        let localRecords: any[] = [];
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) localRecords = filterOutDeletedRecords(parsed);
+          } catch {}
         }
+
+        const mergedMap = new Map<string, any>();
+        filtered.forEach((r) => {
+          const rId = r?.id || r?.fileNumber;
+          if (rId && !isRecordDeleted(rId)) mergedMap.set(String(rId), r);
+        });
+        localRecords.forEach((r) => {
+          const rId = r?.id || r?.fileNumber;
+          if (rId && !isRecordDeleted(rId) && !mergedMap.has(String(rId))) {
+            mergedMap.set(String(rId), r);
+          }
+        });
+
+        const finalRecords = Array.from(mergedMap.values());
+        try {
+          localStorage.setItem(key, JSON.stringify(finalRecords));
+        } catch {}
       });
 
-      const finalRecords = Array.from(mergedMap.values());
-      localStorage.setItem(config.storageKey, JSON.stringify(finalRecords));
-
-      // Trigger UI update
-      window.dispatchEvent(new CustomEvent(config.eventName, { detail: finalRecords }));
-      window.dispatchEvent(new Event("vasthusilpy_storage_update"));
+      config.events.forEach((evName) => {
+        window.dispatchEvent(new Event(evName));
+      });
     }
+
+    window.dispatchEvent(new Event("vasthusilpy_storage_update"));
+    window.dispatchEvent(new CustomEvent("vasthusilpy_realtime_cloud_sync", { detail: { timestamp: Date.now() } }));
   } catch (e) {
     console.warn("[CloudSync] Pull reconciliation error:", e);
   }
@@ -196,31 +314,50 @@ export function initCloudRealtimeSync() {
       });
 
       // Handle instantaneous updates from other computers / browsers / logins
+      const handleIncomingSync = (payload: any) => {
+        if (!payload || !payload.collection) return;
+
+        const colName = payload.collection;
+        const config = COLLECTION_STORAGE_MAP[colName];
+        if (!config) return;
+
+        const incoming = Array.isArray(payload.records) ? payload.records : (Array.isArray(payload.items) ? payload.items : []);
+        const clean = filterOutDeletedRecords(incoming);
+
+        config.storageKeys.forEach((key) => {
+          try {
+            localStorage.setItem(key, JSON.stringify(clean));
+          } catch {}
+        });
+
+        config.events.forEach((eventName) => {
+          window.dispatchEvent(new CustomEvent(eventName, { detail: clean }));
+        });
+        window.dispatchEvent(new Event("vasthusilpy_storage_update"));
+        window.dispatchEvent(new CustomEvent("vasthusilpy_realtime_cloud_sync", { detail: { collection: colName, timestamp: Date.now() } }));
+
+        // Broadcast to tabs on same browser
+        broadcastMessage({
+          type: "SYNC_" + colName.toUpperCase(),
+          data: clean
+        });
+      };
+
       sseConnection.addEventListener("sync_update", (event: MessageEvent) => {
         try {
           const payload = JSON.parse(event.data);
-          if (!payload || !payload.collection) return;
-
-          const colName = payload.collection;
-          const config = COLLECTION_STORAGE_MAP[colName];
-          if (!config) return;
-
-          const incoming = Array.isArray(payload.records) ? payload.records : [];
-          const clean = filterOutDeletedRecords(incoming);
-
-          localStorage.setItem(config.storageKey, JSON.stringify(clean));
-
-          // Notify React components in real time
-          window.dispatchEvent(new CustomEvent(config.eventName, { detail: clean }));
-          window.dispatchEvent(new Event("vasthusilpy_storage_update"));
-
-          // Broadcast to tabs on same browser
-          broadcastMessage({
-            type: "SYNC_" + colName.toUpperCase(),
-            data: clean
-          });
+          handleIncomingSync(payload);
         } catch (err) {
           console.warn("[CloudSync] Error handling sync_update event:", err);
+        }
+      });
+
+      sseConnection.addEventListener("web_data_sync", (event: MessageEvent) => {
+        try {
+          const payload = JSON.parse(event.data);
+          handleIncomingSync(payload);
+        } catch (err) {
+          console.warn("[CloudSync] Error handling web_data_sync event:", err);
         }
       });
 
@@ -235,19 +372,25 @@ export function initCloudRealtimeSync() {
 
           const config = colName ? COLLECTION_STORAGE_MAP[colName] : null;
           if (config) {
-            const raw = localStorage.getItem(config.storageKey);
-            if (raw) {
-              const parsed = JSON.parse(raw);
-              if (Array.isArray(parsed)) {
-                const filtered = parsed.filter((item: any) => item && item.id !== id);
-                localStorage.setItem(config.storageKey, JSON.stringify(filtered));
-                window.dispatchEvent(new CustomEvent(config.eventName, { detail: filtered }));
+            config.storageKeys.forEach((key) => {
+              const raw = localStorage.getItem(key);
+              if (raw) {
+                try {
+                  const parsed = JSON.parse(raw);
+                  if (Array.isArray(parsed)) {
+                    const filtered = parsed.filter((item: any) => item && (item.id !== id && item.fileNumber !== id));
+                    localStorage.setItem(key, JSON.stringify(filtered));
+                  }
+                } catch {}
               }
-            }
+            });
+
+            config.events.forEach((evName) => {
+              window.dispatchEvent(new Event(evName));
+            });
           }
 
           window.dispatchEvent(new Event("vasthusilpy_storage_update"));
-          window.dispatchEvent(new Event("vasthusilpy_valuations_updated"));
         } catch (err) {
           console.warn("[CloudSync] Error handling record_deleted event:", err);
         }

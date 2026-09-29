@@ -147,7 +147,7 @@ export const HomePage: React.FC<HomePageProps> = ({ activeTab = "home_overview",
       `👤 *Name:* ${inquiryName}\n` +
       `📞 *Phone:* ${inquiryPhone}\n` +
       `📐 *Service:* ${inquiryService}\n` +
-      `📝 *Message:* ${inquiryMessage || "I would like to schedule a consultation with Er. Deepak K."}`
+      `📝 *Message:* ${inquiryMessage || "I would like to schedule a consultation with Er.Deepak.C"}`
     );
 
     window.open(`https://wa.me/919747995961?text=${whatsappText}`, "_blank");
@@ -231,19 +231,10 @@ export const HomePage: React.FC<HomePageProps> = ({ activeTab = "home_overview",
               isCustomPreview={!!customThemePreview}
             />
 
-            {/* Futuristic Tech Startup Interactive Holographic Visual Core */}
-            {theme === "tech_startup" && (
-              <div className="animate-in fade-in slide-in-from-top-4 duration-500">
-                <TechStartupHoloRing />
-              </div>
-            )}
-
-            {/* Corporate Executive Trust & Blueprint Showcase */}
-            {theme === "corporate" && (
-              <div className="animate-in fade-in slide-in-from-top-4 duration-500">
-                <CorporateExecutiveShowcase />
-              </div>
-            )}
+            {/* Futuristic Tech Theme Interactive Holographic Visual Core */}
+            <div className="animate-in fade-in slide-in-from-top-4 duration-500">
+              <TechStartupHoloRing />
+            </div>
 
             {/* =========================================================================
                 1. VASTHUSILPY BUSINESS PROFILE & HERO
@@ -283,7 +274,7 @@ export const HomePage: React.FC<HomePageProps> = ({ activeTab = "home_overview",
                   Architects, Engineers & Interior Designers
                 </div>
                 <div className="text-sm font-semibold text-cyan-400 font-sans mt-0.5">
-                  വാസ്തുശില്പി - കേരളശ്ശേരി | Er. Deepak K. (Lead Consultant)
+                  വാസ്തുശില്പി - കേരളശ്ശേരി | Er.Deepak.C (Lead Consultant)
                 </div>
               </div>
 
@@ -393,7 +384,7 @@ export const HomePage: React.FC<HomePageProps> = ({ activeTab = "home_overview",
                   Visit or Contact Our Office
                 </h3>
                 <p className="text-xs text-slate-400 font-sans mt-1">
-                  Schedule an in-person or online consultation with Er. Deepak K. for Vastu planning, building permits, or valuation reports.
+                  Schedule an in-person or online consultation with Er.Deepak.C for Vastu planning, building permits, or valuation reports.
                 </p>
               </div>
 
@@ -441,7 +432,7 @@ export const HomePage: React.FC<HomePageProps> = ({ activeTab = "home_overview",
                   <span>Send a Quick Consultation Inquiry</span>
                 </h4>
                 <p className="text-xs text-slate-400 font-sans">
-                  Direct message to Er. Deepak K. on WhatsApp with your project requirements
+                  Direct message to Er.Deepak.C on WhatsApp with your project requirements
                 </p>
               </div>
 
@@ -523,7 +514,7 @@ export const HomePage: React.FC<HomePageProps> = ({ activeTab = "home_overview",
                     className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-md"
                   >
                     <Send className="w-4 h-4" />
-                    <span>Connect with Er. Deepak K. on WhatsApp</span>
+                    <span>Connect with Er.Deepak.C on WhatsApp</span>
                   </button>
                 </form>
               )}

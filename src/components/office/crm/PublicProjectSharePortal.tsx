@@ -264,10 +264,10 @@ export const PublicProjectSharePortal: React.FC<PublicProjectSharePortalProps> =
 
   const handleShareWhatsApp = () => {
     if (project) {
-      const text = `*Vasthusilpy Engineering - Live Project Tracking*\n\n*Project:* ${project.title} (#${project.id})\n*Client:* ${project.clientName}\n*Location:* ${project.location}\n*Status:* ${project.status}\n*Assigned Engineer:* ${project.assignee || "Er. Deepak C"}\n*Advance Paid:* ₹${Number(project.advancePayment || 0).toLocaleString("en-IN")}\n\n*Track Live Status, Bills & Drawings:*\n${shareUrl}`;
+      const text = `*Vasthusilpy Engineering - Live Project Tracking*\n\n*Project:* ${project.title} (#${project.id})\n*Client:* ${project.clientName}\n*Location:* ${project.location}\n*Status:* ${project.status}\n*Assigned Engineer:* ${project.assignee || "Er.Deepak.C"}\n*Advance Paid:* ₹${Number(project.advancePayment || 0).toLocaleString("en-IN")}\n\n*Track Live Status, Bills & Drawings:*\n${shareUrl}`;
       window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
     } else {
-      const text = `*Vasthusilpy Architectural & Engineering Consultants*\n*Lead Consultant:* Er. Deepak C\n*Phone:* +91 7012383137, +91 9747995961\n*Location:* Near Panchayath Office, Keralassery, Palakkad - 678641\n*Services:* Architectural Plans, 3D Elevation, KPBR & K-SMART Municipal Approvals, Valuation, Estimates\n\n*Digital Visiting Card & CRM Portal:*\n${shareUrl}`;
+      const text = `*Vasthusilpy Architectural & Engineering Consultants*\n*Lead Consultant:* Er.Deepak.C\n*Phone:* +91 7012383137, +91 9747995961\n*Location:* Near Panchayath Office, Keralassery, Palakkad - 678641\n*Services:* Architectural Plans, 3D Elevation, KPBR & K-SMART Municipal Approvals, Valuation, Estimates\n\n*Digital Visiting Card & CRM Portal:*\n${shareUrl}`;
       window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
     }
   };
@@ -277,7 +277,7 @@ export const PublicProjectSharePortal: React.FC<PublicProjectSharePortalProps> =
     const vcard = `BEGIN:VCARD
 VERSION:3.0
 N:C;Deepak;;Er.;
-FN:Er. Deepak C (Vasthusilpy)
+FN:Er.Deepak.C (Vasthusilpy)
 ORG:Vasthusilpy Architectural & Engineering Consultants
 TITLE:Lead Civil Engineer & Vasthu Consultant
 TEL;TYPE=CELL,VOICE,PREF:+917012383137
@@ -467,7 +467,7 @@ END:VCARD`;
                   VASTHUSILPY ARCHITECTURAL & ENGINEERING CONSULTANTS
                 </h1>
                 <p className="text-xs sm:text-sm text-red-400 font-semibold mt-0.5 font-mono">
-                  Er. Deepak C (Lead Civil Engineer & Vasthu Consultant)
+                  Er.Deepak.C (Lead Civil Engineer & Vasthu Consultant)
                 </p>
                 <p className="text-xs text-slate-400 mt-1">
                   Architectural 2D/3D Plans • KPBR & K-SMART Municipal Sanction • Valuation & Estimations
@@ -495,13 +495,13 @@ END:VCARD`;
                   <Phone className="w-4 h-4" />
                 </div>
                 <div className="min-w-0">
-                  <div className="text-[10px] text-slate-400 uppercase font-bold">Er. Deepak C (Call)</div>
+                  <div className="text-[10px] text-slate-400 uppercase font-bold">Er.Deepak.C (Call)</div>
                   <div className="text-xs text-white font-bold truncate">+91 7012383137</div>
                 </div>
               </a>
 
               <a
-                href="https://wa.me/917012383137?text=Hello%20Er.%20Deepak%20(Vasthusilpy),%20I%20am%20checking%20the%20live%20project%20tracking%20portal."
+                href="https://wa.me/917012383137?text=Hello%20Er.Deepak.C%20(Vasthusilpy),%20I%20am%20checking%20the%20live%20project%20tracking%20portal."
                 target="_blank"
                 rel="noreferrer"
                 className="p-3 bg-slate-950/80 hover:bg-slate-900 border border-slate-800 hover:border-emerald-700/50 rounded-2xl flex items-center gap-3 transition group"
@@ -510,7 +510,7 @@ END:VCARD`;
                   <MessageCircle className="w-4 h-4" />
                 </div>
                 <div className="min-w-0">
-                  <div className="text-[10px] text-slate-400 uppercase font-bold">Er. Deepak (WhatsApp)</div>
+                  <div className="text-[10px] text-slate-400 uppercase font-bold">Er.Deepak.C (WhatsApp)</div>
                   <div className="text-xs text-emerald-400 font-bold truncate">+91 7012383137 / 9747995961</div>
                 </div>
               </a>
@@ -673,10 +673,10 @@ END:VCARD`;
                     <span>Assigned Engineer</span>
                   </div>
                   <p className="font-bold text-sm text-red-300 truncate uppercase">
-                    {project.assignee || "Er. Deepak C"}
+                    {project.assignee || "Er.Deepak.C"}
                   </p>
                   <a
-                    href={`https://wa.me/917012383137?text=Hello%20Er.%20Deepak,%20inquiring%20about%20Project%20${encodeURIComponent(project.title)}%20(Receipt%20#${project.receiptNumber || project.id})`}
+                    href={`https://wa.me/917012383137?text=Hello%20Er.Deepak.C,%20inquiring%20about%20Project%20${encodeURIComponent(project.title)}%20(Receipt%20#${project.receiptNumber || project.id})`}
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex items-center gap-1 text-[10px] text-emerald-400 hover:underline"
@@ -1131,7 +1131,7 @@ END:VCARD`;
                   ) : (
                     <div className="p-8 bg-slate-950 border border-slate-800 rounded-2xl text-center space-y-2">
                       <ListTodo className="w-8 h-8 text-slate-600 mx-auto" />
-                      <p className="text-xs text-slate-400">All standard stages are monitored by Er. Deepak C.</p>
+                      <p className="text-xs text-slate-400">All standard stages are monitored by Er.Deepak.C.</p>
                       <div className="flex flex-wrap justify-center gap-2 pt-2">
                         <span className="px-3 py-1 bg-slate-900 border border-slate-800 text-slate-300 rounded-lg text-xs">
                           1. Architectural Drafting & Vasthu Analysis

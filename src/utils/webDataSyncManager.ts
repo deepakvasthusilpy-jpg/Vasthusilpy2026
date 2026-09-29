@@ -72,11 +72,20 @@ export function collectLocalWebData() {
   const estimates = filterOutDeletedRecords(readLocalJson("vasthusilpy_estimates", []));
   const customers = filterOutDeletedRecords(readLocalJson("vasthusilpy_customers", []));
   const rateItems = filterOutDeletedRecords(readLocalJson("vasthusilpy_rate_items", []));
+  const quotations = filterOutDeletedRecords(readLocalJson("vasthusilpy_quotations_v1", readLocalJson("vasthusilpy_quotations", [])));
+  const constructionProjects = filterOutDeletedRecords(readLocalJson("vasthusilpy_construction_projects_v1", []));
+  const constructionAgreements = filterOutDeletedRecords(readLocalJson("vasthusilpy_construction_agreements_v1", readLocalJson("vasthusilpy_construction_agreements", [])));
+  const siteInspections = filterOutDeletedRecords(readLocalJson("vasthusilpy_site_inspections_v1", readLocalJson("vasthusilpy_inspections", [])));
+  const buildingPlans = filterOutDeletedRecords(readLocalJson("vasthusilpy_building_plan_projects_master_v1", readLocalJson("VAS_BUILDING_PLAN_PROJECTS_LIST", [])));
+  const cadFiles = filterOutDeletedRecords(readLocalJson("vasthusilpy_cad_vault_files", []));
+  const cadFolders = filterOutDeletedRecords(readLocalJson("vasthusilpy_cad_vault_folders", []));
   
   // Unify subscription requests from both primary and secondary keys
   const subsMain = readLocalJson<any[]>("vasthusilpy_subscription_requests", []);
   const subsV2 = readLocalJson<any[]>("vasthusilpy_subscription_requests_v2", []);
+  const subsV1 = readLocalJson<any[]>("vasthusilpy_subscription_requests_v1", []);
   const subMap = new Map<string, any>();
+  subsV1.forEach((s) => s?.id && subMap.set(s.id, s));
   subsV2.forEach((s) => s?.id && subMap.set(s.id, s));
   subsMain.forEach((s) => s?.id && subMap.set(s.id, s));
   const subscriptionRequests = Array.from(subMap.values());
@@ -105,6 +114,13 @@ export function collectLocalWebData() {
     estimates,
     customers,
     rateItems,
+    quotations,
+    constructionProjects,
+    constructionAgreements,
+    siteInspections,
+    buildingPlans,
+    cadFiles,
+    cadFolders,
     subscriptionRequests,
     applicationEntries,
     currentUserProfile
@@ -196,9 +212,11 @@ export async function performFullWebDataSync(): Promise<{
     try {
       if (Array.isArray(serverMerged.projects) && serverMerged.projects.length > 0) {
         localStorage.setItem("vasthusilpy_crm_projects", JSON.stringify(serverMerged.projects));
+        localStorage.setItem("vasthusilpy_projects", JSON.stringify(serverMerged.projects));
       }
       if (Array.isArray(serverMerged.invoices) && serverMerged.invoices.length > 0) {
         localStorage.setItem("vasthusilpy_invoices", JSON.stringify(serverMerged.invoices));
+        localStorage.setItem("vasthusilpy_crm_invoices", JSON.stringify(serverMerged.invoices));
       }
       if (Array.isArray(serverMerged.estimates) && serverMerged.estimates.length > 0) {
         localStorage.setItem("vasthusilpy_estimates", JSON.stringify(serverMerged.estimates));
@@ -209,8 +227,28 @@ export async function performFullWebDataSync(): Promise<{
       if (Array.isArray(serverMerged.rateItems) && serverMerged.rateItems.length > 0) {
         localStorage.setItem("vasthusilpy_rate_items", JSON.stringify(serverMerged.rateItems));
       }
+      if (Array.isArray(serverMerged.quotations) && serverMerged.quotations.length > 0) {
+        localStorage.setItem("vasthusilpy_quotations_v1", JSON.stringify(serverMerged.quotations));
+        localStorage.setItem("vasthusilpy_quotations", JSON.stringify(serverMerged.quotations));
+      }
+      if (Array.isArray(serverMerged.constructionProjects) && serverMerged.constructionProjects.length > 0) {
+        localStorage.setItem("vasthusilpy_construction_projects_v1", JSON.stringify(serverMerged.constructionProjects));
+      }
+      if (Array.isArray(serverMerged.constructionAgreements) && serverMerged.constructionAgreements.length > 0) {
+        localStorage.setItem("vasthusilpy_construction_agreements_v1", JSON.stringify(serverMerged.constructionAgreements));
+        localStorage.setItem("vasthusilpy_construction_agreements", JSON.stringify(serverMerged.constructionAgreements));
+      }
+      if (Array.isArray(serverMerged.siteInspections) && serverMerged.siteInspections.length > 0) {
+        localStorage.setItem("vasthusilpy_site_inspections_v1", JSON.stringify(serverMerged.siteInspections));
+        localStorage.setItem("vasthusilpy_inspections", JSON.stringify(serverMerged.siteInspections));
+      }
+      if (Array.isArray(serverMerged.buildingPlans) && serverMerged.buildingPlans.length > 0) {
+        localStorage.setItem("vasthusilpy_building_plan_projects_master_v1", JSON.stringify(serverMerged.buildingPlans));
+        localStorage.setItem("VAS_BUILDING_PLAN_PROJECTS_LIST", JSON.stringify(serverMerged.buildingPlans));
+      }
       if (Array.isArray(serverMerged.subscriptionRequests) && serverMerged.subscriptionRequests.length > 0) {
         localStorage.setItem("vasthusilpy_subscription_requests", JSON.stringify(serverMerged.subscriptionRequests));
+        localStorage.setItem("vasthusilpy_subscription_requests_v1", JSON.stringify(serverMerged.subscriptionRequests));
         localStorage.setItem("vasthusilpy_subscription_requests_v2", JSON.stringify(serverMerged.subscriptionRequests));
       }
     } catch (saveErr) {
@@ -426,19 +464,71 @@ export async function pullAndHydrateWebDataFromServer(accountIdentifier?: string
     };
 
     const projects = mergeById("vasthusilpy_crm_projects", d.projects);
+    try {
+      localStorage.setItem("vasthusilpy_projects", JSON.stringify(projects));
+    } catch {}
+
     const invoices = mergeById("vasthusilpy_invoices", d.invoices);
+    try {
+      localStorage.setItem("vasthusilpy_crm_invoices", JSON.stringify(invoices));
+    } catch {}
+
     const estimates = mergeById("vasthusilpy_estimates", d.estimates);
     const customers = mergeById("vasthusilpy_customers", d.customers);
     const rateItems = mergeById("vasthusilpy_rate_items", d.rateItems);
 
+    if (Array.isArray(d.quotations) && d.quotations.length > 0) {
+      const quotations = mergeById("vasthusilpy_quotations_v1", d.quotations);
+      try {
+        localStorage.setItem("vasthusilpy_quotations", JSON.stringify(quotations));
+      } catch {}
+    }
+
+    if (Array.isArray(d.constructionProjects) && d.constructionProjects.length > 0) {
+      mergeById("vasthusilpy_construction_projects_v1", d.constructionProjects);
+    }
+
+    if (Array.isArray(d.constructionAgreements) && d.constructionAgreements.length > 0) {
+      const agreements = mergeById("vasthusilpy_construction_agreements_v1", d.constructionAgreements);
+      try {
+        localStorage.setItem("vasthusilpy_construction_agreements", JSON.stringify(agreements));
+      } catch {}
+    }
+
+    if (Array.isArray(d.siteInspections) && d.siteInspections.length > 0) {
+      const inspections = mergeById("vasthusilpy_site_inspections_v1", d.siteInspections);
+      try {
+        localStorage.setItem("vasthusilpy_inspections", JSON.stringify(inspections));
+      } catch {}
+    }
+
+    if (Array.isArray(d.buildingPlans) && d.buildingPlans.length > 0) {
+      const plans = mergeById("vasthusilpy_building_plan_projects_master_v1", d.buildingPlans);
+      try {
+        localStorage.setItem("VAS_BUILDING_PLAN_PROJECTS_LIST", JSON.stringify(plans));
+      } catch {}
+    }
+
+    if (Array.isArray(d.cadFiles) && d.cadFiles.length > 0) {
+      mergeById("vasthusilpy_cad_vault_files", d.cadFiles);
+    }
+
+    if (Array.isArray(d.cadFolders) && d.cadFolders.length > 0) {
+      mergeById("vasthusilpy_cad_vault_folders", d.cadFolders);
+    }
+
     // Save subscriptions to both storage keys for 100% interoperability
     const subs = mergeById("vasthusilpy_subscription_requests", d.subscriptionRequests);
     try {
+      localStorage.setItem("vasthusilpy_subscription_requests_v1", JSON.stringify(subs));
       localStorage.setItem("vasthusilpy_subscription_requests_v2", JSON.stringify(subs));
     } catch {}
 
     if (Array.isArray(d.applicationEntries) && d.applicationEntries.length > 0) {
       mergeById("vasthusilpy_application_entries", d.applicationEntries);
+      try {
+        localStorage.setItem("vasthusilpy_application_entries_v1", JSON.stringify(d.applicationEntries));
+      } catch {}
     }
 
     // Resolve unified account details across Email & Mobile Number

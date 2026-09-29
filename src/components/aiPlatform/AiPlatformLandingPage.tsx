@@ -188,19 +188,14 @@ export const AiPlatformLandingPage: React.FC<AiPlatformLandingPageProps> = ({
               <span>Inference Engine: <b>Operational (11ms)</b></span>
             </div>
 
-            {/* Quick Theme Activator */}
-            <button
-              onClick={() => setTheme("ai_platform")}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
-                theme === "ai_platform"
-                  ? "bg-[#00E5FF]/20 text-[#00E5FF] border border-[#00E5FF] shadow-[0_0_12px_rgba(0,229,255,0.3)]"
-                  : "bg-[#1e1e1e] hover:bg-[#252525] text-slate-300 border border-slate-700 hover:border-[#00E5FF]/50"
-              }`}
-              title="Apply this Deep Charcoal & Glowing Cyan theme globally across the portal"
+            {/* Futuristic Tech Theme Indicator */}
+            <div
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold bg-[#00E5FF]/20 text-[#00E5FF] border border-[#00E5FF] shadow-[0_0_12px_rgba(0,229,255,0.3)]"
+              title="Futuristic Tech Theme is active"
             >
               <Palette className="w-3.5 h-3.5 text-[#00E5FF]" />
-              <span>{theme === "ai_platform" ? "Active Theme: #121212 & #00E5FF" : "Activate Theme Globally"}</span>
-            </button>
+              <span>Theme: Futuristic Tech</span>
+            </div>
           </div>
         </header>
 

@@ -921,7 +921,7 @@ Core Standards & Data Schema:
   - buildingType: e.g. "Residential Villa", "Two Storeyed Residential Building", "Commercial Complex", "Single Storeyed Residence"
   - plinthAreaSqFt: Total Plinth area in square feet
   - plinthAreaSqM: Total Plinth area in square meters (sq.ft / 10.7639)
-  - preparedBy: Engineer name (e.g. "DIBIN D" or "Er. Deepak K.")
+  - preparedBy: Engineer name (e.g. "DIBIN D" or "Er.Deepak.C")
   - regNo: Official LSGD registration (e.g. "LSGB/JDPKD/3361/2025-F5/SB")
   - estimationDate: Date string (YYYY-MM-DD)
   - headlineNarrative: Descriptive title/narrative

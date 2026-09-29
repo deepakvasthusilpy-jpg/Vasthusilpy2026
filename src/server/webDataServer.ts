@@ -151,6 +151,16 @@ export function registerWebDataRoutes(app: Express) {
         userProfiles = [],
         subscriptionRequests = [],
         applicationEntries = [],
+        quotations = [],
+        constructionProjects = [],
+        constructionAgreements = [],
+        constructionSettings = null,
+        siteInspections = [],
+        inspectionTemplates = [],
+        buildingPlans = [],
+        authorizedEmails = [],
+        importantSites = [],
+        siteFolders = [],
         currentUserProfile = null
       } = req.body;
 
@@ -233,7 +243,72 @@ export function registerWebDataRoutes(app: Express) {
       const mergedRates = Array.from(rateMap.values());
       writeJsonFile("rate_items.json", mergedRates);
 
-      // 6. CAD Folders Merge
+      // 6. Quotations Merge
+      const existingQuotations = readJsonFile<any[]>("quotations.json", []);
+      const quotationMap = new Map<string, any>();
+      existingQuotations.forEach((q) => q?.id && !deletedIds.has(q.id) && quotationMap.set(q.id, q));
+      (Array.isArray(quotations) ? quotations : []).forEach((q) => {
+        if (q?.id && !deletedIds.has(q.id)) {
+          const prev = quotationMap.get(q.id);
+          quotationMap.set(q.id, prev ? { ...prev, ...q } : q);
+        }
+      });
+      const mergedQuotations = Array.from(quotationMap.values());
+      writeJsonFile("quotations.json", mergedQuotations);
+
+      // 7. Construction Projects Merge
+      const existingConstructionProjects = readJsonFile<any[]>("construction_projects.json", []);
+      const cpMap = new Map<string, any>();
+      existingConstructionProjects.forEach((cp) => cp?.id && !deletedIds.has(cp.id) && cpMap.set(cp.id, cp));
+      (Array.isArray(constructionProjects) ? constructionProjects : []).forEach((cp) => {
+        if (cp?.id && !deletedIds.has(cp.id)) {
+          const prev = cpMap.get(cp.id);
+          cpMap.set(cp.id, prev ? { ...prev, ...cp } : cp);
+        }
+      });
+      const mergedConstructionProjects = Array.from(cpMap.values());
+      writeJsonFile("construction_projects.json", mergedConstructionProjects);
+
+      // 8. Construction Agreements Merge
+      const existingAgreements = readJsonFile<any[]>("construction_agreements.json", []);
+      const caMap = new Map<string, any>();
+      existingAgreements.forEach((ca) => ca?.id && !deletedIds.has(ca.id) && caMap.set(ca.id, ca));
+      (Array.isArray(constructionAgreements) ? constructionAgreements : []).forEach((ca) => {
+        if (ca?.id && !deletedIds.has(ca.id)) {
+          const prev = caMap.get(ca.id);
+          caMap.set(ca.id, prev ? { ...prev, ...ca } : ca);
+        }
+      });
+      const mergedAgreements = Array.from(caMap.values());
+      writeJsonFile("construction_agreements.json", mergedAgreements);
+
+      // 9. Site Inspections Merge
+      const existingInspections = readJsonFile<any[]>("site_inspections.json", []);
+      const siMap = new Map<string, any>();
+      existingInspections.forEach((si) => si?.id && !deletedIds.has(si.id) && siMap.set(si.id, si));
+      (Array.isArray(siteInspections) ? siteInspections : []).forEach((si) => {
+        if (si?.id && !deletedIds.has(si.id)) {
+          const prev = siMap.get(si.id);
+          siMap.set(si.id, prev ? { ...prev, ...si } : si);
+        }
+      });
+      const mergedInspections = Array.from(siMap.values());
+      writeJsonFile("site_inspections.json", mergedInspections);
+
+      // 10. Building Plans Merge
+      const existingPlans = readJsonFile<any[]>("building_plans.json", []);
+      const bpMap = new Map<string, any>();
+      existingPlans.forEach((bp) => bp?.id && !deletedIds.has(bp.id) && bpMap.set(bp.id, bp));
+      (Array.isArray(buildingPlans) ? buildingPlans : []).forEach((bp) => {
+        if (bp?.id && !deletedIds.has(bp.id)) {
+          const prev = bpMap.get(bp.id);
+          bpMap.set(bp.id, prev ? { ...prev, ...bp } : bp);
+        }
+      });
+      const mergedPlans = Array.from(bpMap.values());
+      writeJsonFile("building_plans.json", mergedPlans);
+
+      // 11. CAD Folders Merge
       const existingFolders = readJsonFile<any[]>("cad_folders.json", []);
       const folderMap = new Map<string, any>();
       existingFolders.forEach((f) => f?.id && folderMap.set(f.id, f));
@@ -246,7 +321,7 @@ export function registerWebDataRoutes(app: Express) {
       const mergedFolders = Array.from(folderMap.values());
       writeJsonFile("cad_folders.json", mergedFolders);
 
-      // 7. CAD Vault Files Merge (Index & Metadata)
+      // 12. CAD Vault Files Merge (Index & Metadata)
       const existingCadFiles = readJsonFile<any[]>("cad_files.json", []);
       const cadFileMap = new Map<string, any>();
       existingCadFiles.forEach((file) => file?.id && cadFileMap.set(file.id, file));
@@ -259,7 +334,7 @@ export function registerWebDataRoutes(app: Express) {
       const mergedCadFiles = Array.from(cadFileMap.values());
       writeJsonFile("cad_files.json", mergedCadFiles);
 
-      // 8. User Profiles & Email/Mobile Sync
+      // 13. User Profiles & Email/Mobile Sync
       const existingProfiles = readJsonFile<any[]>("user_profiles.json", []);
       const profileMap = new Map<string, any>();
       existingProfiles.forEach((p) => {
@@ -284,7 +359,7 @@ export function registerWebDataRoutes(app: Express) {
       const mergedProfiles = Array.from(profileMap.values());
       writeJsonFile("user_profiles.json", mergedProfiles);
 
-      // 9. Subscription Requests Merge
+      // 14. Subscription Requests Merge
       const existingSubs = readJsonFile<any[]>("subscription_requests.json", []);
       const subMap = new Map<string, any>();
       existingSubs.forEach((s) => s?.id && subMap.set(s.id, s));
@@ -297,7 +372,7 @@ export function registerWebDataRoutes(app: Express) {
       const mergedSubs = Array.from(subMap.values());
       writeJsonFile("subscription_requests.json", mergedSubs);
 
-      // 10. Application Entries Merge
+      // 15. Application Entries Merge
       const existingEntries = readJsonFile<any[]>("application_entries.json", []);
       const entryMap = new Map<string, any>();
       existingEntries.forEach((e) => e?.id && entryMap.set(e.id, e));
@@ -309,6 +384,24 @@ export function registerWebDataRoutes(app: Express) {
       });
       const mergedEntries = Array.from(entryMap.values());
       writeJsonFile("application_entries.json", mergedEntries);
+
+      // Broadcast all changes
+      broadcastSSE("web_data_sync", {
+        projects: mergedProjects,
+        invoices: mergedInvoices,
+        estimates: mergedEstimates,
+        customers: mergedCustomers,
+        rateItems: mergedRates,
+        quotations: mergedQuotations,
+        constructionProjects: mergedConstructionProjects,
+        constructionAgreements: mergedAgreements,
+        siteInspections: mergedInspections,
+        buildingPlans: mergedPlans,
+        cadFiles: mergedCadFiles,
+        userProfiles: mergedProfiles,
+        subscriptionRequests: mergedSubs,
+        applicationEntries: mergedEntries
+      });
 
       // Record Sync Metadata
       writeJsonFile("last_sync_meta.json", {
@@ -361,6 +454,11 @@ export function registerWebDataRoutes(app: Express) {
       const estimates = readJsonFile<any[]>("estimates.json", []).filter((e) => e?.id && !deletedIds.has(e.id));
       const customers = readJsonFile<any[]>("customers.json", []).filter((c) => c?.id && !deletedIds.has(c.id));
       const rateItems = readJsonFile<any[]>("rate_items.json", []).filter((r) => r?.id && !deletedIds.has(r.id));
+      const quotations = readJsonFile<any[]>("quotations.json", []).filter((q) => q?.id && !deletedIds.has(q.id));
+      const constructionProjects = readJsonFile<any[]>("construction_projects.json", []).filter((cp) => cp?.id && !deletedIds.has(cp.id));
+      const constructionAgreements = readJsonFile<any[]>("construction_agreements.json", []).filter((ca) => ca?.id && !deletedIds.has(ca.id));
+      const siteInspections = readJsonFile<any[]>("site_inspections.json", []).filter((si) => si?.id && !deletedIds.has(si.id));
+      const buildingPlans = readJsonFile<any[]>("building_plans.json", []).filter((bp) => bp?.id && !deletedIds.has(bp.id));
       const cadFolders = readJsonFile<any[]>("cad_folders.json", []).filter((f) => f?.id && !deletedIds.has(f.id));
       const cadFiles = readJsonFile<any[]>("cad_files.json", []).filter((f) => f?.id && !deletedIds.has(f.id));
       const userProfiles = readJsonFile<any[]>("user_profiles.json", []);
@@ -377,6 +475,11 @@ export function registerWebDataRoutes(app: Express) {
           estimates,
           customers,
           rateItems,
+          quotations,
+          constructionProjects,
+          constructionAgreements,
+          siteInspections,
+          buildingPlans,
           cadFolders,
           cadFiles,
           userProfiles,

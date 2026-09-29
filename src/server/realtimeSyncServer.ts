@@ -29,45 +29,81 @@ const HARD_CODED_DEMO_TOMBSTONES = [
   "app_demo_003"
 ];
 
-function getFilePath(collectionName: string): string {
+function getFilePaths(collectionName: string): string[] {
   ensureCloudStoreDir();
   const safeName = collectionName.replace(/[^a-zA-Z0-9_-]/g, "");
-  return path.join(CLOUD_STORE_DIR, `${safeName}.json`);
+  const paths: string[] = [];
+
+  // Primary cloud store path
+  paths.push(path.join(CLOUD_STORE_DIR, `${safeName}.json`));
+
+  // Alias & Web Data mirrors
+  const webDataDir = path.join(DATA_DIR, "web_data");
+  if (!fs.existsSync(webDataDir)) {
+    try {
+      fs.mkdirSync(webDataDir, { recursive: true });
+    } catch (e) {}
+  }
+  paths.push(path.join(webDataDir, `${safeName}.json`));
+
+  // Also mirror common aliases
+  if (safeName === "projects" || safeName === "crm_projects") {
+    paths.push(path.join(CLOUD_STORE_DIR, "crm_projects.json"));
+    paths.push(path.join(CLOUD_STORE_DIR, "projects.json"));
+    paths.push(path.join(webDataDir, "crm_projects.json"));
+    paths.push(path.join(DATA_DIR, "crm_projects.json"));
+  } else if (safeName === "invoices" || safeName === "crm_invoices") {
+    paths.push(path.join(CLOUD_STORE_DIR, "crm_invoices.json"));
+    paths.push(path.join(CLOUD_STORE_DIR, "invoices.json"));
+    paths.push(path.join(webDataDir, "crm_invoices.json"));
+    paths.push(path.join(DATA_DIR, "crm_invoices.json"));
+  } else if (safeName === "building_plans" || safeName === "building_plan_projects") {
+    paths.push(path.join(CLOUD_STORE_DIR, "building_plans.json"));
+    paths.push(path.join(webDataDir, "building_plans.json"));
+  } else if (safeName === "cad_files" || safeName === "cad_vault_files") {
+    paths.push(path.join(CLOUD_STORE_DIR, "cad_files.json"));
+    paths.push(path.join(webDataDir, "cad_files.json"));
+  } else if (safeName === "subscription_requests") {
+    paths.push(path.join(CLOUD_STORE_DIR, "subscription_requests.json"));
+    paths.push(path.join(webDataDir, "subscription_requests.json"));
+  } else if (safeName === "user_profiles") {
+    paths.push(path.join(CLOUD_STORE_DIR, "user_profiles.json"));
+    paths.push(path.join(webDataDir, "user_profiles.json"));
+  }
+
+  return Array.from(new Set(paths));
 }
 
 function readCollection<T = any>(collectionName: string): T[] {
   ensureCloudStoreDir();
-  const filePath = getFilePath(collectionName);
-  try {
-    if (fs.existsSync(filePath)) {
-      const content = fs.readFileSync(filePath, "utf-8");
-      const parsed = JSON.parse(content);
-      if (Array.isArray(parsed)) return parsed;
-    } else {
-      // Fallback: Check data/web_data or data/
-      const webDataPath = path.join(process.cwd(), "data", "web_data", `${collectionName}.json`);
-      if (fs.existsSync(webDataPath)) {
-        const content = fs.readFileSync(webDataPath, "utf-8");
+  const filePaths = getFilePaths(collectionName);
+  for (const filePath of filePaths) {
+    try {
+      if (fs.existsSync(filePath)) {
+        const content = fs.readFileSync(filePath, "utf-8");
         const parsed = JSON.parse(content);
         if (Array.isArray(parsed)) return parsed;
       }
-    }
-  } catch (e) {
-    console.error(`[CloudStore] Error reading ${collectionName}:`, e);
+    } catch (e) {}
   }
   return [];
 }
 
 function writeCollection<T = any>(collectionName: string, data: T[]): boolean {
   ensureCloudStoreDir();
-  const filePath = getFilePath(collectionName);
-  try {
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
-    return true;
-  } catch (e) {
-    console.error(`[CloudStore] Error writing ${collectionName}:`, e);
-    return false;
+  const filePaths = getFilePaths(collectionName);
+  let success = false;
+  for (const filePath of filePaths) {
+    try {
+      const parent = path.dirname(filePath);
+      if (!fs.existsSync(parent)) fs.mkdirSync(parent, { recursive: true });
+      fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
+      success = true;
+    } catch (e) {
+      console.error(`[CloudStore] Error writing to ${filePath}:`, e);
+    }
   }
+  return success;
 }
 
 // In-memory active SSE clients
@@ -257,14 +293,27 @@ export function registerRealtimeSyncRoutes(app: Express) {
     const collections = [
       "online_applications",
       "crm_projects",
+      "projects",
       "crm_invoices",
+      "invoices",
       "estimates",
       "rate_items",
       "customers",
       "valuations",
       "quotations",
+      "construction_projects",
+      "construction_agreements",
+      "construction_settings",
+      "site_inspections",
+      "inspection_templates",
+      "building_plans",
+      "building_plan_projects",
       "cad_folders",
-      "cad_files"
+      "cad_files",
+      "subscription_requests",
+      "user_profiles",
+      "important_sites",
+      "important_folders"
     ];
 
     const result: Record<string, any[]> = {};

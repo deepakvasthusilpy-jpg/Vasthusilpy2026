@@ -961,7 +961,7 @@ export const AgreementPrintView: React.FC<AgreementPrintViewProps> = ({
                       <div className="min-h-[50px] border border-emerald-700/60 bg-emerald-50/50 rounded p-1.5 flex flex-col justify-between text-[9px] font-mono text-emerald-950">
                         <div className="flex items-center justify-between">
                           <span className="font-bold text-emerald-900 uppercase">
-                            {agreement.contractor.proprietorName || "Er. Deepak"}
+                            {agreement.contractor.proprietorName || "Er.Deepak.C"}
                           </span>
                           <span className="text-[7.5px] text-emerald-700 font-bold">
                             DIGITAL SEAL

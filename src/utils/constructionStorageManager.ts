@@ -644,7 +644,7 @@ export const DEFAULT_GENERAL_CLAUSES: GeneralConditionClause[] = [
 export const DEFAULT_CONSTRUCTION_SETTINGS: ConstructionSettings = {
   contractor: {
     companyName: "VASTHUSILPY ARCHITECTURAL & ENGINEERING CONSULTANTS",
-    proprietorName: "Er. Deepak K",
+    proprietorName: "Er.Deepak.C",
     designation: "Chief Consultant & Chartered Civil Engineer",
     address: "Keralassery Main Road, Palakkad District, Kerala - 678641",
     phone: "+91 7012383137",

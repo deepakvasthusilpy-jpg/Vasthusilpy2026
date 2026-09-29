@@ -252,7 +252,7 @@ export const StaffSalaryTab: React.FC = () => {
       (rec.paymentMode ? `💳 *പെയ്‌മെന്റ് രീതി:* ${rec.paymentMode}\n` : "") +
       (rec.transactionId ? `🔢 *റെഫറൻസ്:* ${rec.transactionId}\n` : "") +
       `----------------------------------------\n` +
-      `വാസ്തുശില്പി - കേരളശ്ശേരി | Er. Deepak K. (9747995961)`;
+      `വാസ്തുശില്പി - കേരളശ്ശേരി | Er.Deepak.C (9747995961)`;
 
     const cleanPhone = rec.mobileNumber.replace(/\D/g, "");
     const targetPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;

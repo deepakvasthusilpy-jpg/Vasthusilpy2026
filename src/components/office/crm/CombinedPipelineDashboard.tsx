@@ -384,7 +384,7 @@ export const CombinedPipelineDashboard: React.FC<CombinedPipelineDashboardProps>
         ? "Submitted for Authority / Portal Approval"
         : "Completed & Ready for Handover";
 
-    const message = `*VASTHUSILPY KERALASSERY - WORK STATUS UPDATE*\n\nDear *${item.clientName}*,\n\nYour file *${item.fileNumber}* (${item.fileName}) is currently: *${stageLabel}*.\n\n📍 *Place/Location:* ${item.place}\n⏱️ *Pipeline Duration:* ${item.daysInPipeline} days\n📌 *Work Details:* ${item.workType}\n\nFor any inquiries or drawing adjustments, please contact Er. Deepak .C (+91 7012383137 / +91 8848241463).\n\nThank you,\n*Vasthusilpy Engineering & Architectural Services*`;
+    const message = `*VASTHUSILPY KERALASSERY - WORK STATUS UPDATE*\n\nDear *${item.clientName}*,\n\nYour file *${item.fileNumber}* (${item.fileName}) is currently: *${stageLabel}*.\n\n📍 *Place/Location:* ${item.place}\n⏱️ *Pipeline Duration:* ${item.daysInPipeline} days\n📌 *Work Details:* ${item.workType}\n\nFor any inquiries or drawing adjustments, please contact Er.Deepak.C (+91 7012383137 / +91 8848241463).\n\nThank you,\n*Vasthusilpy Engineering & Architectural Services*`;
 
     window.open(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`, "_blank");
   };

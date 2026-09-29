@@ -1223,7 +1223,7 @@ export const ClientPaymentHistoryView: React.FC<ClientPaymentHistoryViewProps> =
                     Digital Verification ID: #{activeReceipt.payment.id} • SHA-256
                   </div>
                   <div className="text-[11px] text-emerald-800 font-bold">
-                    Er. Deepak & Technical Team
+                    Er.Deepak.C & Technical Team
                   </div>
                 </div>
 

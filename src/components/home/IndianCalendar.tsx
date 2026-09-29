@@ -140,7 +140,7 @@ export const IndianCalendar: React.FC<IndianCalendarProps> = ({
       `  • Yamaganda: ${selectedAstrology.yamagandam}\n\n` +
       `🏛️ *Vasthu Muhurtham:* ${selectedAstrology.vasthuStatus.labelMl}\n` +
       (selectedSpecialDay ? `🚩 *Special Festival:* ${selectedSpecialDay.nameMl} (${selectedSpecialDay.nameEn})\n` : "") +
-      `\n✨ *Vasthusilpy Engineering Studio:* Er. Deepak K. (9747995961)`;
+      `\n✨ *Vasthusilpy Engineering Studio:* Er.Deepak.C (9747995961)`;
 
     if (navigator.clipboard) {
       navigator.clipboard.writeText(text);
@@ -1336,7 +1336,7 @@ export const IndianCalendar: React.FC<IndianCalendarProps> = ({
                   കോൽവിരൽ കണക്കുകൾ, പദവിന്യാസം, ആയാദി ഷഡ്വർഗ്ഗ കണക്കുകൾ, കെട്ടിട നിർമ്മാണ ചട്ടങ്ങൾ (KPBR 2019) എന്നിവ പാലിച്ച് ഡിസൈൻ തയ്യാറാക്കാൻ ബന്ധപ്പെടുക.
                 </p>
                 <div className="text-xs font-mono font-bold text-amber-300 bg-amber-950/30 p-2.5 rounded-xl border border-amber-900/40">
-                  📞 Er. Deepak K. (9747995961) • Vasthusilpy Engineering Studio
+                  📞 Er.Deepak.C (9747995961) • Vasthusilpy Engineering Studio
                 </div>
               </div>
             </div>

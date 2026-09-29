@@ -927,6 +927,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsSubscriberLogin(!isAdmin);
         setActiveTabPermissions(permissions);
         setLoading(false);
+        pullAndHydrateWebDataFromServer(cleanUserId).catch(() => {});
         return true;
       }
     } catch {}
@@ -1000,6 +1001,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsSubscriberLogin(!isPrimaryAdminUser);
       setActiveTabPermissions(isExpired ? { ...DEFAULT_FULL_PERMISSIONS } : permissions);
       setLoading(false);
+      pullAndHydrateWebDataFromServer(cleanUserId).catch(() => {});
       return true;
     }
 

@@ -65,7 +65,10 @@ function hydrateProject(p: BuildingPlanProject): BuildingPlanProject {
 
 export function loadBuildingPlanProjects(): BuildingPlanProject[] {
   try {
-    const raw = localStorage.getItem(PROJECTS_STORAGE_KEY);
+    let raw = localStorage.getItem(PROJECTS_STORAGE_KEY);
+    if (!raw) {
+      raw = localStorage.getItem("vasthusilpy_building_plan_projects_master_v1");
+    }
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
@@ -93,8 +96,9 @@ export function loadBuildingPlanProjects(): BuildingPlanProject[] {
           })
           .map(hydrateProject);
 
-        if (cleaned.length !== parsed.length) {
+        if (cleaned.length !== parsed.length || !localStorage.getItem(PROJECTS_STORAGE_KEY)) {
           localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(cleaned));
+          localStorage.setItem("vasthusilpy_building_plan_projects_master_v1", JSON.stringify(cleaned));
         }
         return cleaned;
       }
@@ -131,7 +135,23 @@ export function saveBuildingPlanProjects(projects: BuildingPlanProject[]): void 
     });
 
     localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(cleaned));
+    localStorage.setItem("vasthusilpy_building_plan_projects_master_v1", JSON.stringify(cleaned));
     
+    // Automatically push to Server and Cloud Sync for multi-browser sync
+    if (typeof fetch !== "undefined") {
+      fetch("/api/web-data/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ buildingPlans: cleaned })
+      }).catch(() => {});
+
+      fetch("/api/cloud-sync/push", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ collection: "building_plans", items: cleaned })
+      }).catch(() => {});
+    }
+
     // Automatically save to Cloud Drive for zero-login QR code downloading
     const activeId = getActiveProjectId(cleaned);
     const activeProject = cleaned.find((p) => p.id === activeId) || cleaned[0];

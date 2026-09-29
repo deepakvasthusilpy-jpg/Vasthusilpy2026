@@ -109,7 +109,7 @@ export const ApplicantPaymentQrModal: React.FC<ApplicantPaymentQrModalProps> = (
       `*UPI ID:* ${DEFAULT_RECEIVER_UPI}\n` +
       `*Name:* ${DEFAULT_BENEFICIARY_NAME}\n\n` +
       `UPI Link: ${upiUrl}\n\n` +
-      `Thank you!\nEr. Deepak K, Vasthusilpy Consultants\nContact: +91 7012383137`;
+      `Thank you!\nEr.Deepak.C, Vasthusilpy Consultants\nContact: +91 7012383137`;
 
     const cleanPhone = applicant.mobileNo.replace(/[^0-9]/g, "");
     const formattedPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;

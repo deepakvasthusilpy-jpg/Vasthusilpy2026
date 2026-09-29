@@ -2,8 +2,8 @@ import React, { useState } from "react";
 import { MainSectionType, TabType, VasthuTabType, BuildingRulesTabType, SurveyTabType } from "../types";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/AuthContext";
-import { Logo } from "./Logo";
 import { ThemeSelectorModal } from "./theme/ThemeSelectorModal";
+import { Logo } from "./Logo";
 import {
   Compass,
   Building2,
@@ -441,8 +441,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Theme Studio Button */}
         <button
           onClick={() => setIsThemeModalOpen(true)}
-          className="w-11 h-11 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 text-purple-300 flex items-center justify-center transition hover:scale-105 cursor-pointer shadow-sm relative backdrop-blur-md"
-          title="Architectural Theme Studio (6 Themes)"
+          className="w-11 h-11 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 text-cyan-300 flex items-center justify-center transition hover:scale-105 cursor-pointer shadow-sm relative backdrop-blur-md"
+          title="Futuristic Tech Theme"
         >
           <Palette className="w-4 h-4" />
           <span
@@ -588,30 +588,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="p-3 m-2.5 glass-card border border-white/15 rounded-3xl text-[10px] font-mono text-purple-200/70 space-y-2 backdrop-blur-xl">
         <div className="flex items-center justify-between text-white font-bold">
           <span>VASTHUSILPY DOCK</span>
-          <span className="text-purple-300">v2.5</span>
+          <span className="text-cyan-300">v2.5</span>
         </div>
 
         <div className="flex items-center gap-1.5">
           <button
             onClick={() => setIsThemeModalOpen(true)}
             className="flex-1 flex items-center gap-1.5 bg-white/10 hover:bg-white/20 border border-white/20 px-2.5 py-1.5 rounded-full text-white transition-colors cursor-pointer text-left truncate"
-            title="Open Architectural Theme Studio (6 Themes)"
+            title="Futuristic Tech Theme"
           >
             <span
               className="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs"
               style={{ backgroundColor: currentThemeMeta.primaryColor }}
             />
             <span className="font-bold uppercase text-[9.5px] truncate">
-              {currentThemeMeta.name.split(" ")[0]}
+              {currentThemeMeta.name}
             </span>
-          </button>
-
-          <button
-            onClick={cycleNextTheme}
-            className="px-2.5 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-full text-purple-200 font-bold text-[9px] hover:text-white transition-colors cursor-pointer shrink-0"
-            title="Cycle to next theme"
-          >
-            NEXT
           </button>
         </div>
       </div>

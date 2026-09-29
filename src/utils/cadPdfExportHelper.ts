@@ -42,7 +42,7 @@ export function generateCadBlueprintPdf(
   doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(203, 213, 225); // Slate-300
-  doc.text("Keralassery, Palakkad, Kerala | Phone: +91 94963 12345 | Chief Consultant: Er. Deepak K.", margin + 6, margin + 14);
+  doc.text("Keralassery, Palakkad, Kerala | Phone: +91 94963 12345 | Chief Consultant: Er.Deepak.C", margin + 6, margin + 14);
   doc.text("ARCHITECTURAL PLAN & VASTHU VIDYA COMPLIANCE DRAWING SHEET", margin + 6, margin + 19);
 
   // QR / Code Stamp on Top Right

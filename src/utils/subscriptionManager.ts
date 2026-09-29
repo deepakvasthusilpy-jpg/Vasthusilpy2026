@@ -3,7 +3,7 @@ import { db } from "../lib/firebase";
 import { doc, setDoc, getDoc, collection, onSnapshot, deleteDoc } from "firebase/firestore";
 
 export const UPI_ID = "7012383137@okbizaxis";
-export const UPI_PAYEE_NAME = "Vasthusilpy Deepak K";
+export const UPI_PAYEE_NAME = "Vasthusilpy Er.Deepak.C";
 export const UPI_NOTE = "Vasthusilpy Engineering Portal Subscription";
 export const DEFAULT_SUBSCRIPTION_FEE_INR = 200;
 export const SUBSCRIPTION_FEE_INR = 200;

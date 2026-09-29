@@ -224,7 +224,7 @@ const DEFAULT_PROJECT_DATA: ProjectData = {
   localBodyName: "Kizhakkambalam Grama Panchayat",
   localBodyType: "Panchayat",
   category: "Category-II",
-  engineerName: "Er. Deepak Architect & Associates",
+  engineerName: "Er.Deepak.C & Associates",
   engineerRegNo: "LSGD/ENG/2024/A-4892",
   date: new Date().toISOString().split("T")[0],
 

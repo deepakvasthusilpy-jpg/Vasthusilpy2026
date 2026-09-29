@@ -47,7 +47,7 @@ export const LandAreaCalculator: React.FC = () => {
     village: "Kottayam",
     taluk: "Kottayam",
     district: "Kottayam",
-    surveyorName: "Er. Deepak Vasthusilpy",
+    surveyorName: "Er.Deepak.C (Vasthusilpy)",
     surveyDate: new Date().toISOString().split("T")[0],
     notes: "Heron's Formula triangulation land measurement"
   });
