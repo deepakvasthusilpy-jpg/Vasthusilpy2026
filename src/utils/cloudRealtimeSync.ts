@@ -18,8 +18,6 @@ export const SYNC_KEYS = {
   ESTIMATES: "vasthusilpy_estimates",
   CUSTOMERS: "vasthusilpy_customers",
   RATE_ITEMS: "vasthusilpy_rate_items",
-  CAD_FOLDERS: "vasthusilpy_cad_folders_v3",
-  CAD_FILES: "vasthusilpy_cad_files_vault_v3",
   IMPORTANT_SITES: "vasthusilpy_important_sites_v1",
   SITE_FOLDERS: "vasthusilpy_site_folders_v1",
   SITE_INSPECTIONS: "vasthusilpy_site_inspections_v1",
@@ -59,9 +57,6 @@ export function dispatchAllSyncEvents(targetKey?: string) {
   }
   if (!targetKey || targetKey === SYNC_KEYS.RATE_ITEMS) {
     window.dispatchEvent(new Event("vasthusilpy_rate_items_updated"));
-  }
-  if (!targetKey || targetKey === SYNC_KEYS.CAD_FOLDERS || targetKey === SYNC_KEYS.CAD_FILES) {
-    window.dispatchEvent(new Event("vasthusilpy_cad_vault_update"));
   }
   if (!targetKey || targetKey === SYNC_KEYS.SUBSCRIPTIONS) {
     window.dispatchEvent(new Event("vasthusilpy_subscription_update"));
@@ -108,46 +103,6 @@ function writeLocalList(key: string, list: any[]) {
     const existing = localStorage.getItem(key);
     if (existing === serialized) return false; // No changes
     localStorage.setItem(key, serialized);
-
-    // If CAD files are updated, regenerate and store metadata index immediately
-    if (key === SYNC_KEYS.CAD_FILES && Array.isArray(list)) {
-      try {
-        const metadataIndex = list.map((file: any) => ({
-          id: file.id,
-          name: file.name || "Untitled_File",
-          title: file.title || file.name || "Untitled File",
-          folderId: file.folderId || "folder-deepak",
-          folderPath: file.folderPath || "/DEEPAK",
-          projectCode: file.projectCode || "",
-          projectName: file.projectName || file.ownerName || "",
-          ownerName: file.ownerName || file.clientName || "",
-          clientName: file.ownerName || file.clientName || "",
-          mobileNo: file.mobileNo || file.clientPhone || "",
-          clientPhone: file.mobileNo || file.clientPhone || "",
-          facing: file.facing || "",
-          bedrooms: file.bedrooms || "",
-          floors: file.floors || "",
-          vasthuChuttu: file.vasthuChuttu || "",
-          category: file.category || "PLAN",
-          fileType: file.fileType || "DWG",
-          fileSize: file.fileSize || 0,
-          keywords: file.keywords || [],
-          attachmentCount: file.attachments?.length || 0,
-          hasDwgAttachment: (file.attachments || []).some((a: any) => a.isDwgOrDxf || (a.name && a.name.toLowerCase().endsWith(".dwg"))),
-          hasPdfAttachment: (file.attachments || []).some((a: any) => a.isPdf || (a.name && a.name.toLowerCase().endsWith(".pdf"))),
-          hasImageAttachment: (file.attachments || []).some((a: any) => a.isImage || (a.name && /\.(png|jpe?g|webp|svg)$/i.test(a.name))),
-          hasCadVector: Boolean(file.drawingData && file.drawingData.entities && file.drawingData.entities.length > 0),
-          isStarred: Boolean(file.isStarred),
-          isShared: Boolean(file.shareSettings?.isShared),
-          googleDriveSyncedAt: file.googleDriveSyncedAt,
-          createdAt: file.createdAt || new Date().toISOString(),
-          updatedAt: file.updatedAt || new Date().toISOString()
-        }));
-        localStorage.setItem("vasthusilpy_cad_metadata_index_v3", JSON.stringify(metadataIndex));
-      } catch (idxErr) {
-        console.warn("[CloudSync] Error generating metadata index:", idxErr);
-      }
-    }
     return true;
   } catch (e) {
     console.warn(`[CloudSync] Error writing local key ${key}:`, e);
@@ -282,8 +237,6 @@ export function initializeCloudRealtimeSync(): () => void {
     { collection: "estimates", storageKey: SYNC_KEYS.ESTIMATES },
     { collection: "customers", storageKey: SYNC_KEYS.CUSTOMERS },
     { collection: "rate_items", storageKey: SYNC_KEYS.RATE_ITEMS },
-    { collection: "cad_folders", storageKey: SYNC_KEYS.CAD_FOLDERS },
-    { collection: "cad_files", storageKey: SYNC_KEYS.CAD_FILES },
     { collection: "important_sites", storageKey: SYNC_KEYS.IMPORTANT_SITES },
     { collection: "site_folders", storageKey: SYNC_KEYS.SITE_FOLDERS },
     { collection: "site_inspections", storageKey: SYNC_KEYS.SITE_INSPECTIONS },
@@ -441,14 +394,6 @@ export async function pullFullCloudDatabaseState(): Promise<boolean> {
           writeLocalList(SYNC_KEYS.RATE_ITEMS, store.rateItems);
           hasHydrated = true;
         }
-        if (Array.isArray(store.cadFolders) && store.cadFolders.length > 0) {
-          writeLocalList(SYNC_KEYS.CAD_FOLDERS, store.cadFolders);
-          hasHydrated = true;
-        }
-        if (Array.isArray(store.cadFiles) && store.cadFiles.length > 0) {
-          writeLocalList(SYNC_KEYS.CAD_FILES, store.cadFiles);
-          hasHydrated = true;
-        }
         if (Array.isArray(store.importantSites) && store.importantSites.length > 0) {
           writeLocalList(SYNC_KEYS.IMPORTANT_SITES, store.importantSites);
           hasHydrated = true;
@@ -496,8 +441,6 @@ export async function pullFullCloudDatabaseState(): Promise<boolean> {
       fetchFirestoreCollection("estimates", SYNC_KEYS.ESTIMATES),
       fetchFirestoreCollection("customers", SYNC_KEYS.CUSTOMERS),
       fetchFirestoreCollection("rate_items", SYNC_KEYS.RATE_ITEMS),
-      fetchFirestoreCollection("cad_folders", SYNC_KEYS.CAD_FOLDERS),
-      fetchFirestoreCollection("cad_files", SYNC_KEYS.CAD_FILES),
       fetchFirestoreCollection("important_sites", SYNC_KEYS.IMPORTANT_SITES),
       fetchFirestoreCollection("online_applications", SYNC_KEYS.ONLINE_APPLICATIONS)
     ]);

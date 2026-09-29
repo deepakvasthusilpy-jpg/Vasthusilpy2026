@@ -1206,6 +1206,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.warn("Firebase Auth sign-out notice (offline/closing):", authErr?.message || authErr);
         }
       }
+      localStorage.removeItem("vasthusilpy_auth_provider");
     } catch (err: any) {
       console.warn("Sign Out notice:", err?.message || err);
     } finally {

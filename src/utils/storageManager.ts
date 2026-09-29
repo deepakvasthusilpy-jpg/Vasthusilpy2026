@@ -135,11 +135,11 @@ export function shouldPurgeClient(name?: string): boolean {
 // Self-invoking database purge for Firestore and LocalStorage
 export function wipeSpecifiedTabsDataVaultAndCrmAndBills(): void {
   try {
-    // 1. Data Storage Vault files
-    localStorage.setItem("vasthusilpy_cad_files_vault_v3", JSON.stringify([]));
-    localStorage.setItem("vasthusilpy_cad_metadata_index_v3", JSON.stringify([]));
+    // 1. Clear CAD Vault Local Keys
+    localStorage.removeItem("vasthusilpy_cad_files_vault_v3");
+    localStorage.removeItem("vasthusilpy_cad_folders_v3");
+    localStorage.removeItem("vasthusilpy_cad_metadata_index_v3");
     localStorage.removeItem("vasthusilpy_cad_files_vault_v2");
-    window.dispatchEvent(new CustomEvent("vasthusilpy_cad_vault_update", { detail: { count: 0 } }));
 
     // 2. CRM Projects & Online Applications
     localStorage.setItem(STORAGE_KEYS.CRM_PROJECTS, JSON.stringify([]));

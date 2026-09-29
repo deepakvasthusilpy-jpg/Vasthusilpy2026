@@ -83,7 +83,11 @@ export async function backupAllWebsiteDataToGoogleDrive(
       if (onProgress) onProgress("Opening Google Sign-In...", 20);
       const signinRes = await googleSignIn(true);
       if (!signinRes || !signinRes.accessToken) {
-        throw new Error("Google Workspace authorization was not completed.");
+        return {
+          success: false,
+          unauthorized: true,
+          error: "Google Workspace sign-in was cancelled or closed."
+        };
       }
       token = signinRes.accessToken;
     }

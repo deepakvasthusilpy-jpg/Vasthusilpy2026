@@ -3360,6 +3360,7 @@ import { registerCrmRoutes } from "./src/server/crmServer.ts";
 import { registerWebDataRoutes } from "./src/server/webDataServer.ts";
 import { registerRealtimeSyncRoutes } from "./src/server/realtimeSyncServer.ts";
 import { registerGoogleBackupRoutes } from "./src/server/googleBackupServer.ts";
+import { registerCloudflareRoutes } from "./src/server/cloudflareServer.ts";
 
 // Register Universal Realtime Cloud Synchronization and SSE Endpoints
 registerRealtimeSyncRoutes(app);
@@ -3375,6 +3376,9 @@ registerWebDataRoutes(app);
 
 // Register Google Drive Full Website Cloud Backup and Restore Endpoints
 registerGoogleBackupRoutes(app);
+
+// Register Cloudflare Workers Edge Integration Endpoints
+registerCloudflareRoutes(app);
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {

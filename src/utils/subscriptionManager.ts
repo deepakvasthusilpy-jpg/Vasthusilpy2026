@@ -525,55 +525,6 @@ export const ALL_APP_MODULES: TabPermissionDefinition[] = [
         description: "Vendor directory, custom bill creation, GPay UPI QR codes and ledger"
       }
     ]
-  },
-  {
-    sectionId: "data_storage_vault",
-    sectionTitle: "Data Storage Vault",
-    sectionTitleMl: "ഡാറ്റാ സ്റ്റോറേജ് & ഫയൽ വോൾട്ട്",
-    tabs: [
-      {
-        id: "vault_dashboard" as TabType,
-        label: "Vault Dashboard",
-        labelMl: "ഡാഷ്‌ബോർഡ്",
-        description: "Storage overview, category distribution, recent uploads and search"
-      },
-      {
-        id: "vault_plan" as TabType,
-        label: "1. Plan (Architectural & Vastu)",
-        labelMl: "1. പ്ലാൻ",
-        description: "2D Floor plans, Vastu layout, structural drawings and CAD files"
-      },
-      {
-        id: "vault_3d" as TabType,
-        label: "2. 3D (Elevations & Renders)",
-        labelMl: "2. 3D എലിവേഷൻ",
-        description: "3D exterior elevations, interior renders and walkthroughs"
-      },
-      {
-        id: "vault_estimate" as TabType,
-        label: "3. Estimate (BOQ & Costing)",
-        labelMl: "3. എസ്റ്റിമേറ്റ്",
-        description: "Detailed estimation sheets, BOQ reports and rate cards"
-      },
-      {
-        id: "vault_survey" as TabType,
-        label: "4. Survey (Land & FMB)",
-        labelMl: "4. സർവ്വേ & FMB",
-        description: "Land survey sketches, FMB subdivision plans and plot layouts"
-      },
-      {
-        id: "vault_documents" as TabType,
-        label: "5. Documents & Permits",
-        labelMl: "5. ഡോക്യുമെന്റുകൾ",
-        description: "LSGD building permits, office documents, deeds and contracts"
-      },
-      {
-        id: "vault_settings" as TabType,
-        label: "Vault Settings & Folders",
-        labelMl: "ഫോൾഡർ ക്രമീകരണങ്ങൾ",
-        description: "Add, edit, delete folders, storage quota and cloud sync"
-      }
-    ]
   }
 ];
 

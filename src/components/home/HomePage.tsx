@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { MainSectionType, TabType } from "../../types";
 import { GoogleAuthenticatorSetupModal } from "../auth/GoogleAuthenticatorSetupModal";
 import { SubscriptionRequestsTab } from "./SubscriptionRequestsTab";
-import { DataStorageTab } from "./DataStorageTab";
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
 import { TechStartupHoloRing } from "../theme/TechStartupHoloRing";
@@ -191,17 +190,6 @@ export const HomePage: React.FC<HomePageProps> = ({ activeTab = "home_overview",
             )}
           </button>
 
-          <button
-            onClick={() => onNavigate("data_storage_vault", "vault_dashboard")}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-mono text-xs font-bold transition-all cursor-pointer whitespace-nowrap text-purple-200/80 hover:text-white hover:bg-white/10`}
-          >
-            <HardDrive className="w-4 h-4 text-emerald-300" />
-            <span>ഡാറ്റ സ്റ്റോറേജ് വോൾട്ട് (Data Storage Vault)</span>
-            <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-200 font-mono text-[10px] font-bold border border-emerald-400/40">
-              VAULT
-            </span>
-          </button>
-
           {isPrimaryAdmin && !isSubscriberLogin && (
             <button
               onClick={() => setActiveTab && setActiveTab("subscription_requests")}
@@ -232,9 +220,7 @@ export const HomePage: React.FC<HomePageProps> = ({ activeTab = "home_overview",
           )}
         </div>
 
-        {activeTab === "data_storage" ? (
-          <DataStorageTab />
-        ) : activeTab === "subscription_requests" && isPrimaryAdmin && !isSubscriberLogin ? (
+        {activeTab === "subscription_requests" && isPrimaryAdmin && !isSubscriberLogin ? (
           <SubscriptionRequestsTab />
         ) : (
           <>

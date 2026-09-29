@@ -1,8 +1,6 @@
 import { BuildingPlanProject, PlanSheet } from "../types/buildingPlanTemplate";
 import { generateDirectProjectVectorPdf } from "./planExportUtils";
 import { getCachedToken } from "../lib/googleWorkspace";
-import { saveCADDrawingRecord, getStoredCADFolders } from "./dataStorageManager";
-import { CADDrawingRecord } from "../types/dataStorageTypes";
 
 export interface CloudSaveResult {
   success: boolean;
@@ -49,59 +47,7 @@ export function getCloudDownloadUrl(projectId: string, sheetId?: string): string
  * so it automatically appears in the user's CAD Drawings & Blueprints Cloud Drive
  */
 export function syncPlanToCadVault(project: BuildingPlanProject, sheet?: PlanSheet, pdfDataUrl?: string): void {
-  try {
-    const folders = getStoredCADFolders();
-    const targetFolder = folders.find((f) => f.name.toUpperCase() === "DEEPAK") || folders[0];
-    const sheetTarget = sheet || project.sheets[0];
-
-    const cadRecord: CADDrawingRecord = {
-      id: `cad-plan-${project.id}`,
-      name: `${project.projectTitle || "Building Plan"} - ${sheetTarget?.drawingName || "Architectural Sheet"}`,
-      title: project.projectTitle || "Architectural Floor Plan",
-      projectName: project.projectTitle || "Building Plan Project",
-      category: "ARCHITECTURAL_PLAN",
-      fileType: "PDF",
-      fileSize: pdfDataUrl ? Math.round(pdfDataUrl.length * 0.75) : 10240,
-      folderId: targetFolder ? targetFolder.id : "folder-deepak",
-      folderPath: targetFolder ? targetFolder.path : "/DEEPAK",
-      clientName: project.clientName || "Client",
-      ownerName: project.clientName || "Client",
-      clientPhone: project.officeMobile || "7012383137",
-      mobileNo: project.officeMobile || "7012383137",
-      location: project.projectLocation || "Kerala",
-      description: `Architectural Blueprint created under Building Plan Templates. Sheet: ${sheetTarget?.drawingNumber || "DWG-1"}. Auto-saved to Cloud Drive.`,
-      keywords: ["Building Plan", "Blueprint", "AutoCloud", project.clientName || ""].filter(Boolean),
-      isStarred: true,
-      shareSettings: {
-        isShared: true,
-        isPublic: true,
-        shareToken: `share-${project.id}`,
-        allowDownload: true,
-        allowPrinting: true,
-        requirePin: false
-      },
-      attachments: pdfDataUrl ? [
-        {
-          id: `att-${project.id}-${Date.now()}`,
-          name: `${(project.clientName || "Plan").replace(/\s+/g, "_")}_${sheetTarget?.drawingNumber || "DWG"}.pdf`,
-          type: "application/pdf",
-          size: Math.round(pdfDataUrl.length * 0.75),
-          dataUrl: pdfDataUrl,
-          downloadUrl: getCloudDownloadUrl(project.id, sheetTarget?.id),
-          uploadedAt: new Date().toISOString(),
-          isPdf: true
-        }
-      ] : [],
-      createdAt: project.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      createdBy: "deepak@vasthusilpy.com",
-      version: 1
-    };
-
-    saveCADDrawingRecord(cadRecord, true);
-  } catch (err) {
-    console.warn("Notice: CAD Vault auto-sync:", err);
-  }
+  // Data Vault removed
 }
 
 /**

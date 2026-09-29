@@ -1,0 +1,25 @@
+# Vasthusilpy Engineering Systems - Cloudflare Worker Backend Configuration
+name = "vasthusilpy-backend"
+main = "cloudflare-worker.js"
+compatibility_date = "2024-01-01"
+
+[vars]
+ENVIRONMENT = "production"
+APP_NAME = "Vasthusilpy Engineering Systems Backend"
+ALLOWED_ORIGIN = "*"
+
+# Cloudflare KV Namespace for Caching & Global Sync
+[[kv_namespaces]]
+binding = "VASTHUSILPY_KV"
+id = "a1b2c3d4e5f6_vasthusilpy_kv"
+
+# Cloudflare D1 Relational Database
+[[d1_databases]]
+binding = "VASTHUSILPY_DB"
+database_name = "vasthusilpy_db"
+database_id = "d1-vasthusilpy-production"
+
+# Cloudflare R2 Object Storage
+[[r2_buckets]]
+binding = "VASTHUSILPY_R2"
+bucket_name = "vasthusilpy-storage"

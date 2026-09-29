@@ -47,10 +47,8 @@ import { PublicAgreementVerificationPortal } from "./components/construction/Pub
 import { ClientProgressPortal } from "./components/office/clientView/ClientProgressPortal";
 import { ClientInvoicePortal } from "./components/office/clientView/ClientInvoicePortal";
 import { PublicProjectSharePortal } from "./components/office/crm/PublicProjectSharePortal";
-import { PublicCadSharePortal } from "./components/home/dataStorage/PublicCadSharePortal";
 import { PublicPlanVerificationPortal } from "./components/planTemplate/PublicPlanVerificationPortal";
 import { HomePage } from "./components/home/HomePage";
-import { DataStorageTab } from "./components/home/DataStorageTab";
 import {
   INITIAL_ESTIMATES_LIST,
   EstimateProject,
@@ -163,8 +161,6 @@ export default function App() {
               ? ("poov_mala_bill" as TabType)
               : sec === "site_inspection"
               ? ("site_inspection_form" as TabType)
-              : sec === "data_storage_vault"
-              ? ("vault_dashboard" as TabType)
               : ("home_overview" as TabType))
         };
       }
@@ -455,62 +451,11 @@ export default function App() {
     );
   }
 
-  const cadShareToken =
-    urlParams.get("cad_share") ||
-    urlParams.get("cad_id") ||
-    urlParams.get("share_cad") ||
-    urlParams.get("drawing_share") ||
-    urlParams.get("cad_token") ||
-    urlParams.get("share_file") ||
-    (isCadId ? rawIdParam : null) ||
-    (isCadToken ? clientViewToken : null) ||
-    hashParams.get("cad_share") ||
-    hashParams.get("cad_id") ||
-    hashParams.get("share_cad");
-
-  // 0. Public Zero-Login Site Inspection Portal (Direct on-site field entry without login)
-  const isSiteInspectionPublic =
-    urlParams.get("portal") === "site_inspection" ||
-    urlParams.get("portal") === "inspection" ||
-    urlParams.get("portal") === "site-inspection" ||
-    urlParams.get("portal") === "field_inspection" ||
-    urlParams.get("site_inspection") === "1" ||
-    urlParams.get("site_inspection") === "public" ||
-    urlParams.get("public_inspection") === "1" ||
-    urlParams.get("form") === "site_inspection" ||
-    (urlParams.get("section") === "site_inspection" && urlParams.get("public") === "1") ||
-    hashParams.get("portal") === "site_inspection" ||
-    hashParams.get("portal") === "inspection" ||
-    hashParams.get("site_inspection") === "1" ||
-    (typeof window !== "undefined" && window.location.hash.includes("portal=site_inspection"));
-
-  if (isSiteInspectionPublic) {
-    return (
-      <PublicSiteInspectionPortal
-        onGoToApp={() => {
-          window.location.href = window.location.origin;
-        }}
-      />
-    );
-  }
-
   // 0. Public Project Pipeline Record & Attachments Portal (Zero Login, Shareable Client Document View)
   if (crmProjectShareId) {
     return (
       <PublicProjectSharePortal
         projectId={crmProjectShareId}
-        onGoToApp={() => {
-          window.location.href = window.location.origin;
-        }}
-      />
-    );
-  }
-
-  // 1. Public CAD Drawing & Blueprint Share Portal (Zero Login, QR & Direct Link Verification)
-  if (cadShareToken) {
-    return (
-      <PublicCadSharePortal
-        token={cadShareToken}
         onGoToApp={() => {
           window.location.href = window.location.origin;
         }}
@@ -662,16 +607,6 @@ export default function App() {
                 setActiveSection(section);
                 setActiveTab(tab);
               }}
-            />
-          )}
-
-          {/* DATA STORAGE VAULT SECTION (SEPARATE MAIN TAB WITH SUB TABS) */}
-          {activeSection === "data_storage_vault" && (
-            <DataStorageTab
-              userRole={isPrimaryAdmin ? "ADMIN" : "USER"}
-              userEmail={user?.email || emailUser?.email || "deepak@vasthusilpy.com"}
-              activeSubTab={activeTab}
-              onSubTabChange={(tab) => setActiveTab(tab)}
             />
           )}
 

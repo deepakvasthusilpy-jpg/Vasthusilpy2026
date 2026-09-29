@@ -5,6 +5,7 @@ import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { initCloudRealtimeSync } from './utils/cloudRealtimeClient';
 import './index.css';
 
@@ -13,15 +14,17 @@ initCloudRealtimeSync();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ThemeProvider>
-      <LanguageProvider>
-        <NotificationProvider>
-          <AuthProvider>
-            <App />
-          </AuthProvider>
-        </NotificationProvider>
-      </LanguageProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <LanguageProvider>
+          <NotificationProvider>
+            <AuthProvider>
+              <App />
+            </AuthProvider>
+          </NotificationProvider>
+        </LanguageProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   </StrictMode>,
 );
 

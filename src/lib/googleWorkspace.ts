@@ -12,6 +12,7 @@ provider.addScope('https://www.googleapis.com/auth/spreadsheets');
 provider.addScope('https://www.googleapis.com/auth/spreadsheets.readonly');
 
 let isSigningIn = false;
+let pendingSignInPromise: Promise<{ user: User; accessToken: string } | null> | null = null;
 let cachedAccessToken: string | null = typeof window !== "undefined" ? localStorage.getItem("vasthusilpy_google_token") : null;
 
 export const clearCachedGoogleToken = () => {
@@ -46,42 +47,73 @@ export const googleSignIn = async (forceConsent: boolean = true): Promise<{ user
   if (!auth) {
     throw new Error('Firebase Auth is not available in current environment.');
   }
-  try {
-    isSigningIn = true;
-    const authProvider = new GoogleAuthProvider();
-    authProvider.addScope('https://www.googleapis.com/auth/drive');
-    authProvider.addScope('https://www.googleapis.com/auth/drive.file');
-    authProvider.addScope('https://www.googleapis.com/auth/gmail.send');
-    authProvider.addScope('https://www.googleapis.com/auth/gmail.compose');
-    authProvider.addScope('https://www.googleapis.com/auth/documents');
-    authProvider.addScope('https://www.googleapis.com/auth/documents.readonly');
-    authProvider.addScope('https://www.googleapis.com/auth/spreadsheets');
-    authProvider.addScope('https://www.googleapis.com/auth/spreadsheets.readonly');
 
-    if (forceConsent) {
-      authProvider.setCustomParameters({
-        prompt: 'select_account consent',
-        access_type: 'offline'
-      });
-    }
-
-    const result = await signInWithPopup(auth, authProvider);
-    const credential = GoogleAuthProvider.credentialFromResult(result);
-    if (!credential?.accessToken) {
-      throw new Error('Failed to obtain Google OAuth Access Token.');
-    }
-
-    cachedAccessToken = credential.accessToken;
-    if (typeof window !== "undefined") {
-      localStorage.setItem("vasthusilpy_google_token", credential.accessToken);
-    }
-    return { user: result.user, accessToken: cachedAccessToken };
-  } catch (error: any) {
-    console.error('Google Workspace Sign-In Error:', error);
-    throw error;
-  } finally {
-    isSigningIn = false;
+  // If a popup request is already in progress, reuse the existing promise to prevent auth/cancelled-popup-request
+  if (pendingSignInPromise) {
+    return pendingSignInPromise;
   }
+
+  pendingSignInPromise = (async () => {
+    try {
+      isSigningIn = true;
+      const authProvider = new GoogleAuthProvider();
+      authProvider.addScope('https://www.googleapis.com/auth/drive');
+      authProvider.addScope('https://www.googleapis.com/auth/drive.file');
+      authProvider.addScope('https://www.googleapis.com/auth/gmail.send');
+      authProvider.addScope('https://www.googleapis.com/auth/gmail.compose');
+      authProvider.addScope('https://www.googleapis.com/auth/documents');
+      authProvider.addScope('https://www.googleapis.com/auth/documents.readonly');
+      authProvider.addScope('https://www.googleapis.com/auth/spreadsheets');
+      authProvider.addScope('https://www.googleapis.com/auth/spreadsheets.readonly');
+
+      if (forceConsent) {
+        authProvider.setCustomParameters({
+          prompt: 'select_account consent',
+          access_type: 'offline'
+        });
+      }
+
+      const result = await signInWithPopup(auth, authProvider);
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      if (!credential?.accessToken) {
+        throw new Error('Failed to obtain Google OAuth Access Token.');
+      }
+
+      cachedAccessToken = credential.accessToken;
+      if (typeof window !== "undefined") {
+        localStorage.setItem("vasthusilpy_google_token", credential.accessToken);
+      }
+      return { user: result.user, accessToken: cachedAccessToken };
+    } catch (error: any) {
+      const errorCode = error?.code || "";
+      const errorMsg = error?.message || "";
+      const errorStr = String(error?.toString ? error.toString() : error || "");
+
+      // Handle expected user cancellations, popup closures, or concurrent requests gracefully without throwing/logging errors
+      if (
+        errorCode === "auth/cancelled-popup-request" ||
+        errorCode === "auth/popup-closed-by-user" ||
+        errorCode === "auth/popup-blocked" ||
+        errorMsg.includes("cancelled-popup-request") ||
+        errorMsg.includes("popup-closed-by-user") ||
+        errorMsg.includes("popup-blocked") ||
+        errorStr.includes("cancelled-popup-request") ||
+        errorStr.includes("popup-closed-by-user") ||
+        errorStr.includes("popup-blocked")
+      ) {
+        console.info("[Google Workspace] Sign-in popup was closed, cancelled, or superseded by another request.");
+        return null;
+      }
+
+      console.error('Google Workspace Sign-In Error:', error);
+      throw error;
+    } finally {
+      isSigningIn = false;
+      pendingSignInPromise = null;
+    }
+  })();
+
+  return pendingSignInPromise;
 };
 
 export const getCachedToken = (): string | null => {
@@ -105,7 +137,7 @@ export const ensureGoogleAccessToken = async (forceConsent: boolean = false): Pr
   // Sign in with Google to get fresh token with all scopes
   const res = await googleSignIn(true);
   if (!res?.accessToken) {
-    throw new Error('Google authorization required for cloud services.');
+    throw new Error('Google authorization was cancelled or closed. Please click Connect to authorize.');
   }
   return res.accessToken;
 };

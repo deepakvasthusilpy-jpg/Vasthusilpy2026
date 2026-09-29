@@ -14,8 +14,6 @@ export interface WebDataSyncStatus {
     estimates: number;
     customers: number;
     rateItems: number;
-    cadFolders: number;
-    cadFiles: number;
     userProfiles: number;
     subscriptionRequests: number;
   };
@@ -73,8 +71,6 @@ export function collectLocalWebData() {
   const estimates = filterOutDeletedRecords(readLocalJson("vasthusilpy_estimates", []));
   const customers = filterOutDeletedRecords(readLocalJson("vasthusilpy_customers", []));
   const rateItems = filterOutDeletedRecords(readLocalJson("vasthusilpy_rate_items", []));
-  const cadFolders = filterOutDeletedRecords(readLocalJson("vasthusilpy_cad_folders_v3", []));
-  const cadFiles = filterOutDeletedRecords(readLocalJson("vasthusilpy_cad_files_vault_v3", []));
   
   // Unify subscription requests from both primary and secondary keys
   const subsMain = readLocalJson<any[]>("vasthusilpy_subscription_requests", []);
@@ -108,8 +104,6 @@ export function collectLocalWebData() {
     estimates,
     customers,
     rateItems,
-    cadFolders,
-    cadFiles,
     subscriptionRequests,
     applicationEntries,
     currentUserProfile
@@ -213,12 +207,6 @@ export async function performFullWebDataSync(): Promise<{
       if (Array.isArray(serverMerged.rateItems) && serverMerged.rateItems.length > 0) {
         localStorage.setItem("vasthusilpy_rate_items", JSON.stringify(serverMerged.rateItems));
       }
-      if (Array.isArray(serverMerged.cadFolders) && serverMerged.cadFolders.length > 0) {
-        localStorage.setItem("vasthusilpy_cad_folders_v3", JSON.stringify(serverMerged.cadFolders));
-      }
-      if (Array.isArray(serverMerged.cadFiles) && serverMerged.cadFiles.length > 0) {
-        localStorage.setItem("vasthusilpy_cad_files_vault_v3", JSON.stringify(serverMerged.cadFiles));
-      }
       if (Array.isArray(serverMerged.subscriptionRequests) && serverMerged.subscriptionRequests.length > 0) {
         localStorage.setItem("vasthusilpy_subscription_requests", JSON.stringify(serverMerged.subscriptionRequests));
         localStorage.setItem("vasthusilpy_subscription_requests_v2", JSON.stringify(serverMerged.subscriptionRequests));
@@ -235,7 +223,6 @@ export async function performFullWebDataSync(): Promise<{
 
   // 5. Dispatch UI refresh events & Cross-Tab Broadcast
   window.dispatchEvent(new Event("vasthusilpy_storage_update"));
-  window.dispatchEvent(new Event("vasthusilpy_cad_vault_update"));
   window.dispatchEvent(new Event("vasthusilpy_subscription_update"));
   window.dispatchEvent(new CustomEvent("vasthusilpy_web_data_synced", { detail: { syncedAt } }));
 
@@ -250,8 +237,6 @@ export async function performFullWebDataSync(): Promise<{
     estimates: serverMerged?.estimates?.length || localData.estimates.length,
     customers: serverMerged?.customers?.length || localData.customers.length,
     rateItems: serverMerged?.rateItems?.length || localData.rateItems.length,
-    cadFolders: serverMerged?.cadFolders?.length || localData.cadFolders.length,
-    cadFiles: serverMerged?.cadFiles?.length || localData.cadFiles.length,
     subscriptionRequests: serverMerged?.subscriptionRequests?.length || localData.subscriptionRequests.length
   };
 
@@ -443,8 +428,6 @@ export async function pullAndHydrateWebDataFromServer(accountIdentifier?: string
     const estimates = mergeById("vasthusilpy_estimates", d.estimates);
     const customers = mergeById("vasthusilpy_customers", d.customers);
     const rateItems = mergeById("vasthusilpy_rate_items", d.rateItems);
-    const cadFolders = mergeById("vasthusilpy_cad_folders_v3", d.cadFolders);
-    const cadFiles = mergeById("vasthusilpy_cad_files_vault_v3", d.cadFiles);
 
     // Save subscriptions to both storage keys for 100% interoperability
     const subs = mergeById("vasthusilpy_subscription_requests", d.subscriptionRequests);
@@ -501,7 +484,6 @@ export async function pullAndHydrateWebDataFromServer(accountIdentifier?: string
 
     // Dispatch real-time events to immediately refresh UI components & tabs
     window.dispatchEvent(new Event("vasthusilpy_storage_update"));
-    window.dispatchEvent(new Event("vasthusilpy_cad_vault_update"));
     window.dispatchEvent(new Event("vasthusilpy_subscription_update"));
     window.dispatchEvent(new CustomEvent("vasthusilpy_web_data_synced", { detail: { syncedAt } }));
 
@@ -519,8 +501,6 @@ export async function pullAndHydrateWebDataFromServer(accountIdentifier?: string
         estimates: estimates.length,
         customers: customers.length,
         rateItems: rateItems.length,
-        cadFolders: cadFolders.length,
-        cadFiles: cadFiles.length,
         subscriptionRequests: subs.length
       },
       account: resolvedAccount

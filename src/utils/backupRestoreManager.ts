@@ -22,7 +22,6 @@ import {
   PersonalVendorBill,
   StaffSalaryRecord
 } from "../types";
-import { CADDrawingRecord, CADFolder, CADMetadataIndexItem } from "../types/dataStorageTypes";
 import { EstimateProject } from "../data/estimateData";
 import {
   loadCrmProjects,
@@ -43,13 +42,6 @@ import { doc } from "firebase/firestore";
 import { broadcastMessage } from "./broadcastSync";
 
 // Storage Key Constants
-const STORAGE_KEYS_VAULT = {
-  FILES: "vasthusilpy_cad_files_vault_v3",
-  FOLDERS: "vasthusilpy_cad_folders_v3",
-  INDEX: "vasthusilpy_cad_metadata_index_v3",
-  SETTINGS: "vasthusilpy_cad_vault_settings_v3"
-};
-
 const STORAGE_KEYS_CONSTRUCTION = {
   PROJECTS: "vasthusilpy_construction_projects",
   AGREEMENTS: "vasthusilpy_construction_agreements",
@@ -114,8 +106,6 @@ export interface VasthusilpyBackupPackage {
     exportedAt: string; // ISO string
     exportedAtFormatted: string;
     // Core Counts
-    totalVaultFiles: number;
-    totalVaultFolders: number;
     totalConstructionProjects: number;
     totalConstructionAgreements: number;
     totalQuotations: number;
@@ -132,15 +122,7 @@ export interface VasthusilpyBackupPackage {
     userEmail?: string;
   };
 
-  // 1. DATA STORAGE VAULT
-  dataStorageVault: {
-    files: CADDrawingRecord[];
-    folders: CADFolder[];
-    metadataIndex?: CADMetadataIndexItem[];
-    settings?: any;
-  };
-
-  // 2. CONSTRUCTION WORK
+  // 1. CONSTRUCTION WORK
   constructionWork: {
     projects: ConstructionProject[];
     agreements: ConstructionAgreement[];
@@ -240,13 +222,7 @@ function readStorageJson<T>(key: string, fallback: T): T {
  * Compile all office data from all 7 tabs into a unified, complete backup package
  */
 export function generateFullBackupPackage(userEmail?: string): VasthusilpyBackupPackage {
-  // 1. Data Storage Vault
-  const vaultFiles: CADDrawingRecord[] = readStorageJson(STORAGE_KEYS_VAULT.FILES, []);
-  const vaultFolders: CADFolder[] = readStorageJson(STORAGE_KEYS_VAULT.FOLDERS, []);
-  const vaultIndex: CADMetadataIndexItem[] = readStorageJson(STORAGE_KEYS_VAULT.INDEX, []);
-  const vaultSettings = readStorageJson(STORAGE_KEYS_VAULT.SETTINGS, null);
-
-  // 2. Construction Work
+  // 1. Construction Work
   const constructionProjects: ConstructionProject[] = readStorageJson(STORAGE_KEYS_CONSTRUCTION.PROJECTS, []);
   const constructionAgreements: ConstructionAgreement[] = readStorageJson(STORAGE_KEYS_CONSTRUCTION.AGREEMENTS, []);
   const constructionSettings: ConstructionSettings | null = readStorageJson(STORAGE_KEYS_CONSTRUCTION.SETTINGS, null);
@@ -318,8 +294,6 @@ export function generateFullBackupPackage(userEmail?: string): VasthusilpyBackup
       version: "3.0.0",
       exportedAt: now.toISOString(),
       exportedAtFormatted: formatted,
-      totalVaultFiles: vaultFiles.length,
-      totalVaultFolders: vaultFolders.length,
       totalConstructionProjects: constructionProjects.length,
       totalConstructionAgreements: constructionAgreements.length,
       totalQuotations: quotations.length,
@@ -334,12 +308,6 @@ export function generateFullBackupPackage(userEmail?: string): VasthusilpyBackup
       totalOnlineApplications: onlineApplicants.length,
       totalImportantSites: importantSites.length,
       userEmail: userEmail || "deepak.vasthusilpy@gmail.com"
-    },
-    dataStorageVault: {
-      files: vaultFiles,
-      folders: vaultFolders,
-      metadataIndex: vaultIndex,
-      settings: vaultSettings
     },
     constructionWork: {
       projects: constructionProjects,
@@ -696,36 +664,7 @@ export async function restoreBackupPackage(
 ): Promise<{ success: boolean; message: string }> {
   try {
     // ----------------------------------------------------
-    // 1. DATA STORAGE VAULT
-    // ----------------------------------------------------
-    const incomingVaultFiles = pkg.dataStorageVault?.files || [];
-    const incomingVaultFolders = pkg.dataStorageVault?.folders || [];
-
-    if (mode === "REPLACE") {
-      if (incomingVaultFiles.length > 0 || incomingVaultFolders.length > 0) {
-        localStorage.setItem(STORAGE_KEYS_VAULT.FILES, JSON.stringify(incomingVaultFiles));
-        if (incomingVaultFolders.length > 0) {
-          localStorage.setItem(STORAGE_KEYS_VAULT.FOLDERS, JSON.stringify(incomingVaultFolders));
-        }
-      }
-    } else {
-      // MERGE Vault Files
-      const existingVaultFiles: CADDrawingRecord[] = readStorageJson(STORAGE_KEYS_VAULT.FILES, []);
-      const fileMap = new Map<string, CADDrawingRecord>();
-      existingVaultFiles.forEach((f) => fileMap.set(f.id, f));
-      incomingVaultFiles.forEach((f) => fileMap.set(f.id, f));
-      localStorage.setItem(STORAGE_KEYS_VAULT.FILES, JSON.stringify(Array.from(fileMap.values())));
-
-      // MERGE Vault Folders
-      const existingFolders: CADFolder[] = readStorageJson(STORAGE_KEYS_VAULT.FOLDERS, []);
-      const folderMap = new Map<string, CADFolder>();
-      existingFolders.forEach((f) => folderMap.set(f.id, f));
-      incomingVaultFolders.forEach((f) => folderMap.set(f.id, f));
-      localStorage.setItem(STORAGE_KEYS_VAULT.FOLDERS, JSON.stringify(Array.from(folderMap.values())));
-    }
-
-    // ----------------------------------------------------
-    // 2. CONSTRUCTION WORK
+    // 1. CONSTRUCTION WORK
     // ----------------------------------------------------
     const incomingConstProjects = pkg.constructionWork?.projects || [];
     const incomingConstAgreements = pkg.constructionWork?.agreements || [];

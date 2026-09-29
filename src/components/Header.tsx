@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import { OfflineBackupRestoreModal } from "./office/crm/OfflineBackupRestoreModal";
 import { GoogleDriveBackupModal } from "./common/GoogleDriveBackupModal";
+import { CloudflareBackendModal } from "./cloudflare/CloudflareBackendModal";
 import {
   performFullWebDataSync,
   getLastWebDataSyncTime,
@@ -83,6 +84,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [backupInitialTab, setBackupInitialTab] = useState<"backup" | "snapshots" | "restore" | "health">("backup");
   const [isGoogleDriveModalOpen, setIsGoogleDriveModalOpen] = useState(false);
   const [gdriveInitialTab, setGdriveInitialTab] = useState<"backup" | "history" | "settings">("backup");
+  const [isCloudflareModalOpen, setIsCloudflareModalOpen] = useState(false);
   const [isWebSyncing, setIsWebSyncing] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
   const [lastSyncStr, setLastSyncStr] = useState<string>(() => formatSyncTimestamp(getLastWebDataSyncTime()));
@@ -165,10 +167,16 @@ export const Header: React.FC<HeaderProps> = ({
     };
     window.addEventListener("vasthusilpy_open_gdrive_backup", handleOpenGdriveModal);
 
+    const handleOpenCloudflareModal = () => {
+      setIsCloudflareModalOpen(true);
+    };
+    window.addEventListener("vasthusilpy_open_cloudflare_modal", handleOpenCloudflareModal);
+
     return () => {
       window.removeEventListener("vasthusilpy_web_data_synced", handleSyncEvent);
       window.removeEventListener("vasthusilpy_open_backup_modal", handleOpenBackupModal);
       window.removeEventListener("vasthusilpy_open_gdrive_backup", handleOpenGdriveModal);
+      window.removeEventListener("vasthusilpy_open_cloudflare_modal", handleOpenCloudflareModal);
     };
   }, []);
 
@@ -535,6 +543,22 @@ export const Header: React.FC<HeaderProps> = ({
                 </span>
               </button>
 
+              {/* CLOUDFLARE BACKEND SUPPORT BUTTON */}
+              <button
+                type="button"
+                onClick={() => setIsCloudflareModalOpen(true)}
+                title="Cloudflare Edge Backend, Workers & KV Configuration"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full border border-amber-500/50 hover:border-amber-400 bg-amber-950/70 hover:bg-amber-900/80 text-amber-200 hover:text-amber-100 text-xs font-mono font-bold transition-all shadow-sm cursor-pointer backdrop-blur-md"
+              >
+                <Globe className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span className="uppercase text-[11px] font-black tracking-wider hidden sm:inline">
+                  CLOUDFLARE
+                </span>
+                <span className="uppercase text-[10px] font-black tracking-wider sm:hidden">
+                  CF
+                </span>
+              </button>
+
               {isPrimaryAdmin && (
                 <button
                   onClick={() => setIsManageUsersOpen(true)}
@@ -622,6 +646,11 @@ export const Header: React.FC<HeaderProps> = ({
         isOpen={isGoogleDriveModalOpen}
         onClose={() => setIsGoogleDriveModalOpen(false)}
         initialTab={gdriveInitialTab}
+      />
+
+      <CloudflareBackendModal
+        isOpen={isCloudflareModalOpen}
+        onClose={() => setIsCloudflareModalOpen(false)}
       />
     </>
   );
