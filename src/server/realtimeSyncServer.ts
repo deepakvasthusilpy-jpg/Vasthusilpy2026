@@ -313,7 +313,11 @@ export function registerRealtimeSyncRoutes(app: Express) {
       "subscription_requests",
       "user_profiles",
       "important_sites",
-      "important_folders"
+      "important_folders",
+      "personal_bills",
+      "valuation_certificates",
+      "application_form_entries",
+      "site_inspection_templates"
     ];
 
     const result: Record<string, any[]> = {};

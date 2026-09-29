@@ -169,7 +169,7 @@ export function recordGlobalDeletion(id: string, collectionName: string = "gener
 
   // 5. Send to Server backend
   if (typeof fetch !== "undefined") {
-    fetch("/api/sync/deletions", {
+    fetch("/api/deletion-registry", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: cleanId, collection: collectionName })

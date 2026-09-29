@@ -1,7 +1,7 @@
 import { Express, Request, Response } from "express";
 import fs from "fs";
 import path from "path";
-import { broadcastSSE } from "./realtimeSyncServer.ts";
+import { broadcastSSE } from "./realtimeSyncServer";
 
 const WEB_DATA_DIR = path.join(process.cwd(), "data", "web_data");
 

@@ -62,6 +62,7 @@ import {
 import { safeDeleteEstimate, getDeletedEstimateIds, safeSetDoc, shouldPurgeClient, shouldRenameClient, addDeletedEstimateId } from "./utils/storageManager";
 import { convertEstimateToCrmProject, convertEstimateToInvoice } from "./utils/estimateConverter";
 import { initializeAutoSyncService } from "./utils/webDataSyncManager";
+import { initCloudRealtimeSync } from "./utils/cloudRealtimeClient";
 import { checkAndRunDailyAutoSnapshot } from "./utils/dailySnapshotManager";
 import { db } from "./lib/firebase";
 import { collection, onSnapshot, setDoc, doc, deleteDoc } from "firebase/firestore";

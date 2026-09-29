@@ -8,6 +8,10 @@ import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 import twilio from "twilio";
 import nodemailer from "nodemailer";
+import { registerApplicationFormsRoutes } from "./src/server/applicationFormsServer";
+import { registerCrmRoutes } from "./src/server/crmServer";
+import { registerWebDataRoutes } from "./src/server/webDataServer";
+import { registerRealtimeSyncRoutes } from "./src/server/realtimeSyncServer";
 
 dotenv.config();
 
@@ -3173,11 +3177,6 @@ app.post("/api/crm/send-work-receipt-email", async (req, res) => {
     return res.status(500).json({ error: error.message || "Internal server error while sending work receipt email." });
   }
 });
-
-import { registerApplicationFormsRoutes } from "./src/server/applicationFormsServer.ts";
-import { registerCrmRoutes } from "./src/server/crmServer.ts";
-import { registerWebDataRoutes } from "./src/server/webDataServer.ts";
-import { registerRealtimeSyncRoutes } from "./src/server/realtimeSyncServer.ts";
 
 // Register Universal Realtime Cloud Synchronization and SSE Endpoints
 registerRealtimeSyncRoutes(app);

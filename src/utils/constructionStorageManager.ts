@@ -14,6 +14,7 @@ import {
   FloorAreaEntry,
   PaymentScheduleItem
 } from "../types";
+import { pushCloudSync, deleteCloudRecord } from "./cloudRealtimeClient";
 
 const STORAGE_KEYS = {
   PROJECTS: "vasthusilpy_construction_projects",
@@ -777,6 +778,8 @@ export class ConstructionStorageManager {
   static saveSettings(settings: ConstructionSettings): void {
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
     this.logAudit("SETTINGS", "SYSTEM", "Updated Construction Settings and Stage Specifications");
+    // Real-time Cloud Sync
+    pushCloudSync("construction_settings", [settings]);
   }
 
   /**
@@ -822,6 +825,11 @@ export class ConstructionStorageManager {
       this.logAudit("PROJECT", project.id, `Created new project: ${project.title}`);
     }
     localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(list));
+    localStorage.setItem("vasthusilpy_construction_projects_v1", JSON.stringify(list));
+    
+    // Real-time Cloud Sync
+    pushCloudSync("construction_projects", list);
+    
     return saved;
   }
 
@@ -830,7 +838,13 @@ export class ConstructionStorageManager {
     const filtered = list.filter(p => p.id !== id);
     if (filtered.length !== list.length) {
       localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(filtered));
+      localStorage.setItem("vasthusilpy_construction_projects_v1", JSON.stringify(filtered));
       this.logAudit("PROJECT", id, `Deleted project ID ${id}`);
+      
+      // Real-time Cloud Sync
+      deleteCloudRecord("construction_projects", id);
+      pushCloudSync("construction_projects", filtered);
+      
       return true;
     }
     return false;
@@ -1174,6 +1188,10 @@ export class ConstructionStorageManager {
     }
 
     localStorage.setItem(STORAGE_KEYS.AGREEMENTS, JSON.stringify(list));
+    localStorage.setItem("vasthusilpy_construction_agreements_v1", JSON.stringify(list));
+
+    // Real-time Cloud Sync
+    pushCloudSync("construction_agreements", list);
 
     // Asynchronously synchronize to Firestore for cross-device public QR verification
     try {
@@ -1258,7 +1276,13 @@ export class ConstructionStorageManager {
     const filtered = list.filter(a => a.id !== id);
     if (filtered.length !== list.length) {
       localStorage.setItem(STORAGE_KEYS.AGREEMENTS, JSON.stringify(filtered));
+      localStorage.setItem("vasthusilpy_construction_agreements_v1", JSON.stringify(filtered));
       this.logAudit("AGREEMENT", id, `Permanently deleted agreement ID ${id}`);
+      
+      // Real-time Cloud Sync
+      deleteCloudRecord("construction_agreements", id);
+      pushCloudSync("construction_agreements", filtered);
+      
       return true;
     }
     return false;

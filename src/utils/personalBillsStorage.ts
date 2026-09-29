@@ -9,6 +9,7 @@ import {
   PersonalVendorBill,
   StaffSalaryRecord
 } from "../types";
+import { pushCloudSync } from "./cloudRealtimeClient";
 
 // STORAGE KEYS
 const STORAGE_KEY_POOV_MALA_ROWS = "vasthusilpy_poov_mala_rows_v2";
@@ -454,6 +455,7 @@ export function savePoovMalaRows(rows: PoovMalaBillRow[]): void {
   try {
     localStorage.setItem(STORAGE_KEY_POOV_MALA_ROWS, JSON.stringify(rows));
     notifyStorageUpdate();
+    pushCloudSync("personal_bills", rows);
   } catch (e) {
     console.error("Failed to save Poov Mala rows", e);
   }
@@ -505,6 +507,7 @@ export function saveKsebBills(bills: KsebBillRecord[]): void {
   try {
     localStorage.setItem(STORAGE_KEY_KSEB_BILLS, JSON.stringify(bills));
     notifyStorageUpdate();
+    pushCloudSync("personal_bills", bills);
   } catch (e) {
     console.error("Failed to save KSEB bills", e);
   }
@@ -528,6 +531,7 @@ export function saveHealthInsurancePolicies(policies: HealthInsurancePolicy[]): 
   try {
     localStorage.setItem(STORAGE_KEY_HEALTH_INSURANCE, JSON.stringify(policies));
     notifyStorageUpdate();
+    pushCloudSync("personal_bills", policies);
   } catch (e) {
     console.error("Failed to save Health Insurance policies", e);
   }
@@ -551,6 +555,7 @@ export function saveRdAccounts(accounts: RdAccount[]): void {
   try {
     localStorage.setItem(STORAGE_KEY_RD_ACCOUNTS, JSON.stringify(accounts));
     notifyStorageUpdate();
+    pushCloudSync("personal_bills", accounts);
   } catch (e) {
     console.error("Failed to save RD accounts", e);
   }
@@ -574,6 +579,7 @@ export function savePanchayathBills(bills: PanchayathBillRecord[]): void {
   try {
     localStorage.setItem(STORAGE_KEY_PANCHAYATH_BILLS, JSON.stringify(bills));
     notifyStorageUpdate();
+    pushCloudSync("personal_bills", bills);
   } catch (e) {
     console.error("Failed to save Panchayath bills", e);
   }
@@ -620,6 +626,7 @@ export function savePersonalVendorBills(bills: PersonalVendorBill[]): void {
   try {
     localStorage.setItem(STORAGE_KEY_VENDOR_BILLS, JSON.stringify(bills));
     notifyStorageUpdate();
+    pushCloudSync("personal_bills", bills);
   } catch (e) {
     console.error("Failed to save personal vendor bills", e);
   }
@@ -645,6 +652,7 @@ export function saveStaffSalaryRecords(records: StaffSalaryRecord[]): void {
   try {
     localStorage.setItem(STORAGE_KEY_STAFF_SALARY, JSON.stringify(records));
     notifyStorageUpdate();
+    pushCloudSync("personal_bills", records);
   } catch (e) {
     console.error("Failed to save staff salary records", e);
   }

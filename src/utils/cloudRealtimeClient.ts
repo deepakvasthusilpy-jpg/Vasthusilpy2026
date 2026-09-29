@@ -78,8 +78,12 @@ const COLLECTION_STORAGE_MAP: Record<string, CollectionConfig> = {
     storageKeys: ["vasthusilpy_site_inspections_v1", "vasthusilpy_inspections"],
     events: ["vasthusilpy_site_inspections_updated", "vasthusilpy_storage_update"]
   },
+  site_inspection_templates: {
+    storageKeys: ["vasthusilpy_site_inspection_templates_v2"],
+    events: ["vasthusilpy_inspection_templates_updated", "vasthusilpy_storage_update"]
+  },
   inspection_templates: {
-    storageKeys: ["vasthusilpy_site_inspection_templates_v1"],
+    storageKeys: ["vasthusilpy_site_inspection_templates_v2"],
     events: ["vasthusilpy_inspection_templates_updated", "vasthusilpy_storage_update"]
   },
 
@@ -143,6 +147,21 @@ const COLLECTION_STORAGE_MAP: Record<string, CollectionConfig> = {
   important_folders: {
     storageKeys: ["vasthusilpy_site_folders_v1", "vasthusilpy_important_folders_v1"],
     events: ["vasthusilpy_site_folders_updated", "vasthusilpy_storage_update"]
+  },
+
+  // Personal Bills & Payments
+  personal_bills: {
+    storageKeys: [
+      "vasthusilpy_poov_mala_rows_v2",
+      "vasthusilpy_kseb_bills_v1",
+      "vasthusilpy_health_insurance_v1",
+      "vasthusilpy_rd_accounts_v1",
+      "vasthusilpy_panchayath_bills_v1",
+      "vasthusilpy_personal_vendors_v1",
+      "vasthusilpy_personal_vendor_bills_v1",
+      "vasthusilpy_staff_salary_records_v1"
+    ],
+    events: ["personal_bills_updated", "vasthusilpy_storage_update"]
   }
 };
 
@@ -314,8 +333,18 @@ export function initCloudRealtimeSync() {
       });
 
       // Handle instantaneous updates from other computers / browsers / logins
-      const handleIncomingSync = (payload: any) => {
-        if (!payload || !payload.collection) return;
+      const applySyncPayload = (payload: any) => {
+        if (!payload) return;
+        
+        // Handle multi-collection payload (e.g. web_data_sync)
+        if (!payload.collection) {
+          Object.entries(payload).forEach(([colName, data]) => {
+             if (Array.isArray(data)) {
+               applySyncPayload({ collection: colName, records: data });
+             }
+          });
+          return;
+        }
 
         const colName = payload.collection;
         const config = COLLECTION_STORAGE_MAP[colName];
@@ -346,7 +375,7 @@ export function initCloudRealtimeSync() {
       sseConnection.addEventListener("sync_update", (event: MessageEvent) => {
         try {
           const payload = JSON.parse(event.data);
-          handleIncomingSync(payload);
+          applySyncPayload(payload);
         } catch (err) {
           console.warn("[CloudSync] Error handling sync_update event:", err);
         }
@@ -355,7 +384,7 @@ export function initCloudRealtimeSync() {
       sseConnection.addEventListener("web_data_sync", (event: MessageEvent) => {
         try {
           const payload = JSON.parse(event.data);
-          handleIncomingSync(payload);
+          applySyncPayload(payload);
         } catch (err) {
           console.warn("[CloudSync] Error handling web_data_sync event:", err);
         }

@@ -407,8 +407,7 @@ export const ClientViewTab: React.FC<ClientViewTabProps> = ({
     });
 
     setInvoices(updatedInvoices);
-    localStorage.setItem("vasthusilpy_invoices", JSON.stringify(updatedInvoices));
-    window.dispatchEvent(new Event("vasthusilpy_invoices_updated"));
+    saveInvoices(updatedInvoices, true);
   };
 
   const handleUpdateInvoiceStatus = (
@@ -445,8 +444,7 @@ export const ClientViewTab: React.FC<ClientViewTabProps> = ({
     });
 
     setInvoices(updatedInvoices);
-    localStorage.setItem("vasthusilpy_invoices", JSON.stringify(updatedInvoices));
-    window.dispatchEvent(new Event("vasthusilpy_invoices_updated"));
+    saveInvoices(updatedInvoices, true);
   };
 
   const handleDeletePayment = (invoiceId: string, paymentId: string) => {
@@ -476,8 +474,7 @@ export const ClientViewTab: React.FC<ClientViewTabProps> = ({
     });
 
     setInvoices(updatedInvoices);
-    localStorage.setItem("vasthusilpy_invoices", JSON.stringify(updatedInvoices));
-    window.dispatchEvent(new Event("vasthusilpy_invoices_updated"));
+    saveInvoices(updatedInvoices, true);
   };
 
   // Filter Invoices

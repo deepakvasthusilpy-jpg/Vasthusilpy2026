@@ -447,7 +447,15 @@ export function saveQuotations(list: Quotation[]): void {
     const cleanList = filterOutDeletedRecords(list || []);
     if (typeof localStorage !== "undefined") {
       localStorage.setItem(QUOTATION_STORAGE_KEYS.QUOTATIONS, JSON.stringify(cleanList));
+      localStorage.setItem("vasthusilpy_quotations", JSON.stringify(cleanList));
+      localStorage.setItem("vasthusilpy_quotations_v1", JSON.stringify(cleanList));
     }
+    
+    // Real-time Cloud Sync
+    import("./cloudRealtimeClient").then(({ pushCloudSync }) => {
+      pushCloudSync("quotations", cleanList);
+    });
+
     // Optional firestore sync for each quotation if available
     if (db) {
       cleanList.forEach((q) => {
@@ -466,6 +474,13 @@ export function deleteQuotation(id: string): Quotation[] {
   const current = loadQuotations();
   const remaining = current.filter((q) => q.id !== id);
   saveQuotations(remaining);
+  
+  // Real-time Cloud Sync
+  import("./cloudRealtimeClient").then(({ deleteCloudRecord, pushCloudSync }) => {
+    deleteCloudRecord("quotations", id);
+    pushCloudSync("quotations", remaining);
+  });
+
   if (db) {
     deleteDoc(doc(db, "quotations", id)).catch(() => {});
   }

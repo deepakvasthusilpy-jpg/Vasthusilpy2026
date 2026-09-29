@@ -206,14 +206,7 @@ export const VasthusilpyCrmTab: React.FC<VasthusilpyCrmTabProps> = ({
   // Save updated projects to localStorage, sync to server backend, and Firestore
   const updateProjectsState = (newProjects: CrmProject[], changedProject?: CrmProject | CrmProject[]) => {
     setProjects(newProjects);
-    try {
-      localStorage.setItem("vasthusilpy_crm_projects", JSON.stringify(newProjects));
-    } catch (e) {
-      console.error("Failed to save projects to localStorage", e);
-    }
-    window.dispatchEvent(new Event("vasthusilpy_storage_update"));
-
-    broadcastMessage({ type: "SYNC_PROJECTS", data: newProjects });
+    saveCrmProjects(newProjects, true);
 
     // Durable sync to server backend
     if (changedProject) {
@@ -234,14 +227,7 @@ export const VasthusilpyCrmTab: React.FC<VasthusilpyCrmTabProps> = ({
   // Save updated invoices to localStorage, sync to server backend, and Firestore
   const updateInvoicesState = (newInvoices: Invoice[], changedInvoice?: Invoice | Invoice[]) => {
     setInvoices(newInvoices);
-    try {
-      localStorage.setItem("vasthusilpy_invoices", JSON.stringify(newInvoices));
-    } catch (e) {
-      console.error("Failed to save invoices to localStorage", e);
-    }
-    window.dispatchEvent(new Event("vasthusilpy_storage_update"));
-
-    broadcastMessage({ type: "SYNC_INVOICES", data: newInvoices });
+    saveInvoices(newInvoices, true);
 
     // Durable sync to server backend
     if (changedInvoice) {

@@ -1,4 +1,4 @@
-import { CrmProject, Invoice, RateItem, Customer } from "../types";
+import { CrmProject, Invoice, RateItem, Customer, PaymentRecord } from "../types";
 import { INITIAL_CRM_PROJECTS, INITIAL_INVOICES, INITIAL_RATE_ITEMS, INITIAL_CUSTOMERS } from "../data/crmData";
 import { EstimateProject, INITIAL_ESTIMATES_LIST, normalizeProjectBlocks } from "../data/estimateData";
 import { db } from "../lib/firebase";
@@ -583,13 +583,17 @@ export function saveCrmProjects(projects: CrmProject[], dispatchEvents = true): 
   const filtered = projects.filter((p) => !deletedIds.includes(p.id));
   try {
     localStorage.setItem(STORAGE_KEYS.CRM_PROJECTS, JSON.stringify(filtered));
+    localStorage.setItem("vasthusilpy_projects", JSON.stringify(filtered));
     localStorage.setItem(STORAGE_KEYS.CRM_INITIALIZED, "true");
     if (dispatchEvents) {
       window.dispatchEvent(new Event("vasthusilpy_storage_update"));
+      window.dispatchEvent(new Event("vasthusilpy_projects_updated"));
+      window.dispatchEvent(new Event("vasthusilpy_crm_updated"));
       broadcastMessage({ type: "SYNC_PROJECTS", data: filtered });
     }
     // Realtime Cloud push (broadcasts via SSE to all open tabs and devices instantly)
     pushCloudSync("crm_projects", filtered);
+    pushCloudSync("projects", filtered);
     // Background durable sync to server
     syncCrmProjectsWithServer(filtered).catch(() => {});
   } catch (e) {
@@ -636,6 +640,44 @@ export async function deleteInvoiceFromServer(invoiceId: string): Promise<void> 
   } catch (err) {
     console.warn("Failed to delete invoice on server:", err);
   }
+}
+
+export async function recordInvoicePaymentOnServer(invoiceId: string, payment: PaymentRecord): Promise<Invoice | null> {
+  try {
+    const res = await fetch(`/api/crm/invoices/${invoiceId}/payments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ payment })
+    });
+    if (res.ok) {
+      const parsed = await safeJsonResponse(res);
+      const data = parsed.data || {};
+      if (data && data.invoice) {
+        return data.invoice;
+      }
+    }
+  } catch (err) {
+    console.warn("Failed to record invoice payment on server:", err);
+  }
+  return null;
+}
+
+export async function deleteInvoicePaymentOnServer(invoiceId: string, paymentId: string): Promise<Invoice | null> {
+  try {
+    const res = await fetch(`/api/crm/invoices/${invoiceId}/payments/${paymentId}`, {
+      method: "DELETE"
+    });
+    if (res.ok) {
+      const parsed = await safeJsonResponse(res);
+      const data = parsed.data || {};
+      if (data && data.invoice) {
+        return data.invoice;
+      }
+    }
+  } catch (err) {
+    console.warn("Failed to delete invoice payment on server:", err);
+  }
+  return null;
 }
 
 export async function syncInvoicesWithServer(invoices: Invoice[]): Promise<Invoice[]> {
@@ -707,6 +749,7 @@ export function saveInvoices(invoices: Invoice[], dispatchEvents = true): void {
   const filtered = invoices.filter((i) => !deletedInvoiceIds.includes(i.id));
   try {
     localStorage.setItem(STORAGE_KEYS.INVOICES, JSON.stringify(filtered));
+    localStorage.setItem("vasthusilpy_crm_invoices", JSON.stringify(filtered));
     localStorage.setItem(STORAGE_KEYS.INVOICES_INITIALIZED, "true");
     if (dispatchEvents) {
       window.dispatchEvent(new Event("vasthusilpy_storage_update"));
@@ -715,6 +758,7 @@ export function saveInvoices(invoices: Invoice[], dispatchEvents = true): void {
     }
     // Realtime Cloud push
     pushCloudSync("crm_invoices", filtered);
+    pushCloudSync("invoices", filtered);
     // Background durable sync to server
     syncInvoicesWithServer(filtered).catch(() => {});
   } catch (e) {

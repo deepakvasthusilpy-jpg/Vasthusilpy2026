@@ -183,6 +183,11 @@ export const saveInspectionTemplates = (templates: InspectionTemplate[], syncToF
     localStorage.setItem(STORAGE_KEY_TEMPLATES, JSON.stringify(templates));
     window.dispatchEvent(new Event("vasthusilpy_inspection_templates_updated"));
 
+    // Real-time Cloud Sync
+    import("./cloudRealtimeClient").then(({ pushCloudSync }) => {
+      pushCloudSync("inspection_templates", templates);
+    });
+
     if (syncToFirebase && db) {
       templates.forEach(async (tpl) => {
         try {
@@ -221,7 +226,13 @@ export const saveSiteInspections = (inspections: SiteInspection[], syncToFirebas
     const deletedIds = getDeletedInspectionIds();
     const cleanInspections = inspections.filter((i) => i && i.id && !deletedIds.includes(i.id));
     localStorage.setItem(STORAGE_KEY_INSPECTIONS, JSON.stringify(cleanInspections));
+    localStorage.setItem("vasthusilpy_inspections", JSON.stringify(cleanInspections));
     window.dispatchEvent(new Event("vasthusilpy_site_inspections_updated"));
+
+    // Real-time Cloud Sync
+    import("./cloudRealtimeClient").then(({ pushCloudSync }) => {
+      pushCloudSync("site_inspections", cleanInspections);
+    });
 
     if (syncToFirebase && db) {
       cleanInspections.forEach(async (item) => {
@@ -244,7 +255,14 @@ export const deleteSiteInspection = (id: string): SiteInspection[] => {
   const current = loadSiteInspections();
   const updated = current.filter((i) => i.id !== id);
   localStorage.setItem(STORAGE_KEY_INSPECTIONS, JSON.stringify(updated));
+  localStorage.setItem("vasthusilpy_inspections", JSON.stringify(updated));
   window.dispatchEvent(new Event("vasthusilpy_site_inspections_updated"));
+
+  // Real-time Cloud Sync
+  import("./cloudRealtimeClient").then(({ deleteCloudRecord, pushCloudSync }) => {
+    deleteCloudRecord("site_inspections", id);
+    pushCloudSync("site_inspections", updated);
+  });
 
   if (db) {
     try {
