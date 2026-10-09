@@ -33,10 +33,6 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
     user,
     emailUser,
     isPrimaryAdmin,
-    lastAdminTotpVerifiedAt,
-    adminTotpDaysRemaining,
-    isAdminTotpDue,
-    verifyAdminTotpNow,
     updateUserProfile
   } = useAuth();
 
@@ -44,11 +40,9 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   const [displayName, setDisplayName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [profession, setProfession] = useState("");
-  const [totpInput, setTotpInput] = useState("");
 
   const [saving, setSaving] = useState(false);
   const [syncingWebData, setSyncingWebData] = useState(false);
-  const [verifyingTotp, setVerifyingTotp] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [lastSyncDisplay, setLastSyncDisplay] = useState<string | null>(null);
 
@@ -60,7 +54,6 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
       setDisplayName(emailUser?.displayName || user?.displayName || (activeEmail ? activeEmail.split("@")[0] : ""));
       setPhoneNumber(emailUser?.phone || (activeEmail.includes("deepak") ? "9567627277" : ""));
       setProfession(emailUser?.profession || "Vasthu Consultant & Civil Engineer");
-      setTotpInput("");
       setStatusMessage(null);
       setLastSyncDisplay(formatSyncTimestamp(getLastWebDataSyncTime()));
     }
@@ -138,53 +131,6 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
       setSyncingWebData(false);
     }
   };
-
-  const handleVerifyTotp = async () => {
-    const cleanTotp = totpInput.trim().replace(/\D/g, "");
-    if (cleanTotp.length !== 6) {
-      setStatusMessage({
-        type: "error",
-        text: "സാധുവായ 6-അക്ക TOTP കോഡ് നൽകുക (Please enter 6-digit TOTP code)."
-      });
-      return;
-    }
-
-    setVerifyingTotp(true);
-    setStatusMessage(null);
-
-    try {
-      const ok = await verifyAdminTotpNow(cleanTotp);
-      if (ok) {
-        setTotpInput("");
-        setStatusMessage({
-          type: "success",
-          text: "അഡ്മിൻ TOTP വിജയകരമായി വെരിഫൈ ചെയ്തു! അടുത്ത 30 ദിവസത്തേക്ക് സുരക്ഷിതമായി ലോഗിൻ നിലനിർത്തും (Admin TOTP verified for 30 days)."
-        });
-      } else {
-        setStatusMessage({
-          type: "error",
-          text: "തെറ്റായ TOTP കോഡ്. Authenticator ആപ്പ് പരിശോധിച്ച് വീണ്ടും ശ്രമിക്കുക (Invalid TOTP code)."
-        });
-      }
-    } catch (err: any) {
-      setStatusMessage({
-        type: "error",
-        text: err.message || "Failed to verify TOTP code."
-      });
-    } finally {
-      setVerifyingTotp(false);
-    }
-  };
-
-  const lastVerifiedFormatted = lastAdminTotpVerifiedAt
-    ? new Date(lastAdminTotpVerifiedAt).toLocaleDateString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit"
-      })
-    : "Never";
 
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
@@ -314,7 +260,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
               )}
             </div>
             <p className="text-[10px] text-white/50 font-mono">
-              Enables 10-digit mobile login and links subscription and CRM accounts.
+              Enables 10-digit mobile login and links accounts.
             </p>
           </div>
 
@@ -367,71 +313,6 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
             )}
           </button>
         </form>
-
-        {/* 30-Day Recurring Admin TOTP Security Section */}
-        {isPrimaryAdmin && (
-          <div className="pt-4 border-t border-white/15 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs font-bold text-white font-mono">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                <span>30-Day Recurring Admin TOTP</span>
-              </div>
-              <span
-                className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold border ${
-                  isAdminTotpDue
-                    ? "bg-rose-500/20 text-rose-300 border-rose-400/40"
-                    : "bg-emerald-500/20 text-emerald-300 border-emerald-400/40"
-                }`}
-              >
-                {isAdminTotpDue
-                  ? "Re-verification Due"
-                  : `${adminTotpDaysRemaining} Days Remaining`}
-              </span>
-            </div>
-
-            <div className="p-3.5 rounded-2xl bg-black/40 border border-white/15 space-y-2.5 text-xs font-mono">
-              <div className="flex items-center justify-between text-[11px] text-purple-200/80">
-                <span className="flex items-center gap-1">
-                  <Clock className="w-3 h-3 text-pink-300" />
-                  <span>Last Verified:</span>
-                </span>
-                <span className="text-white">{lastVerifiedFormatted}</span>
-              </div>
-
-              <div className="text-[11px] text-purple-200/60 leading-relaxed">
-                30 ദിവസത്തെ സുരക്ഷാ ഇടവേളയിൽ അഡ്മിൻ TOTP പരിശോധന ആവർത്തിക്കുന്നു (30-day recurring Admin TOTP required for every login).
-              </div>
-
-              {/* In-place verify input */}
-              <div className="flex items-center gap-2 pt-1">
-                <div className="relative flex-1">
-                  <input
-                    type="text"
-                    maxLength={6}
-                    value={totpInput}
-                    onChange={(e) => setTotpInput(e.target.value.replace(/\D/g, ""))}
-                    placeholder="Enter 6-digit TOTP"
-                    className="w-full bg-white/10 border border-white/25 rounded-xl px-3 py-1.5 text-xs font-mono text-center tracking-widest text-white placeholder-white/40 focus:outline-none focus:border-emerald-400"
-                  />
-                  <KeyRound className="w-3.5 h-3.5 text-white/50 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                </div>
-                <button
-                  type="button"
-                  onClick={handleVerifyTotp}
-                  disabled={verifyingTotp || totpInput.length !== 6}
-                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold font-mono transition cursor-pointer disabled:opacity-50 flex items-center gap-1 shrink-0"
-                >
-                  {verifyingTotp ? (
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                  )}
-                  <span>Verify Now</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
       </div>
     </div>

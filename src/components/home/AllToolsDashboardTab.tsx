@@ -103,8 +103,7 @@ export const AllToolsDashboardTab: React.FC<AllToolsDashboardTabProps> = ({ onNa
     "survey_land_area",
     "estimate_sheet_tool",
     "rules_ai_chat",
-    "civil_bbs",
-    "invoices_billing_list"
+    "civil_bbs"
   ];
   const featuredTools = ALL_TOOLS_DATA.filter((t) => FEATURED_TOOL_IDS.includes(t.id));
 
@@ -143,7 +142,7 @@ export const AllToolsDashboardTab: React.FC<AllToolsDashboardTabProps> = ({ onNa
             </div>
 
             <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-sans max-w-3xl">
-              തച്ചുശാസ്ത്രം, കെട്ടിട നിർമ്മാണ ചട്ടങ്ങൾ (KPBR 2024 / KSMART), ഡിജിറ്റൽ ലാൻഡ് സർവ്വേ (Heron's Formula), സിവിൽ എഞ്ചിനീയറിംഗ് (IS 456 & IS 2502 BBS), കേരള PWD റേറ്റ് എസ്റ്റിമേറ്റ്, ഓഫീസ് CRM, GST ഇൻവോയ്സിംഗ് എന്നിവ ഉൾപ്പെടുന്ന സമ്പൂർണ്ണ സോഫ്റ്റ്‌വെയർ സ്യൂട്ട്.
+              തച്ചുശാസ്ത്രം, കെട്ടിട നിർമ്മാണ ചട്ടങ്ങൾ (KPBR 2024 / KSMART), ഡിജിറ്റൽ ലാൻഡ് സർവ്വേ (Heron's Formula), സിവിൽ എഞ്ചിനീയറിംഗ് (IS 456 & IS 2502 BBS), കേരള PWD റേറ്റ് എസ്റ്റിമേറ്റ് എന്നിവ ഉൾപ്പെടുന്ന സമ്പൂർണ്ണ സോഫ്റ്റ്‌വെയർ സ്യൂട്ട്.
             </p>
           </div>
 

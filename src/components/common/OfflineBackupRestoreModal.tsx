@@ -37,7 +37,7 @@ import {
   validateBackupFile,
   restoreBackupPackage,
   BackupValidationResult
-} from "../../../utils/backupRestoreManager";
+} from "../../utils/backupRestoreManager";
 import {
   getDailySnapshots,
   createDailySnapshot,
@@ -46,7 +46,7 @@ import {
   deleteDailySnapshot,
   detectPotentialDataLoss,
   DailySnapshotRecord
-} from "../../../utils/dailySnapshotManager";
+} from "../../utils/dailySnapshotManager";
 
 interface OfflineBackupRestoreModalProps {
   isOpen: boolean;
@@ -109,17 +109,7 @@ export const OfflineBackupRestoreModal: React.FC<OfflineBackupRestoreModalProps>
       constructionAgreements: pkg.constructionWork?.agreements?.length || 0,
       quotations: pkg.quotation?.quotations?.length || 0,
       quotationServices: pkg.quotation?.services?.length || 0,
-      estimates: (pkg.estimator?.estimates?.length ?? pkg.estimates?.length) || 0,
-      rateItems: (pkg.estimator?.rateItems?.length ?? pkg.rateItems?.length) || 0,
-      crmProjects: (pkg.crm?.projects?.length ?? pkg.crmProjects?.length) || 0,
-      customers: (pkg.crm?.customers?.length ?? pkg.customers?.length) || 0,
-      registeredTasks: (pkg.crm?.registeredTasks?.length ?? pkg.registeredTasks?.length) || 0,
-      invoices: (pkg.invoicePayments?.invoices?.length ?? pkg.invoices?.length) || 0,
-      personalBills:
-        (pkg.personalBills?.poovMalaRows?.length || 0) +
-        (pkg.personalBills?.ksebBills?.length || 0) +
-        (pkg.personalBills?.vendorBills?.length || 0) +
-        (pkg.personalBills?.staffSalary?.length || 0)
+      estimates: (pkg.estimator?.estimates?.length ?? pkg.estimates?.length) || 0
     };
   }, [isOpen, restoreCompletedMessage, snapshotActionMessage]);
 
@@ -128,11 +118,7 @@ export const OfflineBackupRestoreModal: React.FC<OfflineBackupRestoreModalProps>
       liveStats.constructionProjects +
       liveStats.constructionAgreements +
       liveStats.quotations +
-      liveStats.estimates +
-      liveStats.crmProjects +
-      liveStats.customers +
-      liveStats.invoices +
-      liveStats.personalBills
+      liveStats.estimates
     );
   }, [liveStats]);
 
@@ -173,7 +159,7 @@ export const OfflineBackupRestoreModal: React.FC<OfflineBackupRestoreModalProps>
     const confirmMsg =
       `Are you sure you want to restore the snapshot from ${snap.formattedDate} (${snap.formattedTime})?\n\n` +
       `Mode: ${restoreMode}\n` +
-      `Records in Snapshot: ${snap.stats.totalRecords} total items across Vault, Construction, Quotation, Estimates, CRM, Invoices & Personal Bills.`;
+      `Records in Snapshot: ${snap.stats.totalRecords} total items across Construction, Quotation & Estimates.`;
 
     if (!window.confirm(confirmMsg)) return;
 
@@ -261,9 +247,6 @@ export const OfflineBackupRestoreModal: React.FC<OfflineBackupRestoreModalProps>
                 <h3 className="text-base font-bold text-white tracking-wide">
                   Vasthusilpy Backup & Data Protection Center
                 </h3>
-                <span className="text-[10px] font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 px-2 py-0.5 rounded-full">
-                  ALL 7 MODULES
-                </span>
               </div>
               <p className="text-xs text-slate-400">
                 Daily local storage snapshots, complete offline downloads & instant recovery
@@ -364,7 +347,7 @@ export const OfflineBackupRestoreModal: React.FC<OfflineBackupRestoreModalProps>
                       Full System Offline Backup (Local JSON)
                     </h4>
                     <p className="text-xs text-slate-400 mt-1">
-                      Exports a JSON file containing every file, folder, drawing, quotation, estimate, construction agreement, invoice, CRM record, and personal bill in your workspace.
+                      Exports a JSON file containing every file, folder, drawing, quotation, and estimate in your workspace.
                     </p>
                   </div>
                   <button
@@ -384,18 +367,18 @@ export const OfflineBackupRestoreModal: React.FC<OfflineBackupRestoreModalProps>
                 )}
               </div>
 
-              {/* Breakdown Across All 7 Tabs */}
+                  {/* Breakdown Across All Modules */}
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <h5 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-400">
-                    Live Data In Workspace (All 7 Tabs Protected)
+                    Live Data In Workspace
                   </h5>
                   <span className="text-xs font-mono text-cyan-400 font-bold">
                     {totalLiveRecords} Total Items
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {/* 1. Construction Work */}
                   <div className="bg-slate-950 border border-slate-800/80 p-3.5 rounded-xl">
                     <div className="flex items-center gap-2 text-amber-400 mb-1">
@@ -432,51 +415,6 @@ export const OfflineBackupRestoreModal: React.FC<OfflineBackupRestoreModalProps>
                     </div>
                     <div className="text-lg font-mono font-bold text-white">
                       {liveStats.estimates} <span className="text-xs text-slate-400 font-normal">estimates</span>
-                    </div>
-                    <div className="text-[10px] text-slate-400 font-mono mt-0.5">
-                      {liveStats.rateItems} master rate items
-                    </div>
-                  </div>
-
-                  {/* 5. CRM */}
-                  <div className="bg-slate-950 border border-slate-800/80 p-3.5 rounded-xl">
-                    <div className="flex items-center gap-2 text-cyan-400 mb-1">
-                      <Users className="w-4 h-4" />
-                      <span className="text-[11px] font-bold">CRM & Clients</span>
-                    </div>
-                    <div className="text-lg font-mono font-bold text-white">
-                      {liveStats.crmProjects} <span className="text-xs text-slate-400 font-normal">projects</span>
-                    </div>
-                    <div className="text-[10px] text-slate-400 font-mono mt-0.5">
-                      {liveStats.customers} clients registered
-                    </div>
-                  </div>
-
-                  {/* 6. Invoice Payments */}
-                  <div className="bg-slate-950 border border-slate-800/80 p-3.5 rounded-xl">
-                    <div className="flex items-center gap-2 text-rose-400 mb-1">
-                      <Receipt className="w-4 h-4" />
-                      <span className="text-[11px] font-bold">Invoice Payments</span>
-                    </div>
-                    <div className="text-lg font-mono font-bold text-white">
-                      {liveStats.invoices} <span className="text-xs text-slate-400 font-normal">invoices</span>
-                    </div>
-                    <div className="text-[10px] text-slate-400 font-mono mt-0.5">
-                      Payments & 20% slips
-                    </div>
-                  </div>
-
-                  {/* 7. Personal Bills & Payments */}
-                  <div className="bg-slate-950 border border-slate-800/80 p-3.5 rounded-xl col-span-2">
-                    <div className="flex items-center gap-2 text-purple-400 mb-1">
-                      <Wallet className="w-4 h-4" />
-                      <span className="text-[11px] font-bold">Personal Bills & Payments</span>
-                    </div>
-                    <div className="text-lg font-mono font-bold text-white">
-                      {liveStats.personalBills} <span className="text-xs text-slate-400 font-normal">bill records</span>
-                    </div>
-                    <div className="text-[10px] text-slate-400 font-mono mt-0.5">
-                      Poov Mala flower bills, KSEB electricity, Health Insurance, RD & Staff
                     </div>
                   </div>
                 </div>
@@ -585,9 +523,6 @@ export const OfflineBackupRestoreModal: React.FC<OfflineBackupRestoreModalProps>
                           <span>🏗️ Construction: {snap.stats.constructionProjects}</span>
                           <span>📄 Quotes: {snap.stats.quotations}</span>
                           <span>📊 Estimates: {snap.stats.estimates}</span>
-                          <span>👥 CRM: {snap.stats.crmProjects}</span>
-                          <span>🧾 Invoices: {snap.stats.invoices}</span>
-                          <span>💳 Bills: {snap.stats.personalBills}</span>
                         </div>
                       </div>
 
@@ -686,12 +621,6 @@ export const OfflineBackupRestoreModal: React.FC<OfflineBackupRestoreModalProps>
                   {/* Summary of Items to be Restored */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs font-mono">
                     <div className="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
-                      <span className="text-slate-400 block text-[10px]">Vault Files</span>
-                      <span className="text-white font-bold text-sm">
-                        {validationResult.summary?.vaultFilesCount ?? 0}
-                      </span>
-                    </div>
-                    <div className="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
                       <span className="text-slate-400 block text-[10px]">Construction</span>
                       <span className="text-white font-bold text-sm">
                         {validationResult.summary?.constructionProjectsCount ?? 0}
@@ -707,24 +636,6 @@ export const OfflineBackupRestoreModal: React.FC<OfflineBackupRestoreModalProps>
                       <span className="text-slate-400 block text-[10px]">Estimates</span>
                       <span className="text-white font-bold text-sm">
                         {validationResult.summary?.estimatesCount ?? 0}
-                      </span>
-                    </div>
-                    <div className="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
-                      <span className="text-slate-400 block text-[10px]">CRM Projects</span>
-                      <span className="text-white font-bold text-sm">
-                        {validationResult.summary?.crmProjectsCount ?? 0}
-                      </span>
-                    </div>
-                    <div className="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
-                      <span className="text-slate-400 block text-[10px]">Invoices</span>
-                      <span className="text-white font-bold text-sm">
-                        {validationResult.summary?.invoicesCount ?? 0}
-                      </span>
-                    </div>
-                    <div className="bg-slate-900 p-2.5 rounded-xl border border-slate-800 col-span-2">
-                      <span className="text-slate-400 block text-[10px]">Personal Bills</span>
-                      <span className="text-white font-bold text-sm">
-                        {validationResult.summary?.personalBillsCount ?? 0}
                       </span>
                     </div>
                   </div>
@@ -845,7 +756,7 @@ export const OfflineBackupRestoreModal: React.FC<OfflineBackupRestoreModalProps>
                         Anti-Data-Loss Shield Status: Active
                       </h4>
                       <p className="text-xs text-slate-400">
-                        Local storage daily snapshots are actively monitoring data integrity across all 7 tabs.
+                        Local storage daily snapshots are actively monitoring data integrity.
                       </p>
                     </div>
                   </div>
@@ -893,37 +804,7 @@ export const OfflineBackupRestoreModal: React.FC<OfflineBackupRestoreModalProps>
                       3. Estimator
                     </span>
                     <span className="font-bold text-white">
-                      {liveStats.estimates} estimates ({liveStats.rateItems} rates)
-                    </span>
-                  </div>
-
-                  <div className="px-5 py-3 flex items-center justify-between">
-                    <span className="text-slate-300 flex items-center gap-2">
-                      <Users className="w-4 h-4 text-cyan-400" />
-                      4. CRM & Clients
-                    </span>
-                    <span className="font-bold text-white">
-                      {liveStats.crmProjects} projects ({liveStats.customers} clients)
-                    </span>
-                  </div>
-
-                  <div className="px-5 py-3 flex items-center justify-between">
-                    <span className="text-slate-300 flex items-center gap-2">
-                      <Receipt className="w-4 h-4 text-rose-400" />
-                      5. Invoice Payments
-                    </span>
-                    <span className="font-bold text-white">
-                      {liveStats.invoices} invoices & receipts
-                    </span>
-                  </div>
-
-                  <div className="px-5 py-3 flex items-center justify-between">
-                    <span className="text-slate-300 flex items-center gap-2">
-                      <Wallet className="w-4 h-4 text-purple-400" />
-                      6. Personal Bills & Payments
-                    </span>
-                    <span className="font-bold text-white">
-                      {liveStats.personalBills} entries (Poov Mala, KSEB, Health, RD, Staff)
+                      {liveStats.estimates} estimates
                     </span>
                   </div>
                 </div>

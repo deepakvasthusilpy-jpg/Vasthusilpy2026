@@ -1,8 +1,4 @@
 import {
-  CrmProject,
-  Invoice,
-  Customer,
-  RateItem,
   ConstructionProject,
   ConstructionAgreement,
   ConstructionSettings,
@@ -11,35 +7,19 @@ import {
   QuotationService,
   Contractor,
   TermsClause,
-  CompanyDetails,
-  PoovMalaBillRow,
-  PoovMalaVendorConfig,
-  KsebBillRecord,
-  HealthInsurancePolicy,
-  RdAccount,
-  PanchayathBillRecord,
-  PersonalVendor,
-  PersonalVendorBill,
-  StaffSalaryRecord
+  CompanyDetails
 } from "../types";
 import { EstimateProject } from "../data/estimateData";
 import {
-  loadCrmProjects,
-  saveCrmProjects,
-  loadInvoices,
-  saveInvoices,
   loadEstimatesList,
   saveEstimatesList,
-  getDeletedProjectIds,
-  getDeletedInvoiceIds,
   getDeletedEstimateIds,
   STORAGE_KEYS,
   safeSetDoc
 } from "./storageManager";
-import { loadRegisteredTasks, saveRegisteredTasks, RegisteredTask } from "../data/registeredTasksData";
+import { loadRegisteredTasks, RegisteredTask } from "../data/registeredTasksData";
 import { db } from "../lib/firebase";
 import { doc } from "firebase/firestore";
-import { broadcastMessage } from "./broadcastSync";
 
 // Storage Key Constants
 const STORAGE_KEYS_CONSTRUCTION = {
@@ -58,46 +38,16 @@ const STORAGE_KEYS_QUOTATION = {
   COMPANY_SETTINGS: "vasthusilpy_quotation_company_v2"
 };
 
-const STORAGE_KEYS_PERSONAL = {
-  POOV_MALA_ROWS: "vasthusilpy_poov_mala_rows_v2",
-  POOV_MALA_CONFIG: "vasthusilpy_poov_mala_config_v1",
-  KSEB_BILLS: "vasthusilpy_kseb_bills_v1",
-  HEALTH_INSURANCE: "vasthusilpy_health_insurance_v1",
-  RD_ACCOUNTS: "vasthusilpy_rd_accounts_v1",
-  PANCHAYATH_BILLS: "vasthusilpy_panchayath_bills_v1",
-  PERSONAL_VENDORS: "vasthusilpy_personal_vendors_v1",
-  VENDOR_BILLS: "vasthusilpy_personal_vendor_bills_v1",
-  STAFF_SALARY: "vasthusilpy_staff_salary_records_v1"
-};
-
 const STORAGE_KEYS_EXTRA = {
   BUILDING_PLANS: "VAS_BUILDING_PLAN_PROJECTS_LIST",
   APP_TYPES: "vasthusilpy_app_types_clean_v3",
-  RECEIPT_COUNTER: "vasthusilpy_receipt_number_counter",
-  RECEIPT_PROJECTS: "vasthusilpy_receipt_assigned_projects",
   MASTER_WORK_ITEMS: "vasthusilpy_estimate_master_work_items",
   CUSTOM_WORK_ITEMS: "vasthusilpy_custom_items_of_work",
   CLIENT_SHARE_LINKS: "vasthusilpy_client_share_links"
 };
 
-const STORAGE_KEYS_INSPECTION = {
-  INSPECTIONS: "vasthusilpy_site_inspections_v1",
-  TEMPLATES: "vasthusilpy_site_inspection_templates_v2",
-  DELETED_IDS: "vasthusilpy_site_inspections_deleted_ids_v1"
-};
-
-const STORAGE_KEYS_ONLINE_APP = {
-  APPLICANTS: "vasthusilpy_online_applications_v1",
-  PORTAL_TYPES: "vasthusilpy_stored_application_types_v1"
-};
-
-const STORAGE_KEYS_SITES = {
-  IMPORTANT_SITES: "vasthusilpy_important_sites_v1",
-  SITE_FOLDERS: "vasthusilpy_site_folders_v1"
-};
-
 /**
- * Universal Backup Package Interface supporting all 7 Core Modules & Site Inspections
+ * Universal Backup Package Interface supporting core modules
  */
 export interface VasthusilpyBackupPackage {
   metadata: {
@@ -110,15 +60,7 @@ export interface VasthusilpyBackupPackage {
     totalConstructionAgreements: number;
     totalQuotations: number;
     totalEstimates: number;
-    totalCrmProjects: number;
-    totalCustomers: number;
-    totalInvoices: number;
-    totalPersonalBills: number;
     totalRegisteredTasks: number;
-    totalRateItems: number;
-    totalSiteInspections?: number;
-    totalOnlineApplications?: number;
-    totalImportantSites?: number;
     userEmail?: string;
   };
 
@@ -143,63 +85,13 @@ export interface VasthusilpyBackupPackage {
   // 4. ESTIMATOR
   estimator: {
     estimates: EstimateProject[];
-    rateItems: RateItem[];
     masterWorkItems?: any[];
     customWorkItems?: any[];
   };
 
-  // 5. CRM
-  crm: {
-    projects: CrmProject[];
-    customers: Customer[];
-    registeredTasks: RegisteredTask[];
-    buildingPlans?: any[];
-    applicationTypes?: any[];
-    receiptCounter?: number;
-    receiptProjects?: any[];
-  };
-
-  // 6. INVOICE PAYMENTS
-  invoicePayments: {
-    invoices: Invoice[];
-  };
-
-  // 7. PERSONAL BILLS & PAYMENTS
-  personalBills: {
-    poovMalaRows: PoovMalaBillRow[];
-    poovMalaConfig: PoovMalaVendorConfig | null;
-    ksebBills: KsebBillRecord[];
-    healthInsurance: HealthInsurancePolicy[];
-    rdAccounts: RdAccount[];
-    panchayathBills: PanchayathBillRecord[];
-    personalVendors: PersonalVendor[];
-    vendorBills: PersonalVendorBill[];
-    staffSalary: StaffSalaryRecord[];
-  };
-
-  // 8. SITE INSPECTIONS
-  siteInspections?: any[];
-  siteInspectionData?: any[];
-  siteInspectionTemplates?: any[];
-  deletedInspectionIds?: string[];
-
-  // 9. ONLINE APPLICATIONS & PORTALS
-  onlineApplications?: any[];
-  storedPortalTypes?: any[];
-
-  // 10. IMPORTANT SITES & GEO RECORDS
-  importantSites?: any[];
-  siteFolders?: any[];
-
   // Backwards compatibility root fields (for older versions)
-  crmProjects: CrmProject[];
-  invoices: Invoice[];
   estimates: EstimateProject[];
-  customers: Customer[];
-  rateItems: RateItem[];
   registeredTasks: RegisteredTask[];
-  deletedProjectIds: string[];
-  deletedInvoiceIds: string[];
   deletedEstimateIds: string[];
   customWorkItems?: any[];
   clientShareLinks?: any[];
@@ -219,7 +111,7 @@ function readStorageJson<T>(key: string, fallback: T): T {
 }
 
 /**
- * Compile all office data from all 7 tabs into a unified, complete backup package
+ * Compile all office data into a unified, complete backup package
  */
 export function generateFullBackupPackage(userEmail?: string): VasthusilpyBackupPackage {
   // 1. Construction Work
@@ -236,57 +128,15 @@ export function generateFullBackupPackage(userEmail?: string): VasthusilpyBackup
   const quotationTerms: TermsClause[] = readStorageJson(STORAGE_KEYS_QUOTATION.TERMS, []);
   const quotationCompany: CompanyDetails | null = readStorageJson(STORAGE_KEYS_QUOTATION.COMPANY_SETTINGS, null);
 
-  // 4. Estimator
+  // 4. ESTIMATOR
   const estimates = loadEstimatesList();
-  const rateItems: RateItem[] = readStorageJson(STORAGE_KEYS.RATE_ITEMS, []);
   const masterWorkItems = readStorageJson(STORAGE_KEYS_EXTRA.MASTER_WORK_ITEMS, []);
   const customWorkItems = readStorageJson(STORAGE_KEYS_EXTRA.CUSTOM_WORK_ITEMS, []);
 
-  // 5. CRM
-  const crmProjects = loadCrmProjects();
-  const customers: Customer[] = readStorageJson(STORAGE_KEYS.CUSTOMERS, []);
-  const registeredTasks = loadRegisteredTasks();
-  const buildingPlans = readStorageJson(STORAGE_KEYS_EXTRA.BUILDING_PLANS, []);
-  const applicationTypes = readStorageJson(STORAGE_KEYS_EXTRA.APP_TYPES, []);
-  const receiptCounter = Number(localStorage.getItem(STORAGE_KEYS_EXTRA.RECEIPT_COUNTER) || "1");
-  const receiptProjects = readStorageJson(STORAGE_KEYS_EXTRA.RECEIPT_PROJECTS, []);
-  const clientShareLinks = readStorageJson(STORAGE_KEYS_EXTRA.CLIENT_SHARE_LINKS, []);
-
-  // 6. Invoice Payments
-  const invoices = loadInvoices();
-
-  // 7. Personal Bills & Payments
-  const poovMalaRows: PoovMalaBillRow[] = readStorageJson(STORAGE_KEYS_PERSONAL.POOV_MALA_ROWS, []);
-  const poovMalaConfig: PoovMalaVendorConfig | null = readStorageJson(STORAGE_KEYS_PERSONAL.POOV_MALA_CONFIG, null);
-  const ksebBills: KsebBillRecord[] = readStorageJson(STORAGE_KEYS_PERSONAL.KSEB_BILLS, []);
-  const healthInsurance: HealthInsurancePolicy[] = readStorageJson(STORAGE_KEYS_PERSONAL.HEALTH_INSURANCE, []);
-  const rdAccounts: RdAccount[] = readStorageJson(STORAGE_KEYS_PERSONAL.RD_ACCOUNTS, []);
-  const panchayathBills: PanchayathBillRecord[] = readStorageJson(STORAGE_KEYS_PERSONAL.PANCHAYATH_BILLS, []);
-  const personalVendors: PersonalVendor[] = readStorageJson(STORAGE_KEYS_PERSONAL.PERSONAL_VENDORS, []);
-  const vendorBills: PersonalVendorBill[] = readStorageJson(STORAGE_KEYS_PERSONAL.VENDOR_BILLS, []);
-  const staffSalary: StaffSalaryRecord[] = readStorageJson(STORAGE_KEYS_PERSONAL.STAFF_SALARY, []);
-
-  // 8. Site Inspections
-  const siteInspections = readStorageJson(STORAGE_KEYS_INSPECTION.INSPECTIONS, []);
-  const siteInspectionTemplates = readStorageJson(STORAGE_KEYS_INSPECTION.TEMPLATES, []);
-  const deletedInspectionIds = readStorageJson(STORAGE_KEYS_INSPECTION.DELETED_IDS, []);
-
-  // 9. Online Applications
-  const onlineApplicants = readStorageJson(STORAGE_KEYS_ONLINE_APP.APPLICANTS, []);
-  const storedPortalTypes = readStorageJson(STORAGE_KEYS_ONLINE_APP.PORTAL_TYPES, []);
-
-  // 10. Important Sites
-  const importantSites = readStorageJson(STORAGE_KEYS_SITES.IMPORTANT_SITES, []);
-  const siteFolders = readStorageJson(STORAGE_KEYS_SITES.SITE_FOLDERS, []);
-
-  const deletedProjectIds = getDeletedProjectIds();
-  const deletedInvoiceIds = getDeletedInvoiceIds();
   const deletedEstimateIds = getDeletedEstimateIds();
 
   const now = new Date();
   const formatted = `${now.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })} at ${now.toLocaleTimeString("en-IN")}`;
-
-  const totalPersonalBills = poovMalaRows.length + ksebBills.length + vendorBills.length + staffSalary.length;
 
   return {
     metadata: {
@@ -298,15 +148,7 @@ export function generateFullBackupPackage(userEmail?: string): VasthusilpyBackup
       totalConstructionAgreements: constructionAgreements.length,
       totalQuotations: quotations.length,
       totalEstimates: estimates.length,
-      totalCrmProjects: crmProjects.length,
-      totalCustomers: customers.length,
-      totalInvoices: invoices.length,
-      totalPersonalBills: totalPersonalBills,
-      totalRegisteredTasks: registeredTasks.length,
-      totalRateItems: rateItems.length,
-      totalSiteInspections: siteInspections.length,
-      totalOnlineApplications: onlineApplicants.length,
-      totalImportantSites: importantSites.length,
+      totalRegisteredTasks: loadRegisteredTasks().length,
       userEmail: userEmail || "deepak.vasthusilpy@gmail.com"
     },
     constructionWork: {
@@ -325,55 +167,16 @@ export function generateFullBackupPackage(userEmail?: string): VasthusilpyBackup
     },
     estimator: {
       estimates: estimates,
-      rateItems: rateItems,
       masterWorkItems: masterWorkItems,
       customWorkItems: customWorkItems
     },
-    crm: {
-      projects: crmProjects,
-      customers: customers,
-      registeredTasks: registeredTasks,
-      buildingPlans: buildingPlans,
-      applicationTypes: applicationTypes,
-      receiptCounter: receiptCounter,
-      receiptProjects: receiptProjects
-    },
-    invoicePayments: {
-      invoices: invoices
-    },
-    personalBills: {
-      poovMalaRows: poovMalaRows,
-      poovMalaConfig: poovMalaConfig,
-      ksebBills: ksebBills,
-      healthInsurance: healthInsurance,
-      rdAccounts: rdAccounts,
-      panchayathBills: panchayathBills,
-      personalVendors: personalVendors,
-      vendorBills: vendorBills,
-      staffSalary: staffSalary
-    },
-    // Site Inspections, Applications & Sites
-    siteInspections: siteInspections,
-    siteInspectionData: siteInspections,
-    siteInspectionTemplates: siteInspectionTemplates,
-    deletedInspectionIds: deletedInspectionIds,
-    onlineApplications: onlineApplicants,
-    storedPortalTypes: storedPortalTypes,
-    importantSites: importantSites,
-    siteFolders: siteFolders,
 
     // Legacy flat properties for compatibility
-    crmProjects: crmProjects,
-    invoices: invoices,
     estimates: estimates,
-    customers: customers,
-    rateItems: rateItems,
-    registeredTasks: registeredTasks,
-    deletedProjectIds: deletedProjectIds,
-    deletedInvoiceIds: deletedInvoiceIds,
+    registeredTasks: loadRegisteredTasks(),
     deletedEstimateIds: deletedEstimateIds,
     customWorkItems: customWorkItems,
-    clientShareLinks: clientShareLinks
+    clientShareLinks: readStorageJson(STORAGE_KEYS_EXTRA.CLIENT_SHARE_LINKS, [])
   };
 }
 
@@ -415,10 +218,6 @@ export interface BackupValidationResult {
     constructionAgreementsCount: number;
     quotationsCount: number;
     estimatesCount: number;
-    crmProjectsCount: number;
-    customersCount: number;
-    invoicesCount: number;
-    personalBillsCount: number;
     exportedAtFormatted: string;
     version: string;
   };
@@ -435,13 +234,8 @@ export function validateBackupFile(fileContent: string): BackupValidationResult 
     const isVasthusilpyPackage =
       data &&
       (data.metadata?.app?.includes("Vasthusilpy") ||
-        data.dataStorageVault ||
         data.constructionWork ||
         data.quotation ||
-        data.personalBills ||
-        Array.isArray(data.crmProjects) ||
-        Array.isArray(data.projects) ||
-        Array.isArray(data.invoices) ||
         Array.isArray(data.estimates));
 
     if (!isVasthusilpyPackage) {
@@ -476,55 +270,6 @@ export function validateBackupFile(fileContent: string): BackupValidationResult 
     // Extract Estimator
     const estimates: EstimateProject[] =
       data.estimator?.estimates || (Array.isArray(data.estimates) ? data.estimates : []);
-    const rateItems: RateItem[] =
-      data.estimator?.rateItems || (Array.isArray(data.rateItems) ? data.rateItems : []);
-
-    // Extract CRM
-    const crmProjects: CrmProject[] =
-      data.crm?.projects || (Array.isArray(data.crmProjects) ? data.crmProjects : Array.isArray(data.projects) ? data.projects : []);
-    const customers: Customer[] =
-      data.crm?.customers || (Array.isArray(data.customers) ? data.customers : []);
-    const registeredTasks: RegisteredTask[] =
-      data.crm?.registeredTasks || (Array.isArray(data.registeredTasks) ? data.registeredTasks : []);
-
-    // Extract Invoices
-    const invoices: Invoice[] =
-      data.invoicePayments?.invoices || (Array.isArray(data.invoices) ? data.invoices : []);
-
-    // Extract Personal Bills
-    const poovMalaRows: PoovMalaBillRow[] =
-      data.personalBills?.poovMalaRows || (Array.isArray(data.poovMalaRows) ? data.poovMalaRows : []);
-    const poovMalaConfig: PoovMalaVendorConfig | null =
-      data.personalBills?.poovMalaConfig || data.poovMalaConfig || null;
-    const ksebBills: KsebBillRecord[] =
-      data.personalBills?.ksebBills || (Array.isArray(data.ksebBills) ? data.ksebBills : []);
-    const healthInsurance: HealthInsurancePolicy[] =
-      data.personalBills?.healthInsurance || (Array.isArray(data.healthInsurance) ? data.healthInsurance : []);
-    const rdAccounts: RdAccount[] =
-      data.personalBills?.rdAccounts || (Array.isArray(data.rdAccounts) ? data.rdAccounts : []);
-    const panchayathBills: PanchayathBillRecord[] =
-      data.personalBills?.panchayathBills || (Array.isArray(data.panchayathBills) ? data.panchayathBills : []);
-    const personalVendors: PersonalVendor[] =
-      data.personalBills?.personalVendors || (Array.isArray(data.personalVendors) ? data.personalVendors : []);
-    const vendorBills: PersonalVendorBill[] =
-      data.personalBills?.vendorBills || (Array.isArray(data.vendorBills) ? data.vendorBills : []);
-    const staffSalary: StaffSalaryRecord[] =
-      data.personalBills?.staffSalary || (Array.isArray(data.staffSalary) ? data.staffSalary : []);
-
-    // Extract Site Inspections, Applications & Sites
-    const siteInspections = Array.isArray(data.siteInspections)
-      ? data.siteInspections
-      : Array.isArray(data.siteInspectionData)
-      ? data.siteInspectionData
-      : [];
-    const siteInspectionTemplates = Array.isArray(data.siteInspectionTemplates) ? data.siteInspectionTemplates : [];
-    const deletedInspectionIds = Array.isArray(data.deletedInspectionIds) ? data.deletedInspectionIds : [];
-    const onlineApplications = Array.isArray(data.onlineApplications) ? data.onlineApplications : [];
-    const storedPortalTypes = Array.isArray(data.storedPortalTypes) ? data.storedPortalTypes : [];
-    const importantSites = Array.isArray(data.importantSites) ? data.importantSites : [];
-    const siteFolders = Array.isArray(data.siteFolders) ? data.siteFolders : [];
-
-    const totalPersonalBills = poovMalaRows.length + ksebBills.length + vendorBills.length + staffSalary.length;
 
     const normalizedPackage: VasthusilpyBackupPackage = {
       metadata: {
@@ -538,15 +283,7 @@ export function validateBackupFile(fileContent: string): BackupValidationResult 
         totalConstructionAgreements: constructionAgreements.length,
         totalQuotations: quotations.length,
         totalEstimates: estimates.length,
-        totalCrmProjects: crmProjects.length,
-        totalCustomers: customers.length,
-        totalInvoices: invoices.length,
-        totalPersonalBills: totalPersonalBills,
-        totalRegisteredTasks: registeredTasks.length,
-        totalRateItems: rateItems.length,
-        totalSiteInspections: siteInspections.length,
-        totalOnlineApplications: onlineApplications.length,
-        totalImportantSites: importantSites.length,
+        totalRegisteredTasks: loadRegisteredTasks().length,
         userEmail: data.metadata?.userEmail
       },
       constructionWork: {
@@ -565,49 +302,13 @@ export function validateBackupFile(fileContent: string): BackupValidationResult 
       },
       estimator: {
         estimates: estimates,
-        rateItems: rateItems,
         masterWorkItems: data.estimator?.masterWorkItems || [],
         customWorkItems: data.estimator?.customWorkItems || []
       },
-      crm: {
-        projects: crmProjects,
-        customers: customers,
-        registeredTasks: registeredTasks,
-        buildingPlans: data.crm?.buildingPlans || [],
-        applicationTypes: data.crm?.applicationTypes || [],
-        receiptCounter: data.crm?.receiptCounter || 1,
-        receiptProjects: data.crm?.receiptProjects || []
-      },
-      invoicePayments: {
-        invoices: invoices
-      },
-      personalBills: {
-        poovMalaRows: poovMalaRows,
-        poovMalaConfig: poovMalaConfig,
-        ksebBills: ksebBills,
-        healthInsurance: healthInsurance,
-        rdAccounts: rdAccounts,
-        panchayathBills: panchayathBills,
-        personalVendors: personalVendors,
-        vendorBills: vendorBills,
-        staffSalary: staffSalary
-      },
-      siteInspections: siteInspections,
-      siteInspectionData: siteInspections,
-      siteInspectionTemplates: siteInspectionTemplates,
-      deletedInspectionIds: deletedInspectionIds,
-      onlineApplications: onlineApplications,
-      storedPortalTypes: storedPortalTypes,
-      importantSites: importantSites,
-      siteFolders: siteFolders,
-      crmProjects: crmProjects,
-      invoices: invoices,
+
+      // Legacy flat properties for compatibility
       estimates: estimates,
-      customers: customers,
-      rateItems: rateItems,
-      registeredTasks: registeredTasks,
-      deletedProjectIds: Array.isArray(data.deletedProjectIds) ? data.deletedProjectIds : [],
-      deletedInvoiceIds: Array.isArray(data.deletedInvoiceIds) ? data.deletedInvoiceIds : [],
+      registeredTasks: loadRegisteredTasks(),
       deletedEstimateIds: Array.isArray(data.deletedEstimateIds) ? data.deletedEstimateIds : [],
       customWorkItems: Array.isArray(data.customWorkItems) ? data.customWorkItems : [],
       clientShareLinks: Array.isArray(data.clientShareLinks) ? data.clientShareLinks : []
@@ -621,10 +322,6 @@ export function validateBackupFile(fileContent: string): BackupValidationResult 
         constructionAgreementsCount: constructionAgreements.length,
         quotationsCount: quotations.length,
         estimatesCount: estimates.length,
-        crmProjectsCount: crmProjects.length,
-        customersCount: customers.length,
-        invoicesCount: invoices.length,
-        personalBillsCount: totalPersonalBills,
         exportedAtFormatted: normalizedPackage.metadata.exportedAtFormatted,
         version: normalizedPackage.metadata.version
       }
@@ -638,7 +335,7 @@ export function validateBackupFile(fileContent: string): BackupValidationResult 
 }
 
 /**
- * Restore data with either CLEAN REPLACE or MERGE mode across all 7 tabs & Site Inspections
+ * Restore data with either CLEAN REPLACE or MERGE mode across core tabs
  */
 export async function restoreBackupPackage(
   pkg: VasthusilpyBackupPackage,
@@ -662,15 +359,15 @@ export async function restoreBackupPackage(
       localStorage.setItem(STORAGE_KEYS_CONSTRUCTION.AUDIT_LOGS, JSON.stringify(incomingConstLogs));
     } else {
       // MERGE Construction Projects
-      const existingProjects: ConstructionProject[] = readStorageJson(STORAGE_KEYS_CONSTRUCTION.PROJECTS, []);
       const cpMap = new Map<string, ConstructionProject>();
+      const existingProjects: ConstructionProject[] = readStorageJson(STORAGE_KEYS_CONSTRUCTION.PROJECTS, []);
       existingProjects.forEach((p) => cpMap.set(p.id, p));
       incomingConstProjects.forEach((p) => cpMap.set(p.id, p));
       localStorage.setItem(STORAGE_KEYS_CONSTRUCTION.PROJECTS, JSON.stringify(Array.from(cpMap.values())));
 
       // MERGE Construction Agreements
-      const existingAgreements: ConstructionAgreement[] = readStorageJson(STORAGE_KEYS_CONSTRUCTION.AGREEMENTS, []);
       const caMap = new Map<string, ConstructionAgreement>();
+      const existingAgreements: ConstructionAgreement[] = readStorageJson(STORAGE_KEYS_CONSTRUCTION.AGREEMENTS, []);
       existingAgreements.forEach((a) => caMap.set(a.id, a));
       incomingConstAgreements.forEach((a) => caMap.set(a.id, a));
       localStorage.setItem(STORAGE_KEYS_CONSTRUCTION.AGREEMENTS, JSON.stringify(Array.from(caMap.values())));
@@ -697,15 +394,15 @@ export async function restoreBackupPackage(
       if (incomingCompany) localStorage.setItem(STORAGE_KEYS_QUOTATION.COMPANY_SETTINGS, JSON.stringify(incomingCompany));
     } else {
       // MERGE Quotations
-      const existingQuotes: Quotation[] = readStorageJson(STORAGE_KEYS_QUOTATION.QUOTATIONS, []);
       const qMap = new Map<string, Quotation>();
+      const existingQuotes: Quotation[] = readStorageJson(STORAGE_KEYS_QUOTATION.QUOTATIONS, []);
       existingQuotes.forEach((q) => qMap.set(q.id, q));
       incomingQuotes.forEach((q) => qMap.set(q.id, q));
       localStorage.setItem(STORAGE_KEYS_QUOTATION.QUOTATIONS, JSON.stringify(Array.from(qMap.values())));
 
       // MERGE Services
-      const existingServices: QuotationService[] = readStorageJson(STORAGE_KEYS_QUOTATION.SERVICES, []);
       const sMap = new Map<string, QuotationService>();
+      const existingServices: QuotationService[] = readStorageJson(STORAGE_KEYS_QUOTATION.SERVICES, []);
       existingServices.forEach((s) => sMap.set(s.id, s));
       incomingServices.forEach((s) => sMap.set(s.id, s));
       if (incomingServices.length > 0) {
@@ -717,10 +414,10 @@ export async function restoreBackupPackage(
     // 4. ESTIMATOR
     // ----------------------------------------------------
     const incomingEstimates = pkg.estimator?.estimates || pkg.estimates || [];
-    const incomingRateItems = pkg.estimator?.rateItems || pkg.rateItems || [];
+    const incomingRateItems = (pkg.estimator as any)?.rateItems || (pkg as any).rateItems || [];
 
     let finalEstimates: EstimateProject[] = [];
-    let finalRateItems: RateItem[] = [];
+    let finalRateItems: any[] = [];
 
     if (mode === "REPLACE") {
       localStorage.setItem(STORAGE_KEYS.DELETED_ESTIMATE_IDS, JSON.stringify([]));
@@ -733,10 +430,10 @@ export async function restoreBackupPackage(
       incomingEstimates.forEach((e) => eMap.set(e.id, e));
       finalEstimates = Array.from(eMap.values());
 
-      const existingRates: RateItem[] = readStorageJson(STORAGE_KEYS.RATE_ITEMS, []);
-      const rMap = new Map<string, RateItem>();
+      const existingRates: any[] = readStorageJson(STORAGE_KEYS.RATE_ITEMS, []);
+      const rMap = new Map<string, any>();
       existingRates.forEach((r) => rMap.set(r.id, r));
-      incomingRateItems.forEach((r) => rMap.set(r.id, r));
+      incomingRateItems.forEach((r: any) => rMap.set(r.id, r));
       finalRateItems = Array.from(rMap.values());
     }
 
@@ -746,250 +443,25 @@ export async function restoreBackupPackage(
     }
 
     // ----------------------------------------------------
-    // 5. CRM
-    // ----------------------------------------------------
-    const incomingCrmProjects = pkg.crm?.projects || pkg.crmProjects || [];
-    const incomingCustomers = pkg.crm?.customers || pkg.customers || [];
-    const incomingTasks = pkg.crm?.registeredTasks || pkg.registeredTasks || [];
-
-    let finalCrmProjects: CrmProject[] = [];
-    let finalCustomers: Customer[] = [];
-    let finalTasks: RegisteredTask[] = [];
-
-    if (mode === "REPLACE") {
-      localStorage.setItem(STORAGE_KEYS.DELETED_CRM_PROJECT_IDS, JSON.stringify([]));
-      finalCrmProjects = incomingCrmProjects;
-      finalCustomers = incomingCustomers;
-      finalTasks = incomingTasks;
-    } else {
-      const existingCrm = loadCrmProjects();
-      const cpMap = new Map<string, CrmProject>();
-      existingCrm.forEach((p) => cpMap.set(p.id, p));
-      incomingCrmProjects.forEach((p) => cpMap.set(p.id, p));
-      finalCrmProjects = Array.from(cpMap.values());
-
-      const existingCust: Customer[] = readStorageJson(STORAGE_KEYS.CUSTOMERS, []);
-      const cuMap = new Map<string, Customer>();
-      existingCust.forEach((c) => cuMap.set(c.id, c));
-      incomingCustomers.forEach((c) => cuMap.set(c.id, c));
-      finalCustomers = Array.from(cuMap.values());
-
-      const existingTasks = loadRegisteredTasks();
-      const tMap = new Map<string, RegisteredTask>();
-      existingTasks.forEach((t) => tMap.set(t.id, t));
-      incomingTasks.forEach((t) => tMap.set(t.id, t));
-      finalTasks = Array.from(tMap.values());
-    }
-
-    saveCrmProjects(finalCrmProjects, false);
-    if (finalCustomers.length > 0) {
-      localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(finalCustomers));
-    }
-    if (finalTasks.length > 0) {
-      saveRegisteredTasks(finalTasks);
-    }
-
-    // Receipt Counter & Assigned Projects
-    if (pkg.crm?.receiptCounter) {
-      localStorage.setItem(STORAGE_KEYS_EXTRA.RECEIPT_COUNTER, String(pkg.crm.receiptCounter));
-    }
-    if (pkg.crm?.receiptProjects && pkg.crm.receiptProjects.length > 0) {
-      localStorage.setItem(STORAGE_KEYS_EXTRA.RECEIPT_PROJECTS, JSON.stringify(pkg.crm.receiptProjects));
-    }
-
-    // ----------------------------------------------------
-    // 6. INVOICE PAYMENTS
-    // ----------------------------------------------------
-    const incomingInvoices = pkg.invoicePayments?.invoices || pkg.invoices || [];
-    let finalInvoices: Invoice[] = [];
-
-    if (mode === "REPLACE") {
-      localStorage.setItem(STORAGE_KEYS.DELETED_INVOICE_IDS, JSON.stringify([]));
-      finalInvoices = incomingInvoices;
-    } else {
-      const existingInvoices = loadInvoices();
-      const invMap = new Map<string, Invoice>();
-      existingInvoices.forEach((i) => invMap.set(i.id, i));
-      incomingInvoices.forEach((i) => invMap.set(i.id, i));
-      finalInvoices = Array.from(invMap.values());
-    }
-
-    saveInvoices(finalInvoices, false);
-
-    // ----------------------------------------------------
-    // 7. PERSONAL BILLS & PAYMENTS
-    // ----------------------------------------------------
-    if (pkg.personalBills) {
-      const {
-        poovMalaRows,
-        poovMalaConfig,
-        ksebBills,
-        healthInsurance,
-        rdAccounts,
-        panchayathBills,
-        personalVendors,
-        vendorBills,
-        staffSalary
-      } = pkg.personalBills;
-
-      if (mode === "REPLACE") {
-        if (poovMalaRows) localStorage.setItem(STORAGE_KEYS_PERSONAL.POOV_MALA_ROWS, JSON.stringify(poovMalaRows));
-        if (poovMalaConfig) localStorage.setItem(STORAGE_KEYS_PERSONAL.POOV_MALA_CONFIG, JSON.stringify(poovMalaConfig));
-        if (ksebBills) localStorage.setItem(STORAGE_KEYS_PERSONAL.KSEB_BILLS, JSON.stringify(ksebBills));
-        if (healthInsurance) localStorage.setItem(STORAGE_KEYS_PERSONAL.HEALTH_INSURANCE, JSON.stringify(healthInsurance));
-        if (rdAccounts) localStorage.setItem(STORAGE_KEYS_PERSONAL.RD_ACCOUNTS, JSON.stringify(rdAccounts));
-        if (panchayathBills) localStorage.setItem(STORAGE_KEYS_PERSONAL.PANCHAYATH_BILLS, JSON.stringify(panchayathBills));
-        if (personalVendors) localStorage.setItem(STORAGE_KEYS_PERSONAL.PERSONAL_VENDORS, JSON.stringify(personalVendors));
-        if (vendorBills) localStorage.setItem(STORAGE_KEYS_PERSONAL.VENDOR_BILLS, JSON.stringify(vendorBills));
-        if (staffSalary) localStorage.setItem(STORAGE_KEYS_PERSONAL.STAFF_SALARY, JSON.stringify(staffSalary));
-      } else {
-        // MERGE Personal Bills
-        if (poovMalaRows && poovMalaRows.length > 0) {
-          const ex: PoovMalaBillRow[] = readStorageJson(STORAGE_KEYS_PERSONAL.POOV_MALA_ROWS, []);
-          const map = new Map<string, PoovMalaBillRow>();
-          ex.forEach((r) => map.set(r.id, r));
-          poovMalaRows.forEach((r) => map.set(r.id, r));
-          localStorage.setItem(STORAGE_KEYS_PERSONAL.POOV_MALA_ROWS, JSON.stringify(Array.from(map.values())));
-        }
-        if (ksebBills && ksebBills.length > 0) {
-          const ex: KsebBillRecord[] = readStorageJson(STORAGE_KEYS_PERSONAL.KSEB_BILLS, []);
-          const map = new Map<string, KsebBillRecord>();
-          ex.forEach((b) => map.set(b.id, b));
-          ksebBills.forEach((b) => map.set(b.id, b));
-          localStorage.setItem(STORAGE_KEYS_PERSONAL.KSEB_BILLS, JSON.stringify(Array.from(map.values())));
-        }
-        if (vendorBills && vendorBills.length > 0) {
-          const ex: PersonalVendorBill[] = readStorageJson(STORAGE_KEYS_PERSONAL.VENDOR_BILLS, []);
-          const map = new Map<string, PersonalVendorBill>();
-          ex.forEach((b) => map.set(b.id, b));
-          vendorBills.forEach((b) => map.set(b.id, b));
-          localStorage.setItem(STORAGE_KEYS_PERSONAL.VENDOR_BILLS, JSON.stringify(Array.from(map.values())));
-        }
-        if (staffSalary && staffSalary.length > 0) {
-          const ex: StaffSalaryRecord[] = readStorageJson(STORAGE_KEYS_PERSONAL.STAFF_SALARY, []);
-          const map = new Map<string, StaffSalaryRecord>();
-          ex.forEach((s) => map.set(s.id, s));
-          staffSalary.forEach((s) => map.set(s.id, s));
-          localStorage.setItem(STORAGE_KEYS_PERSONAL.STAFF_SALARY, JSON.stringify(Array.from(map.values())));
-        }
-      }
-    }
-
-    // ----------------------------------------------------
-    // 8. SITE INSPECTIONS
-    // ----------------------------------------------------
-    const incomingInspections = pkg.siteInspections || pkg.siteInspectionData || [];
-    const incomingInspectionTemplates = pkg.siteInspectionTemplates || [];
-
-    if (incomingInspections.length > 0) {
-      if (mode === "REPLACE") {
-        localStorage.setItem(STORAGE_KEYS_INSPECTION.INSPECTIONS, JSON.stringify(incomingInspections));
-        localStorage.setItem(STORAGE_KEYS_INSPECTION.DELETED_IDS, JSON.stringify([]));
-      } else {
-        const existingInspections = readStorageJson<any[]>(STORAGE_KEYS_INSPECTION.INSPECTIONS, []);
-        const inspMap = new Map<string, any>();
-        existingInspections.forEach((item) => inspMap.set(item.id, item));
-        incomingInspections.forEach((item) => inspMap.set(item.id, item));
-        localStorage.setItem(STORAGE_KEYS_INSPECTION.INSPECTIONS, JSON.stringify(Array.from(inspMap.values())));
-      }
-    }
-    if (incomingInspectionTemplates.length > 0) {
-      localStorage.setItem(STORAGE_KEYS_INSPECTION.TEMPLATES, JSON.stringify(incomingInspectionTemplates));
-    }
-
-    // ----------------------------------------------------
-    // 9. ONLINE APPLICATIONS & PORTALS
-    // ----------------------------------------------------
-    const incomingOnlineApps = pkg.onlineApplications || [];
-    const incomingStoredPortals = pkg.storedPortalTypes || [];
-
-    if (incomingOnlineApps.length > 0) {
-      if (mode === "REPLACE") {
-        localStorage.setItem(STORAGE_KEYS_ONLINE_APP.APPLICANTS, JSON.stringify(incomingOnlineApps));
-      } else {
-        const existingApps = readStorageJson<any[]>(STORAGE_KEYS_ONLINE_APP.APPLICANTS, []);
-        const appMap = new Map<string, any>();
-        existingApps.forEach((item) => appMap.set(item.id, item));
-        incomingOnlineApps.forEach((item) => appMap.set(item.id, item));
-        localStorage.setItem(STORAGE_KEYS_ONLINE_APP.APPLICANTS, JSON.stringify(Array.from(appMap.values())));
-      }
-    }
-    if (incomingStoredPortals.length > 0) {
-      localStorage.setItem(STORAGE_KEYS_ONLINE_APP.PORTAL_TYPES, JSON.stringify(incomingStoredPortals));
-    }
-
-    // ----------------------------------------------------
-    // 10. IMPORTANT SITES & FOLDERS
-    // ----------------------------------------------------
-    const incomingSites = pkg.importantSites || [];
-    const incomingSiteFolders = pkg.siteFolders || [];
-
-    if (incomingSites.length > 0) {
-      if (mode === "REPLACE") {
-        localStorage.setItem(STORAGE_KEYS_SITES.IMPORTANT_SITES, JSON.stringify(incomingSites));
-      } else {
-        const existingSites = readStorageJson<any[]>(STORAGE_KEYS_SITES.IMPORTANT_SITES, []);
-        const siteMap = new Map<string, any>();
-        existingSites.forEach((item) => siteMap.set(item.id, item));
-        incomingSites.forEach((item) => siteMap.set(item.id, item));
-        localStorage.setItem(STORAGE_KEYS_SITES.IMPORTANT_SITES, JSON.stringify(Array.from(siteMap.values())));
-      }
-    }
-    if (incomingSiteFolders.length > 0) {
-      localStorage.setItem(STORAGE_KEYS_SITES.SITE_FOLDERS, JSON.stringify(incomingSiteFolders));
-    }
-
-    // ----------------------------------------------------
     // BACKGROUND FIRESTORE SYNC & EVENT DISPATCHING
     // ----------------------------------------------------
     try {
-      finalCrmProjects.forEach((p) => {
-        safeSetDoc(doc(db, "projects", p.id), p, { merge: true }).catch(() => {});
-      });
-      finalInvoices.forEach((i) => {
-        safeSetDoc(doc(db, "invoices", i.id), i, { merge: true }).catch(() => {});
-      });
       finalEstimates.forEach((e) => {
         safeSetDoc(doc(db, "estimates", e.id), e, { merge: true }).catch(() => {});
-      });
-      incomingInspections.forEach((insp) => {
-        if (insp.id) {
-          safeSetDoc(doc(db, "site_inspections", insp.id), insp, { merge: true }).catch(() => {});
-        }
-      });
-      incomingOnlineApps.forEach((oApp) => {
-        if (oApp.id) {
-          safeSetDoc(doc(db, "online_applications", oApp.id), oApp, { merge: true }).catch(() => {});
-        }
-      });
-      incomingSites.forEach((site) => {
-        if (site.id) {
-          safeSetDoc(doc(db, "important_sites", site.id), site, { merge: true }).catch(() => {});
-        }
       });
     } catch (e) {
       console.warn("Firestore sync during restore skipped/offline:", e);
     }
 
-    // Dispatch global events for instant reactivity across all opened tabs
+    // Dispatch global events
     window.dispatchEvent(new Event("vasthusilpy_storage_update"));
-    window.dispatchEvent(new Event("vasthusilpy_invoices_updated"));
-    window.dispatchEvent(new Event("vasthusilpy_cad_storage_updated"));
     window.dispatchEvent(new Event("vasthusilpy_construction_updated"));
     window.dispatchEvent(new Event("vasthusilpy_quotations_updated"));
-    window.dispatchEvent(new Event("vasthusilpy_personal_bills_updated"));
-    window.dispatchEvent(new Event("vasthusilpy_site_inspections_updated"));
-    window.dispatchEvent(new Event("vasthusilpy_online_apps_updated"));
-    window.dispatchEvent(new Event("vasthusilpy_important_sites_updated"));
     window.dispatchEvent(new Event("vasthusilpy_backup_restored"));
-    window.dispatchEvent(new Event("vasthusilpy_snapshots_updated"));
-
-    broadcastMessage({ type: "SYNC_PROJECTS", data: finalCrmProjects });
-    broadcastMessage({ type: "SYNC_INVOICES", data: finalInvoices });
 
     return {
       success: true,
-      message: `Complete system restore finished! Restored Site Inspections, Construction Work, Quotations, Estimator, CRM, Invoices, Online Applications, Important Sites, and Personal Bills seamlessly.`
+      message: `Complete system restore finished! Restored Construction Work, Quotations, and Estimator seamlessly.`
     };
   } catch (err: any) {
     console.error("Failed to execute restore:", err);

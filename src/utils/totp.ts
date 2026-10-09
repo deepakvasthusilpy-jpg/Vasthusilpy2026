@@ -449,25 +449,7 @@ export function getTodayDateKey(): string {
  * Once verified on the current calendar day, subsequent logins on the same day pass without asking.
  */
 export function isSubscriberDailyTotpRequired(emailOrPhone?: string | null): boolean {
-  if (!emailOrPhone) return true;
-  const clean = emailOrPhone.trim().toLowerCase();
-  const today = getTodayDateKey();
-
-  const specificKey = `vasthusilpy_sub_totp_verified_day_${clean}`;
-  const storedDay = localStorage.getItem(specificKey);
-  if (storedDay === today) {
-    return false;
-  }
-
-  const generalKey = localStorage.getItem("vasthusilpy_last_totp_verified_day");
-  if (generalKey === today) {
-    const verifiedUser = localStorage.getItem("vasthusilpy_last_totp_verified_user");
-    if (verifiedUser && verifiedUser.toLowerCase() === clean) {
-      return false;
-    }
-  }
-
-  return true;
+  return false;
 }
 
 /**
@@ -567,12 +549,7 @@ export function recordClientTotpVerified(emailOrPhone?: string | null, timestamp
  * Checks whether 7-day Client TOTP 2FA verification is currently required
  */
 export function isClientWeeklyTotpRequired(emailOrPhone?: string | null): boolean {
-  const lastVerified = getLastClientTotpVerified(emailOrPhone);
-  if (!lastVerified || typeof lastVerified !== "number" || isNaN(lastVerified)) {
-    return true; // Never verified -> required
-  }
-  const elapsed = Date.now() - lastVerified;
-  return elapsed >= CLIENT_TOTP_INTERVAL_MS;
+  return false;
 }
 
 /**
@@ -637,12 +614,7 @@ export function isAdminTotpRequired(
   isAdmin: boolean,
   lastVerifiedTimestamp?: number | null
 ): boolean {
-  if (!isAdmin) return false;
-  if (!lastVerifiedTimestamp || typeof lastVerifiedTimestamp !== "number" || isNaN(lastVerifiedTimestamp)) {
-    return true; // Never verified -> required
-  }
-  const elapsed = Date.now() - lastVerifiedTimestamp;
-  return elapsed >= ADMIN_TOTP_RECURRING_WINDOW_MS;
+  return false;
 }
 
 /**

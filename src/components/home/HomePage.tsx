@@ -1,13 +1,11 @@
 import React, { useState } from "react";
 import { MainSectionType, TabType } from "../../types";
-import { GoogleAuthenticatorSetupModal } from "../auth/GoogleAuthenticatorSetupModal";
 import { SubscriptionRequestsTab } from "./SubscriptionRequestsTab";
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
 import { TechStartupHoloRing } from "../theme/TechStartupHoloRing";
 import { CorporateExecutiveShowcase } from "../theme/CorporateExecutiveShowcase";
 import { PRIMARY_ADMIN_EMAILS } from "../../lib/firebase";
-import { getOrCreateTotpSecret } from "../../utils/totp";
 import { isOnamThemeActive, getOnamRemainingStatus } from "../../utils/onamTheme";
 import { getActiveWebsiteTheme, ActiveThemeConfig } from "../../utils/festivalTheme";
 import { SpecialDayInfo } from "../../utils/keralaCalendarData";
@@ -107,26 +105,6 @@ export const HomePage: React.FC<HomePageProps> = ({ activeTab = "home_overview",
       }
     : getActiveWebsiteTheme();
 
-  // Authenticator 2FA Setup State (Moved to Home Tab)
-  const [showAuthSetupModal, setShowAuthSetupModal] = useState(false);
-  const [authSetupEmail, setAuthSetupEmail] = useState("deepak.vasthusilpy@gmail.com");
-  const [isCustomAuthEmail, setIsCustomAuthEmail] = useState(false);
-  const [customAuthEmailInput, setCustomAuthEmailInput] = useState("");
-  const [copiedSecret, setCopiedSecret] = useState(false);
-
-  const effectiveAuthEmail = isCustomAuthEmail
-    ? customAuthEmailInput.trim().toLowerCase() || "deepak.vasthusilpy@gmail.com"
-    : authSetupEmail;
-
-  const currentSecret = getOrCreateTotpSecret(effectiveAuthEmail);
-
-  const handleCopySecret = () => {
-    if (!currentSecret) return;
-    navigator.clipboard.writeText(currentSecret);
-    setCopiedSecret(true);
-    setTimeout(() => setCopiedSecret(false), 2500);
-  };
-
   const handleOpenInNewWindow = (section: MainSectionType, tab: TabType) => {
     const url = `${window.location.origin}${window.location.pathname}?section=${encodeURIComponent(section)}&tab=${encodeURIComponent(tab)}`;
     window.open(url, "_blank");
@@ -206,16 +184,6 @@ export const HomePage: React.FC<HomePageProps> = ({ activeTab = "home_overview",
                   {pendingRequestsCount} NEW
                 </span>
               )}
-            </button>
-          )}
-
-          {isPrimaryAdmin && !isSubscriberLogin && (
-            <button
-              onClick={() => setShowAuthSetupModal(true)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-mono text-xs font-bold text-amber-300 hover:text-white hover:bg-slate-800 transition-all cursor-pointer whitespace-nowrap ml-auto"
-            >
-              <KeyRound className="w-4 h-4 text-amber-400" />
-              <span>2FA Authenticator Setup</span>
             </button>
           )}
         </div>
@@ -522,247 +490,10 @@ export const HomePage: React.FC<HomePageProps> = ({ activeTab = "home_overview",
 
           </div>
         </section>
+      </>
+    )}
 
-        {/* =========================================================================
-            6. FIRST TIME SETTING UP GOOGLE AUTHENTICATOR (2FA SETUP SECTION)
-           ========================================================================= */}
-        <section className="relative rounded-3xl border border-indigo-900/60 bg-gradient-to-br from-slate-950 via-slate-900/95 to-indigo-950/40 shadow-2xl backdrop-blur-xl p-6 sm:p-8 overflow-hidden">
-          {/* Ambient Glow */}
-          <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="relative z-10 space-y-6">
-            
-            {/* Header / Badge */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-indigo-950 pb-5">
-              <div className="space-y-1.5">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-950/80 border border-indigo-500/40 text-indigo-300 font-mono text-xs font-bold">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>SECURITY & 2FA ACCESS • സുരക്ഷാ സംവിധാനം</span>
-                </div>
-                <h2 className="text-xl sm:text-2xl font-black text-white font-sans flex items-center gap-2.5">
-                  <QrCode className="w-6 h-6 text-indigo-400" />
-                  <span>First Time Setting Up Google Authenticator?</span>
-                </h2>
-                <p className="text-xs text-slate-400 font-sans max-w-2xl">
-                  സുരക്ഷിതമായി ലോഗിൻ ചെയ്യുന്നതിനായി നിങ്ങളുടെ മൊബൈൽ ഫോണിൽ Google Authenticator (TOTP 2FA) ആപ്പ് സജ്ജീകരിക്കുക.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowAuthSetupModal(true)}
-                className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-teal-600 hover:from-indigo-500 hover:to-teal-500 text-white font-mono font-bold text-xs tracking-wider uppercase shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer shrink-0"
-              >
-                <QrCode className="w-4 h-4 text-amber-300" />
-                <span>Open Setup QR Code</span>
-              </button>
-            </div>
-
-            {/* Content Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              
-              {/* Left Column: Account Selection & Steps (7 Cols) */}
-              <div className="lg:col-span-7 space-y-5">
-                
-                {/* Account Selector */}
-                <div className="space-y-2">
-                  <label className="block text-xs font-mono font-bold text-slate-300">
-                    തിരഞ്ഞെടുത്ത ഇമെയിൽ (Target Engineer Account):
-                  </label>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {PRIMARY_ADMIN_EMAILS.map((email) => {
-                      const isSelected = !isCustomAuthEmail && authSetupEmail === email;
-                      return (
-                        <button
-                          key={email}
-                          type="button"
-                          onClick={() => {
-                            setIsCustomAuthEmail(false);
-                            setAuthSetupEmail(email);
-                          }}
-                          className={`p-2.5 rounded-2xl border text-left flex items-center gap-2.5 transition-all cursor-pointer ${
-                            isSelected
-                              ? "bg-indigo-950/70 border-indigo-500 text-white ring-1 ring-indigo-500/50 shadow-md"
-                              : "bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700"
-                          }`}
-                        >
-                          <div
-                            className={`w-7 h-7 rounded-xl flex items-center justify-center font-bold font-mono text-xs ${
-                              isSelected
-                                ? "bg-indigo-500 text-white"
-                                : "bg-slate-800 text-slate-400"
-                            }`}
-                          >
-                            {email.charAt(0).toUpperCase()}
-                          </div>
-                          <div className="truncate flex-1">
-                            <p className="font-mono text-xs font-bold truncate leading-tight">
-                              {email}
-                            </p>
-                            <span className="text-[10px] text-emerald-400 font-sans">
-                              Primary Admin
-                            </span>
-                          </div>
-                          {isSelected && (
-                            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Custom Email Option */}
-                  <div className="pt-1">
-                    {!isCustomAuthEmail ? (
-                      <button
-                        type="button"
-                        onClick={() => setIsCustomAuthEmail(true)}
-                        className="text-xs text-indigo-400 hover:text-indigo-300 font-mono underline cursor-pointer"
-                      >
-                        + Configure custom engineer account email
-                      </button>
-                    ) : (
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[11px] text-slate-400 font-mono">Custom Engineer Email:</span>
-                          <button
-                            type="button"
-                            onClick={() => setIsCustomAuthEmail(false)}
-                            className="text-[11px] text-slate-400 hover:text-slate-200 font-mono underline cursor-pointer"
-                          >
-                            Switch to Primary Admin
-                          </button>
-                        </div>
-                        <input
-                          type="email"
-                          value={customAuthEmailInput}
-                          onChange={(e) => setCustomAuthEmailInput(e.target.value)}
-                          placeholder="engineer@gmail.com"
-                          className="w-full bg-slate-950 border border-indigo-900/60 rounded-xl px-3.5 py-2 text-xs font-mono text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* 4 Steps Timeline */}
-                <div className="bg-slate-950/70 border border-indigo-950 p-4 rounded-2xl space-y-3">
-                  <h4 className="font-mono font-bold text-amber-300 flex items-center gap-1.5 text-xs">
-                    <Smartphone className="w-4 h-4 text-amber-400" />
-                    <span>4 ലളിതമായ ഘട്ടങ്ങൾ (4 Simple Setup Steps):</span>
-                  </h4>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                    <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1">
-                      <div className="flex items-center gap-2 font-mono font-bold text-indigo-300">
-                        <span className="w-5 h-5 rounded-full bg-indigo-950 border border-indigo-700 flex items-center justify-center text-[10px] text-indigo-400">1</span>
-                        <span>Install App</span>
-                      </div>
-                      <p className="text-[11px] text-slate-400 leading-snug">
-                        മൊബൈലിൽ <strong>Google Authenticator</strong> (Play Store / App Store) ഡൗൺലോഡ് ചെയ്യുക.
-                      </p>
-                    </div>
-
-                    <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1">
-                      <div className="flex items-center gap-2 font-mono font-bold text-teal-300">
-                        <span className="w-5 h-5 rounded-full bg-teal-950 border border-teal-700 flex items-center justify-center text-[10px] text-teal-400">2</span>
-                        <span>Tap + (Add)</span>
-                      </div>
-                      <p className="text-[11px] text-slate-400 leading-snug">
-                        ആപ്പ് തുറന്ന് <strong>+</strong> ബട്ടൺ ടാപ്പ് ചെയ്ത് <strong>Scan a QR code</strong> തിരഞ്ഞെടുക്കുക.
-                      </p>
-                    </div>
-
-                    <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1">
-                      <div className="flex items-center gap-2 font-mono font-bold text-cyan-300">
-                        <span className="w-5 h-5 rounded-full bg-cyan-950 border border-cyan-700 flex items-center justify-center text-[10px] text-cyan-400">3</span>
-                        <span>Scan Portal QR</span>
-                      </div>
-                      <p className="text-[11px] text-slate-400 leading-snug">
-                        <strong>Open Setup QR Code</strong> ബട്ടൺ അമർത്തി സ്ക്രീനിലുള്ള QR കോഡ് ക്യാമറയിൽ കാണിക്കുക.
-                      </p>
-                    </div>
-
-                    <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1">
-                      <div className="flex items-center gap-2 font-mono font-bold text-emerald-300">
-                        <span className="w-5 h-5 rounded-full bg-emerald-950 border border-emerald-700 flex items-center justify-center text-[10px] text-emerald-400">4</span>
-                        <span>Enter 6 Digits</span>
-                      </div>
-                      <p className="text-[11px] text-slate-400 leading-snug">
-                        ഓരോ 30 സെക്കൻഡിലും മാറുന്ന 6 അക്ക കോഡ് നൽകി ലോഗിൻ ചെയ്യുക.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-
-              {/* Right Column: Secret Key & Direct Modal Launch (5 Cols) */}
-              <div className="lg:col-span-5 flex flex-col justify-between bg-slate-950/80 border border-indigo-900/40 p-5 rounded-2xl space-y-4">
-                
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-xs font-mono font-bold text-slate-200">
-                      <KeyRound className="w-4 h-4 text-emerald-400" />
-                      <span>Manual Secret Key (മാനുവൽ കീ):</span>
-                    </div>
-                    <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-2 py-0.5 rounded-full">
-                      RFC 6238 Standard
-                    </span>
-                  </div>
-
-                  <p className="text-[11px] text-slate-400 leading-relaxed font-sans">
-                    QR കോഡ് സ്കാൻ ചെയ്യാൻ സാധിക്കുന്നില്ലെങ്കിൽ, Authenticator ആപ്പിൽ <strong>"Enter a setup key"</strong> തിരഞ്ഞെടുത്ത് താഴെ നൽകിയിരിക്കുന്ന കീ പേസ്റ്റ് ചെയ്യുക:
-                  </p>
-
-                  <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 flex items-center justify-between gap-2">
-                    <span className="font-mono text-xs font-bold text-emerald-300 tracking-wider truncate">
-                      {currentSecret}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleCopySecret}
-                      className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
-                      title="Copy Secret Key"
-                    >
-                      {copiedSecret ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
-                      <span>{copiedSecret ? "Copied" : "Copy"}</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-slate-800/80 space-y-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowAuthSetupModal(true)}
-                    className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:from-emerald-700 active:to-teal-700 text-white font-mono font-bold text-xs tracking-wider uppercase shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <QrCode className="w-4 h-4" />
-                    <span>View Fullscreen QR & Download (QR തുറക്കുക)</span>
-                  </button>
-
-                  <div className="flex items-center justify-between text-[11px] font-mono text-slate-500">
-                    <span className="flex items-center gap-1 text-emerald-400">
-                      <ShieldCheck className="w-3 h-3" />
-                      <span>Works 100% Offline</span>
-                    </span>
-                    <span>Google / Authy / Microsoft</span>
-                  </div>
-                </div>
-
-              </div>
-
-            </div>
-
-          </div>
-        </section>
-
-        </>
-        )}
-
-        {/* Footer info */}
+    {/* Footer info */}
         <footer className="text-center text-xs font-mono text-slate-500 pt-4 border-t border-slate-800/60">
           <div>VASTHUSILPY TECHNICAL ENGINEERING SYSTEM • KERALASSERY, PALAKKAD • 2026</div>
           <div className="text-[11px] text-slate-600 mt-1">
@@ -771,13 +502,6 @@ export const HomePage: React.FC<HomePageProps> = ({ activeTab = "home_overview",
         </footer>
 
       </div>
-
-      {/* Google Authenticator Setup Modal */}
-      <GoogleAuthenticatorSetupModal
-        isOpen={showAuthSetupModal}
-        onClose={() => setShowAuthSetupModal(false)}
-        email={effectiveAuthEmail}
-      />
     </div>
   );
 };

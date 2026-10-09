@@ -36,25 +36,14 @@ export interface AttachmentPage {
 
 export type MainSectionType =
   | "home"
-  | "panchangam"
-  | "ai_agent"
   | "construction_works"
   | "estimate"
-  | "office_dashboard"
-  | "invoices_payments"
-  | "personal_bills"
-  | "site_inspection"
-  | "important_sites"
   | "vasthu"
   | "building_rules"
-  | "ksmart"
   | "survey"
   | "civil"
   | "quotation"
-  | "online_applications"
-  | "application_forms";
-
-export * from "./types/siteInspection";
+  | "ai_agent";
 
 export type BuildingPlanTabType =
   | "building_plan_dashboard"
@@ -82,22 +71,6 @@ export type PanchangamTabType =
   | "panchangam_festivals"
   | "panchangam_choghadiya";
 
-export type PersonalBillsTabType =
-  | "staff_salary"
-  | "poov_mala"
-  | "poov_mala_bill"
-  | "kseb_bills"
-  | "kseb_bill"
-  | "health_insurance"
-  | "rd_accounts"
-  | "rd_deposit"
-  | "panchayath_bills"
-  | "licence_panchayath"
-  | "panchayath_fees"
-  | "all_vendors"
-  | "all_vendors_bills"
-  | "personal_vendors";
-
 export type AIAgentTabType =
   | "ai_agent_chat"
   | "ai_vastu"
@@ -108,8 +81,6 @@ export type AIAgentTabType =
   | "ai_visual_scanner";
 
 export type HomeTabType = "home_overview" | "all_tools" | "data_storage" | "subscription_requests";
-
-export type SubscriptionStatus = "pending" | "approved" | "rejected" | "expired";
 export type AccessLevel = "full" | "preview" | "none";
 
 export interface SubscriptionRequest {
@@ -175,137 +146,7 @@ export type SurveyTabType = "missing_side" | "land_area" | "unit_converters" | "
 
 export type CivilTabType = "brick_masonry" | "concrete_block" | "cement_concrete" | "material_quantity_bbs";
 
-export type OfficeDashboardTabType =
-  | "office_combined_dashboard"
-  | "office_crm_projects"
-  | "office_crm"
-  | "office_tasks"
-  | "office_activities"
-  | "office_important_sites"
-  | "office_online_applications"
-  | "office_application_types";
-
-export type OnlineApplicationStatus =
-  | "PENDING"
-  | "SUBMITTED"
-  | "IN_PROGRESS"
-  | "VERIFICATION"
-  | "APPROVED"
-  | "DELIVERED"
-  | "FEE_DUE"
-  | "COMPLETED"
-  | "REJECTED";
-
-export interface ApplicationPaymentRecord {
-  id: string;
-  date: string;
-  amount: number;
-  mode?: string; // "UPI_QR" | "CASH" | "BANK_TRANSFER" | "GPAY"
-  refNo?: string;
-  note?: string;
-}
-
-export interface ApplicationDetailItem {
-  id: string;
-  portal: string; // e.g. "K-SMART LSGD", "KSEB Electricity", "Kerala Water Authority (KWA)", "Fire & Rescue NOC", "KSPPCB", "Revenue / Pokkuvaravu", "e-District", "Other"
-  applicationNumber: string; // e.g. "KL-2026-PKD-0928"
-  loginId: string; // Username / Mobile / File ID
-  passwordOrPin?: string; // Deprecated / removed from UI
-  portalUrl?: string; // Quick URL to the portal
-  submissionDate?: string;
-  remarks?: string;
-  // Per-application payment entry
-  billAmount?: number; // Application specific fee/bill (₹)
-  paidAmount?: number; // Application specific paid amount (₹)
-  paymentStatus?: "PENDING" | "PARTIAL" | "PAID";
-  payments?: ApplicationPaymentRecord[];
-  isApproved?: boolean; // Checkbox to identify whether the application is approved or not
-}
-
-export interface OnlineApplicantRecord {
-  id: string;
-  applicantName: string;
-  mobileNo: string;
-  email?: string;
-  address?: string;
-  applications: ApplicationDetailItem[];
-  status: OnlineApplicationStatus;
-  isCompleted?: boolean; // Toggled strictly via manual "Move to Completed" checkbox
-  billAmount: number; // Bill amount in Rupees
-  paidAmount: number; // Paid amount in Rupees
-  lastPaymentDate?: string;
-  paymentMode?: string; // e.g. "UPI_QR", "CASH", "BANK_TRANSFER"
-  notes?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface SiteFolder {
-  id: string;
-  name: string;
-  color?: string; // e.g. "emerald", "cyan", "blue", "amber", "rose", "indigo", "purple"
-  icon?: string;
-  description?: string;
-  createdAt: string;
-  updatedAt?: string;
-}
-
-export type ImportantSiteCategory =
-  | "LSGD_GOVT"
-  | "REVENUE_SURVEY"
-  | "TAX_BANKING"
-  | "CAD_SOFTWARE"
-  | "UTILITY_OFFICE"
-  | "OTHER";
-
-export interface ImportantSite {
-  id: string;
-  name: string;
-  category: ImportantSiteCategory;
-  customCategory?: string;
-  folder?: string; // Folder name or ID (e.g. "VEO", "General")
-  url: string;
-  username: string;
-  password?: string;
-  securityPin?: string;
-  notes?: string;
-  isFavorite?: boolean;
-  color?: string; // e.g. "emerald", "cyan", "blue", "amber", "rose", "indigo", "purple"
-  favicon?: string;
-  lastOpenedAt?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export type ImportantSitesTabType = "important_sites" | "all_sites" | "sites_folders" | "site_vault";
-
-export type InvoicesTabType =
-  | "invoices_list"
-  | "products_services"
-  | "customers"
-  | "reports_analysis"
-  | "client_view"
-  | "office_invoices"
-  | "office_products"
-  | "office_customers"
-  | "office_reports"
-  | "office_client_view"
-  | "personal_bills"
-  | "staff_salary"
-  | "poov_mala"
-  | "poov_mala_bill"
-  | "kseb_bills"
-  | "kseb_bill"
-  | "health_insurance"
-  | "rd_accounts"
-  | "rd_deposit"
-  | "panchayath_bills"
-  | "licence_panchayath"
-  | "panchayath_fees"
-  | "all_vendors"
-  | "all_vendors_bills"
-  | "personal_vendors";
-
+// --- Client Share & Certificates Module Types ---
 export interface ClientShareLink {
   id: string; // Unique ID, e.g. "CSL-2026-001"
   token: string; // URL token e.g. "vst-9b8e21a"
@@ -493,201 +334,6 @@ export type EstimateTabType =
 
 export type StaffName = "DEEPAK" | "VISHNU" | "DIBIN";
 
-export type ProjectStatus = "PENDING" | "LAND SURVEY" | "PROGRESS" | "READY TO SUBMIT" | "COMPLETED";
-
-export interface SubTask {
-  id: string;
-  title: string;
-  completed: boolean;
-  assignee?: StaffName;
-}
-
-export interface ProjectAttachment {
-  id: string;
-  name: string;
-  url?: string;
-  type: string;
-  size?: string;
-  uploadedAt: string;
-}
-
-export interface ProjectComment {
-  id: string;
-  author: StaffName | "CLIENT" | "ADMIN";
-  text: string;
-  timestamp: string;
-}
-
-export interface ProjectActivity {
-  id: string;
-  actor: string;
-  action: string;
-  timestamp: string;
-}
-
-export interface CrmProject {
-  id: string;
-  receiptNumber?: string; // Sequential receipt number with prefix VS (e.g. VS000001, VS000002)
-  title: string;
-  clientName: string;
-  clientPhone: string;
-  clientEmail?: string; // Client / Property Owner Email ID for automated work receipts and live status notifications
-  location: string;
-  assignee: StaffName;
-  status: ProjectStatus;
-  dueDate: string;
-  description: string;
-  subTasks: SubTask[];
-  attachments: ProjectAttachment[];
-  comments: ProjectComment[];
-  activities: ProjectActivity[];
-  invoiceId?: string; // Linked invoice ID
-  estimatedAmount?: number;
-  advancePayment?: number; // Advance payment amount received (₹)
-  advancePaymentDate?: string; // Date advance was received
-  advancePaymentMode?: string; // e.g. "CASH" | "UPI / GPAY" | "BANK_TRANSFER" | "CHEQUE"
-  advancePaymentRef?: string; // Transaction reference or notes for advance
-  createdAt: string;
-  workReceiptGeneratedAt?: string;
-  lastEmailedTo?: string;
-  lastEmailedAt?: string;
-  clientPortalToken?: string;
-}
-
-export interface RateItem {
-  id: string;
-  name: string;
-  category: "SERVICE" | "DRAWING" | "SURVEY" | "VALUATION" | "OTHER";
-  unit: string; // e.g. "Sq.Ft", "Per Plot", "Fixed", "Per Page"
-  rate: number; // in Rupees
-  description?: string;
-}
-
-export interface Customer {
-  id: string;
-  name: string;
-  phone: string;
-  email?: string;
-  contactPerson?: string;
-  houseName?: string;
-  villagePanchayat?: string;
-  district?: string;
-  addressLine?: string;
-  gstNo?: string;
-}
-
-export interface PaymentRecord {
-  id: string;
-  amount: number;
-  date: string;
-  method: "MANUAL" | "UPI_QR" | "BANK_PAYMENT" | string;
-  paymentMode: string; // "Bank payment", "UPI / GPay", "Cash", "Cheque", "Online Transfer", etc.
-  account?: string; // "UPI (INR)", "Bank Account (SBI Keralassery)", etc.
-  referenceNo?: string;
-  memo?: string;
-  notes?: string;
-  createdAt: string;
-  // Automated Post-Payment Hook Fields
-  receiptNumber?: string;
-  receiptPdfUrl?: string; // Public / Firebase Storage Download URL
-  receiptStoragePath?: string; // Firebase Storage Object Path (e.g. receipts/INV-2026-001/REC-001.pdf)
-  receiptGeneratedAt?: string;
-  // Google Drive Cloud Storage Integration
-  googleDriveFileId?: string;
-  googleDriveUrl?: string; // Google Drive Web View Link
-  googleDriveSyncedAt?: string;
-  autoDispatched?: {
-    email?: boolean;
-    emailSentTo?: string;
-    emailSentAt?: string;
-    whatsApp?: boolean;
-    whatsAppSentTo?: string;
-    whatsAppSentAt?: string;
-    firebaseStorageSaved?: boolean;
-    googleDriveSaved?: boolean;
-    timestamp?: string;
-  };
-}
-
-export interface InvoiceItem {
-  id: string;
-  rateItemId?: string;
-  description: string;
-  unit: string;
-  quantity: number;
-  rate: number;
-  amount: number;
-}
-
-export interface Invoice {
-  id: string;
-  invoiceNumber: string;
-  poNumber?: string; // P.O./S.O. number
-  projectId?: string;
-  projectTitle?: string;
-  // Applicant details
-  applicantName: string;
-  applicantMobile: string;
-  applicantEmail?: string;
-  applicantAddress?: string;
-  applicantContactPerson?: string;
-  // Dates
-  invoiceDate: string;
-  dueDate: string;
-  lastSentDate?: string;
-  // Line items
-  items: InvoiceItem[];
-  subTotal: number;
-  currency?: string;
-  taxRate?: number;
-  taxAmount: number;
-  discount: number;
-  grandTotal: number;
-  // Payment tracking
-  payments: PaymentRecord[];
-  totalPaid: number;
-  balanceDue: number;
-  advancePayment?: number; // Advance payment amount received (₹)
-  advancePaymentDate?: string; // Date advance was received
-  advancePaymentMode?: string; // e.g. "CASH" | "UPI / GPAY" | "BANK_TRANSFER" | "CHEQUE"
-  advancePaymentRef?: string; // Transaction reference or notes for advance
-  paymentStatus: "UNPAID" | "PARTIALLY PAID" | "PAID";
-  // Notes & UPI
-  upiId?: string; // e.g. "7012383137@okbizaxis"
-  bankDetails?: {
-    accountName?: string;
-    accountNo?: string;
-    ifsc?: string;
-    bank?: string;
-    upiId1?: string;
-    upiId2?: string;
-  };
-  notes?: string;
-  terms?: string;
-  // Google Drive Cloud Storage Synchronization
-  googleDriveFileId?: string;
-  googleDriveUrl?: string; // Google Drive Web View Link
-  googleDriveFolderId?: string;
-  googleDriveSyncedAt?: string;
-  createdAt: string;
-}
-
-export interface Client {
-  id: string;
-  name: string;
-  companyName?: string;
-  phone: string;
-  email: string;
-  address: string;
-  gstin?: string;
-}
-
-export interface ProjectDetails {
-  projectName: string;
-  projectType: string;
-  siteAddress: string;
-}
-
 export type ConstructionTabType =
   | "dashboard"
   | "new_construction"
@@ -717,12 +363,6 @@ export type OnlineApplicationsTabType =
   | "online_applications_directory"
   | "online_applications_types";
 
-export type SiteInspectionTabType =
-  | "site_inspection_form"
-  | "site_inspection_dashboard"
-  | "site_inspection_builder"
-  | "site_inspection_guide";
-
 export type ApplicationFormsTabType =
   | "application_forms_dashboard"
   | "application_forms_fill"
@@ -739,15 +379,8 @@ export type TabType =
   | BuildingPlanTabType
   | SurveyTabType
   | CivilTabType
-  | OfficeDashboardTabType
-  | InvoicesTabType
   | EstimateTabType
-  | PersonalBillsTabType
-  | QuotationTabType
-  | OnlineApplicationsTabType
-  | ApplicationFormsTabType
-  | SiteInspectionTabType
-  | ImportantSitesTabType;
+  | QuotationTabType;
 
 export interface FormFieldDefinition {
   id: string;
@@ -1324,240 +957,7 @@ export interface FilterState {
 }
 
 // ==========================================
-// PERSONAL BILLS & PAYMENTS DATA STRUCTURES
+// FILTER & SEARCH DATA STRUCTURES
 // ==========================================
-
-export interface PoovMalaBillRow {
-  id: string;
-  dateFrom: string; // e.g. "01-01-2026" or "2026-01-01"
-  dateTo: string; // e.g. "31-03-2026" or "2026-03-31"
-  totalCalendarDays?: number; // Total calendar days between dateFrom and dateTo
-  sundaysCount?: number; // Total Sundays in the period
-  daysExcludeSundays: number; // Calendar days excluding Sundays (e.g. 77)
-  otherLeave: number; // Total other leaves (e.g. 1)
-  leaveDetails?: string; // Specific leave breakdown (e.g. "1 DAY TRADE HARTHAL, 9-4-26 ELECTION LEAVE")
-  netWorkingDays?: number; // daysExcludeSundays - otherLeave
-  ratePerDay: number; // default 20 (₹20/mala)
-  extraGarlands?: number; // special occasions extra garlands
-  extraGarlandsRate?: number;
-  amount: number; // Net Working Days * ratePerDay + extra
-  paidAmount: number; // e.g. 1520
-  paidDate?: string; // e.g. "30/03/2026"
-  remarks: string; // e.g. "1 DAY TRADE HARTHAL LEAVE"
-  status: "PAYMENT COMPLETED" | "PENDING" | "PARTIAL";
-  paymentMode?: string;
-  transactionRef?: string;
-  notes?: string;
-}
-
-export interface PoovMalaVendorConfig {
-  vendorName: string; // "RANJITH POOV MALA"
-  gpayNumber: string; // "9446669832"
-  upiId?: string; // e.g. "9446669832@okaxis"
-  defaultDailyRate: number; // 20
-  address?: string;
-  referenceImage?: string;
-  bankDetails?: {
-    accountNumber?: string;
-    ifscCode?: string;
-    bankName?: string;
-  };
-}
-
-export interface KsebBillRecord {
-  id: string;
-  consumerNo: string;
-  sectionName?: string;
-  consumerName?: string;
-  billMonth: string; // e.g. "Jan-Feb 2026"
-  billDate?: string;
-  dueDate?: string;
-  disconnectionDate?: string;
-  unitsConsumed?: number;
-  energyCharges?: number;
-  fixedCharges?: number;
-  meterRent?: number;
-  fuelSurcharge?: number;
-  electricityDuty?: number;
-  totalAmount: number;
-  paidAmount: number;
-  paidDate?: string;
-  status: "PAID" | "UNPAID" | "OVERDUE";
-  paymentMode?: string;
-  transactionId?: string;
-  receiptNo?: string;
-  notes?: string;
-}
-
-export interface HealthInsurancePolicy {
-  id: string;
-  policyName: string;
-  policyNumber: string;
-  insurerName: string;
-  policyHolderName: string;
-  insuredMembers: Array<{ name: string; relation: string; age: number }>;
-  sumInsured: number;
-  cumulativeBonus?: number;
-  premiumAmount: number;
-  gstAmount?: number;
-  totalPremium: number;
-  paymentFrequency: "YEARLY" | "HALF_YEARLY" | "QUARTERLY" | "MONTHLY";
-  policyStartDate: string;
-  policyEndDate: string;
-  nextRenewalDueDate: string;
-  lastPaidDate?: string;
-  status: "ACTIVE" | "RENEWAL_DUE" | "EXPIRED" | "GRACE_PERIOD";
-  tpaDetails?: string;
-  cashlessHelpline?: string;
-  agentContact?: string;
-  notes?: string;
-}
-
-export interface RdDepositMonth {
-  monthIndex: number; // 1 to 60
-  monthYear: string; // e.g. "2026-01"
-  dueAmount: number;
-  paidAmount: number;
-  paidDate?: string;
-  fineAmount?: number;
-  status: "PAID" | "PENDING" | "DEFAULTED";
-  transactionRef?: string;
-}
-
-export interface RdAccount {
-  id: string;
-  accountNumber: string;
-  institutionType: "POST_OFFICE" | "BANK" | "COOPERATIVE_SOCIETY";
-  bankOrPostOfficeName: string;
-  accountHolderName: string;
-  monthlyInstallment: number;
-  dueDayOfMonth: number;
-  tenureMonths: number;
-  interestRate: number;
-  startDate: string;
-  maturityDate: string;
-  expectedMaturityAmount: number;
-  deposits: RdDepositMonth[];
-  notes?: string;
-}
-
-export type RdMonthlyDeposit = RdDepositMonth;
-
-export type PanchayathFeeType =
-  | "TRADE_LICENCE_DNO"
-  | "BUILDING_PROPERTY_TAX"
-  | "PROFESSIONAL_TAX"
-  | "SIGNAGE_FEE"
-  | "WASTE_MANAGEMENT"
-  | "OTHER_PANCHAYATH_FEE"
-  | "OTHER_FEE";
-
-export interface PanchayathBillRecord {
-  id: string;
-  panchayathName: string;
-  feeType: PanchayathFeeType;
-  customFeeName?: string;
-  assessmentOrLicenceNo: string;
-  financialYear: string;
-  wardNo?: string;
-  doorOrPremiseNo?: string;
-  feeAmount: number;
-  serviceCess?: number;
-  libraryCess?: number;
-  penalty?: number;
-  totalPayable: number;
-  dueDate: string;
-  paidAmount: number;
-  paidDate?: string;
-  challanOrReceiptNo?: string;
-  status: "PAID" | "UNPAID" | "OVERDUE";
-  ksmartRefNo?: string;
-  notes?: string;
-}
-
-export type PersonalVendorCategory =
-  | "FLOWERS"
-  | "ELECTRICAL"
-  | "PLUMBING"
-  | "HARDWARE"
-  | "LABOUR"
-  | "OFFICE"
-  | "FUEL"
-  | "PRINTING"
-  | "PAINTING"
-  | "GENERAL"
-  | "OTHER";
-
-export interface PersonalVendor {
-  id: string;
-  vendorName: string;
-  businessOrShopName: string;
-  category: PersonalVendorCategory;
-  customCategory?: string;
-  mobileNumber: string;
-  alternateMobile?: string;
-  address: string;
-  upiId?: string;
-  gpayNumber?: string;
-  bankDetails?: {
-    accountNumber?: string;
-    ifscCode?: string;
-    bankName?: string;
-    branch?: string;
-  };
-  notes?: string;
-  createdAt: string;
-}
-
-export interface PersonalVendorBillItem {
-  id: string;
-  description: string;
-  quantity: number;
-  unit?: string;
-  rate: number;
-  amount: number;
-}
-
-export interface PersonalVendorBill {
-  id: string;
-  vendorId: string;
-  vendorName: string;
-  billNumber: string;
-  billDate: string;
-  dueDate?: string;
-  serviceOrParticulars: string;
-  items?: PersonalVendorBillItem[];
-  billAmount: number;
-  paidAmount: number;
-  paidDate?: string;
-  status: "PAID" | "PENDING" | "PARTIAL" | "OVERDUE";
-  paymentMode?: string;
-  transactionReference?: string;
-  notes?: string;
-  attachmentUrl?: string;
-  createdAt: string;
-}
-
-export interface StaffSalaryRecord {
-  id: string;
-  staffName: string;
-  role?: string;
-  mobileNumber: string;
-  month: string; // e.g. "January" or "Jan 2026"
-  year: number; // e.g. 2026
-  basicSalary: number;
-  allowances: number; // OT, travel, bonus, other payments
-  deductions: number; // advance deductions, leave cuts
-  netSalary: number; // basicSalary + allowances - deductions
-  paidAmount: number;
-  balanceAmount: number;
-  paymentStatus: "PAID" | "PARTIAL" | "UNPAID";
-  paidDate?: string;
-  paymentMode?: "UPI / GPay" | "Bank Transfer" | "Cash" | "Cheque" | string;
-  transactionId?: string;
-  notes?: string;
-  createdAt: string;
-  updatedAt?: string;
-}
 
 

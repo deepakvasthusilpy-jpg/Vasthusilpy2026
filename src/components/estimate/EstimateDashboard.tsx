@@ -39,8 +39,6 @@ interface EstimateDashboardProps {
   onOpenStageCertificates?: (proj: EstimateProject) => void;
   onDeleteProject?: (id: string) => void;
   onDuplicateProject?: (proj: EstimateProject) => void;
-  onConvertToProject?: (proj: EstimateProject) => void;
-  onConvertToInvoice?: (proj: EstimateProject) => void;
   onSaveClonedProject?: (clonedProject: EstimateProject, openInEditor?: boolean) => void;
 }
 
@@ -52,8 +50,6 @@ export const EstimateDashboard: React.FC<EstimateDashboardProps> = ({
   onOpenStageCertificates,
   onDeleteProject,
   onDuplicateProject,
-  onConvertToProject,
-  onConvertToInvoice,
   onSaveClonedProject
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -566,28 +562,6 @@ export const EstimateDashboard: React.FC<EstimateDashboardProps> = ({
                           >
                             <Award className="w-3.5 h-3.5 text-amber-400" />
                             <span>Certificates</span>
-                          </button>
-                        )}
-
-                        {onConvertToProject && (
-                          <button
-                            onClick={() => onConvertToProject(p)}
-                            className="px-2 py-1 bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 rounded-lg border border-emerald-800 transition-colors cursor-pointer flex items-center gap-1 font-mono text-[11px] font-bold shadow-sm"
-                            title="Convert this Estimate into a CRM Project record"
-                          >
-                            <FolderKanban className="w-3.5 h-3.5 text-emerald-400" />
-                            <span>To Project</span>
-                          </button>
-                        )}
-
-                        {onConvertToInvoice && (
-                          <button
-                            onClick={() => onConvertToInvoice(p)}
-                            className="px-2 py-1 bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 rounded-lg border border-cyan-800 transition-colors cursor-pointer flex items-center gap-1 font-mono text-[11px] font-bold shadow-sm"
-                            title="Convert this Estimate into an Office Invoice"
-                          >
-                            <Receipt className="w-3.5 h-3.5 text-cyan-400" />
-                            <span>To Invoice</span>
                           </button>
                         )}
 

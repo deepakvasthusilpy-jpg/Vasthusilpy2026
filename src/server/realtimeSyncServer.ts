@@ -304,8 +304,6 @@ export function registerRealtimeSyncRoutes(app: Express) {
       "construction_projects",
       "construction_agreements",
       "construction_settings",
-      "site_inspections",
-      "inspection_templates",
       "building_plans",
       "building_plan_projects",
       "cad_folders",
@@ -316,8 +314,7 @@ export function registerRealtimeSyncRoutes(app: Express) {
       "important_folders",
       "personal_bills",
       "valuation_certificates",
-      "application_form_entries",
-      "site_inspection_templates"
+      "application_form_entries"
     ];
 
     const result: Record<string, any[]> = {};

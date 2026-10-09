@@ -28,22 +28,6 @@ import {
   emailToDocId
 } from "../lib/firebase";
 import {
-  getOrCreateTotpSecret,
-  verifyTotpCode,
-  isAdminTotpRequired,
-  getAdminTotpDaysRemaining,
-  getLastAdminTotpVerified,
-  recordAdminTotpVerified,
-  ADMIN_TOTP_RECURRING_WINDOW_MS,
-  isSubscriberDailyTotpRequired,
-  recordSubscriberDailyTotpVerified,
-  isClientWeeklyTotpRequired,
-  recordClientTotpVerified,
-  getClientTotpCountdown,
-  CLIENT_TOTP_INTERVAL_DAYS,
-  CLIENT_TOTP_INTERVAL_MS
-} from "../utils/totp";
-import {
   SubscriptionRequest,
   SubscriptionStatus,
   AccessLevel,
@@ -112,7 +96,6 @@ export interface EmailUser {
   phone?: string;
   subscriptionId?: string;
   profession?: string;
-  lastAdminTotpVerifiedAt?: number;
   lastLoginAt?: string;
   photoURL?: string;
   isSubscriberLogin?: boolean;
@@ -128,12 +111,6 @@ interface AuthContextType {
   isSubscriberLogin: boolean;
   authError: string | null;
   clearAuthError: () => void;
-
-  // 30-Day Admin TOTP State & Verifier
-  lastAdminTotpVerifiedAt: number | null;
-  adminTotpDaysRemaining: number;
-  isAdminTotpDue: boolean;
-  verifyAdminTotpNow: (totpCode: string) => Promise<boolean>;
 
   // User Profile & Synchronized Details across all logins
   updateUserProfile: (updates: {
@@ -151,7 +128,7 @@ interface AuthContextType {
     otp?: string;
   }) => Promise<boolean>;
   loginWithPassword: (userIdInput: string, passwordInput: string) => Promise<boolean>;
-  loginWithSubscription: (emailOrPhoneInput: string, passwordInput: string, totpCode?: string) => Promise<boolean>;
+  loginWithSubscription: (emailOrPhoneInput: string, passwordInput: string) => Promise<boolean>;
   submitSubscriptionRequest: (details: {
     fullName: string;
     email: string;
@@ -162,7 +139,6 @@ interface AuthContextType {
     planName?: string;
     notes?: string;
   }) => Promise<{ success: boolean; id: string; message: string }>;
-  loginWithGoogleAuthenticator: (email: string, totpCode: string) => Promise<boolean>;
   sendEmailOtp: (email: string) => Promise<{
     success: boolean;
     email: string;
@@ -216,12 +192,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return loadSavedSubscriptionRequests();
   });
   const [isExpiredSubscription, setIsExpiredSubscription] = useState<boolean>(false);
-  const [lastAdminTotpVerifiedAt, setLastAdminTotpVerifiedAt] = useState<number | null>(() => {
-    return getLastAdminTotpVerified();
-  });
-
-  const adminTotpDaysRemaining = getAdminTotpDaysRemaining(lastAdminTotpVerifiedAt);
-  const isAdminTotpDue = isAdminTotpRequired(isPrimaryAdmin, lastAdminTotpVerifiedAt);
 
   const [activeTabPermissions, setActiveTabPermissions] = useState<Record<string, AccessLevel>>(() => {
     try {
@@ -347,8 +317,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           isSubscriberLogin: isSubLogin,
           authMethod: isAuthAdminLogin ? "google_authenticator" : "subscription_user",
           loginTimestamp: loginTime,
-          subscriptionId: parsedSub?.subscriptionId || parsedEmail?.subscriptionId,
-          lastAdminTotpVerifiedAt: parsedEmail?.lastAdminTotpVerifiedAt
+          subscriptionId: parsedSub?.subscriptionId || parsedEmail?.subscriptionId
         };
 
         setEmailUser(unifiedEmailUser);
@@ -416,12 +385,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (docSnap.exists()) {
             const uData = docSnap.data();
             if (uData) {
-              // Synchronize 30-day TOTP timestamp if present
-              if (uData.lastAdminTotpVerifiedAt && typeof uData.lastAdminTotpVerifiedAt === "number") {
-                setLastAdminTotpVerifiedAt(uData.lastAdminTotpVerifiedAt);
-                recordAdminTotpVerified(currentEmail, uData.lastAdminTotpVerifiedAt);
-              }
-
               setEmailUser((prev) => {
                 const cleanEmail = uData.email || currentEmail;
                 const updated: EmailUser = {
@@ -431,7 +394,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   phone: uData.phone !== undefined ? uData.phone : (prev?.phone || ""),
                   profession: uData.profession !== undefined ? uData.profession : (prev?.profession || "Vasthu Architect / Engineer"),
                   role: uData.role || prev?.role || (isPrimaryAdminEmail(cleanEmail) ? "primary_admin" : "authorized_user"),
-                  lastAdminTotpVerifiedAt: uData.lastAdminTotpVerifiedAt || prev?.lastAdminTotpVerifiedAt,
                   photoURL: uData.photoURL || prev?.photoURL || user?.photoURL || undefined,
                   loginTimestamp: prev?.loginTimestamp || Date.now()
                 };
@@ -1276,139 +1238,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Google Authenticator (TOTP) Authentication
-  const loginWithGoogleAuthenticator = async (inputEmail: string, enteredCode: string): Promise<boolean> => {
-    setAuthError(null);
-    setLoading(true);
-
-    const cleanEmail = inputEmail.trim().toLowerCase();
-    const cleanCode = enteredCode.trim().replace(/\D/g, "");
-
-    if (!cleanEmail || !cleanEmail.includes("@")) {
-      setLoading(false);
-      throw new Error("ദയവായി സാധുവായ ഇമെയിൽ വിലാസം നൽകുക (Please enter a valid email address).");
-    }
-
-    if (cleanCode.length !== 6) {
-      setLoading(false);
-      throw new Error("Google Authenticator ആപ്പിലെ 6 അക്ക കോഡ് നൽകുക (Please enter the 6-digit Authenticator code).");
-    }
-
-    // Retrieve user's TOTP Secret
-    const secret = getOrCreateTotpSecret(cleanEmail);
-    const verification = await verifyTotpCode(secret, cleanCode, 1);
-
-    if (!verification.valid) {
-      setLoading(false);
-      throw new Error("നൽകിയ 6 അക്ക Google Authenticator കോഡ് തെറ്റാണ് അല്ലെങ്കിൽ കാലഹരണപ്പെട്ടു (Invalid or expired Authenticator code). ദയവായി ആപ്പിലെ പുതിയ കോഡ് നൽകുക.");
-    }
-
-    const isAdmin = isPrimaryAdminEmail(cleanEmail);
-    const docId = emailToDocId(cleanEmail);
-
-    let displayName = cleanEmail.split("@")[0].toUpperCase();
-    let phone = isAdmin ? "9747995961" : "";
-    let profession = isAdmin ? "Vasthu Consultant & Civil Engineer" : "Engineer";
-
-    const now = Date.now();
-    if (isAdmin) {
-      setLastAdminTotpVerifiedAt(now);
-      recordAdminTotpVerified(cleanEmail, now);
-    }
-
-    try {
-      const resolved = await resolveAccountDetails(cleanEmail);
-      if (resolved) {
-        if (resolved.displayName) displayName = resolved.displayName;
-        if (resolved.phone) phone = resolved.phone;
-        if (resolved.profession) profession = resolved.profession;
-      }
-    } catch {}
-
-    try {
-      const userDoc = await getDoc(doc(db, "users", docId));
-      if (userDoc.exists()) {
-        const uData = userDoc.data();
-        if (uData.displayName) displayName = uData.displayName;
-        if (uData.phone) phone = uData.phone;
-        if (uData.profession) profession = uData.profession;
-      }
-
-      await setDoc(doc(db, "users", docId), {
-        email: cleanEmail,
-        phone: phone,
-        displayName: displayName,
-        profession: profession,
-        role: isAdmin ? "primary_admin" : "authorized_user",
-        lastLoginAt: new Date().toISOString(),
-        lastAdminTotpVerifiedAt: isAdmin ? now : undefined,
-        authMethod: "google_authenticator"
-      }, { merge: true });
-    } catch (e) {
-      // Offline fallback
-    }
-
-    const sessionUser: EmailUser = {
-      email: cleanEmail,
-      phone: phone,
-      displayName: displayName,
-      profession: profession,
-      role: isAdmin ? "primary_admin" : "authorized_user",
-      loginTimestamp: Date.now(),
-      lastAdminTotpVerifiedAt: isAdmin ? now : undefined,
-      subscriptionId: isAdmin ? "SUB-ADMIN-DEEPAK" : undefined,
-      isSubscriberLogin: false,
-      authMethod: "google_authenticator"
-    };
-
-    const subSession: SubscriptionUserSession = {
-      email: cleanEmail,
-      fullName: displayName,
-      phone: phone,
-      role: isAdmin ? "primary_admin" : "authorized_user",
-      subscriptionId: isAdmin ? "SUB-ADMIN-DEEPAK" : "",
-      validUntil: isAdmin ? "2099-12-31" : "",
-      validDays: isAdmin ? 36500 : 30,
-      status: "approved",
-      tabPermissions: { ...DEFAULT_FULL_PERMISSIONS },
-      loginTimestamp: Date.now()
-    };
-
-    localStorage.setItem("vasthusilpy_email_user", JSON.stringify(sessionUser));
-    localStorage.setItem("vasthusilpy_subscription_user", JSON.stringify(subSession));
-    localStorage.setItem("vasthusilpy_saved_login_id", cleanEmail);
-    if (isAdmin) {
-      localStorage.setItem("vasthusilpy_authenticator_login", "true");
-    } else {
-      localStorage.removeItem("vasthusilpy_authenticator_login");
-    }
-
-    // Record daily TOTP verification so subscriber login doesn't ask again today
-    recordSubscriberDailyTotpVerified(cleanEmail);
-    if (phone) {
-      recordSubscriberDailyTotpVerified(phone);
-    }
-
-    setEmailUser(sessionUser);
-    setUser(null);
-    setAuthorized(true);
-    setIsPrimaryAdmin(isAdmin);
-    setIsSubscriberLogin(false);
-    setLoading(false);
-
-    // Two-way synchronization & hydration of all web data in background
-    setTimeout(async () => {
-      try {
-        await pullAndHydrateWebDataFromServer(cleanEmail).catch(() => {});
-        await performFullWebDataSync().catch(() => {});
-      } catch (syncErr) {
-        console.warn("Post-auth sync notice:", syncErr);
-      }
-    }, 50);
-
-    return true;
-  };
-
   // Subscription Request Submission from Login Page
   const submitSubscriptionRequest = async (details: {
     fullName: string;
@@ -1512,8 +1341,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Login for Subscribed Users via Email / Mobile Number and Password
   const loginWithSubscription = async (
     emailOrPhoneInput?: string,
-    passwordInput?: string,
-    totpCode?: string
+    passwordInput?: string
   ): Promise<boolean> => {
     setAuthError(null);
     setLoading(true);
@@ -1778,44 +1606,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const hasExpired = foundSub.status === "expired" || isSubscriptionExpired(foundSub);
-
-    // 7-Day Client TOTP Interval Enforcement:
-    // "MANDATORY TO ENTER TOTP ON EVERY CLIENT LOGIN WITH 1 WEEK INTERVAL (ONCE EVERY 7 DAYS)"
-    const subIdentifier = foundSub.email || foundSub.phone || cleanInput;
-    const isWeeklyTotpNeeded = isClientWeeklyTotpRequired(subIdentifier);
-
-    if (isWeeklyTotpNeeded) {
-      if (totpCode && totpCode.trim().length === 6) {
-        const userEmail = foundSub.email || (cleanInput.includes("@") ? cleanInput : `${cleanPhoneDigits}@vasthusilpy.local`);
-        const secret = getOrCreateTotpSecret(userEmail);
-        const verification = await verifyTotpCode(secret, totpCode.trim(), 1);
-        if (!verification.valid) {
-          setLoading(false);
-          throw new Error("നൽകിയ 6 അക്ക Google Authenticator കോഡ് തെറ്റാണ് അല്ലെങ്കിൽ കാലഹരണപ്പെട്ടു (Invalid or expired 6-digit Authenticator code).");
-        }
-        recordClientTotpVerified(foundSub.email);
-        if (foundSub.phone) recordClientTotpVerified(foundSub.phone);
-        if (cleanInput) recordClientTotpVerified(cleanInput);
-      } else {
-        setLoading(false);
-        const err: any = new Error("CLIENT_WEEKLY_TOTP_REQUIRED");
-        err.code = "CLIENT_WEEKLY_TOTP_REQUIRED";
-        err.subscriberEmail = foundSub.email || (cleanInput.includes("@") ? cleanInput : `${cleanPhoneDigits}@vasthusilpy.local`);
-        err.subscriberPhone = foundSub.phone || cleanPhoneDigits;
-        err.displayName = foundSub.fullName || cleanInput;
-        throw err;
-      }
-    } else {
-      if (totpCode && totpCode.trim().length === 6) {
-        const userEmail = foundSub.email || (cleanInput.includes("@") ? cleanInput : `${cleanPhoneDigits}@vasthusilpy.local`);
-        const secret = getOrCreateTotpSecret(userEmail);
-        const verification = await verifyTotpCode(secret, totpCode.trim(), 1);
-        if (verification.valid) {
-          recordClientTotpVerified(foundSub.email);
-          if (foundSub.phone) recordClientTotpVerified(foundSub.phone);
-        }
-      }
-    }
 
     // Instant session construction
     const displayName = foundSub.fullName || (foundSub.email.includes("@") ? foundSub.email.split("@")[0] : "Subscriber");
@@ -2168,48 +1958,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAuthError(null);
   };
 
-  // Immediate Admin TOTP Verification (when 30-day window expires or on prompt)
-  const verifyAdminTotpNow = async (totpCode: string): Promise<boolean> => {
-    const targetEmail = emailUser?.email || user?.email || "deepak.vasthusilpy@gmail.com";
-    const cleanCode = totpCode.trim().replace(/\D/g, "");
-
-    if (cleanCode.length !== 6) {
-      throw new Error("Google Authenticator ആപ്പിലെ 6 അക്ക കോഡ് നൽകുക (Please enter 6-digit TOTP code).");
-    }
-
-    const secret = getOrCreateTotpSecret(targetEmail);
-    const verification = await verifyTotpCode(secret, cleanCode, 1);
-
-    if (!verification.valid) {
-      throw new Error("നൽകിയ Google Authenticator കോഡ് തെറ്റാണ് അല്ലെങ്കിൽ കാലാവധി കഴിഞ്ഞു (Invalid or expired Authenticator code).");
-    }
-
-    const now = Date.now();
-    setLastAdminTotpVerifiedAt(now);
-    recordAdminTotpVerified(targetEmail, now);
-
-    if (db) {
-      try {
-        const docId = emailToDocId(targetEmail);
-        await setDoc(doc(db, "users", docId), {
-          lastAdminTotpVerifiedAt: now,
-          updatedAt: new Date().toISOString()
-        }, { merge: true });
-      } catch (e) {
-        // Offline resilience
-      }
-    }
-
-    setEmailUser((prev) => {
-      if (!prev) return null;
-      const updated: EmailUser = { ...prev, lastAdminTotpVerifiedAt: now };
-      localStorage.setItem("vasthusilpy_email_user", JSON.stringify(updated));
-      return updated;
-    });
-
-    return true;
-  };
-
   // Synchronize user profile updates online to Firestore and local state
   const updateUserProfile = async (updates: {
     displayName?: string;
@@ -2229,8 +1977,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       phone: cleanPhone || emailUser?.phone || "",
       displayName: updates.displayName || emailUser?.displayName || user?.displayName || cleanEmail.split("@")[0],
       profession: updates.profession || emailUser?.profession || "Vasthu Architect / Engineer",
-      role: emailUser?.role || (isPrimaryAdminEmail(cleanEmail) ? "primary_admin" : "authorized_user"),
-      lastAdminTotpVerifiedAt
+      role: emailUser?.role || (isPrimaryAdminEmail(cleanEmail) ? "primary_admin" : "authorized_user")
     });
 
     // 2. Direct React state update
@@ -2263,18 +2010,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isSubscriberLogin,
         authError,
         clearAuthError,
-
-        lastAdminTotpVerifiedAt,
-        adminTotpDaysRemaining,
-        isAdminTotpDue,
-        verifyAdminTotpNow,
         updateUserProfile,
-
         signUpUser,
         loginWithPassword,
         loginWithSubscription,
         submitSubscriptionRequest,
-        loginWithGoogleAuthenticator,
         sendEmailOtp,
         verifyEmailOtp,
         signOutUser,

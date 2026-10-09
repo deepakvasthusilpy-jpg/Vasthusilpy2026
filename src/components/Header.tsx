@@ -36,7 +36,7 @@ import {
   RefreshCw,
   Database
 } from "lucide-react";
-import { OfflineBackupRestoreModal } from "./office/crm/OfflineBackupRestoreModal";
+import { OfflineBackupRestoreModal } from "./common/OfflineBackupRestoreModal";
 import { PWAInstallButton } from "./common/PWAInstallButton";
 import {
   performFullWebDataSync,
@@ -377,7 +377,7 @@ export const Header: React.FC<HeaderProps> = ({
                   setBackupInitialTab("backup");
                   setIsBackupRestoreOpen(true);
                 }}
-                title="Vasthusilpy Backup & Restore Center - Construction, Quotation, Estimator, CRM, Invoice Payments & Personal Bills"
+                title="Vasthusilpy Backup & Restore Center - Construction, Quotation & Estimator"
                 className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full border border-purple-500/50 hover:border-purple-400 bg-purple-950/70 hover:bg-purple-900/80 text-purple-200 hover:text-white text-xs font-mono font-bold transition-all shadow-sm cursor-pointer backdrop-blur-md"
               >
                 <Database className="w-3.5 h-3.5 text-purple-300 shrink-0" />
@@ -406,7 +406,7 @@ export const Header: React.FC<HeaderProps> = ({
                     type="button"
                     onClick={() => setIsProfileOpen(true)}
                     className="flex items-center gap-2 text-left cursor-pointer group"
-                    title="Click to view & edit Profile (Email, Mobile, Admin TOTP) synced online"
+                    title="Click to view & edit Profile (Email, Mobile) synced online"
                   >
                     <div className="hidden sm:flex flex-col text-right">
                       <span className="text-xs font-mono font-bold text-white max-w-[160px] truncate group-hover:text-pink-200 transition-colors">

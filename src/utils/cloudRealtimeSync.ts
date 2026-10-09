@@ -13,11 +13,7 @@ import { sanitizeForFirestore } from "./storageManager";
 
 // Local storage key constants
 export const SYNC_KEYS = {
-  PROJECTS: "vasthusilpy_crm_projects",
-  INVOICES: "vasthusilpy_invoices",
   ESTIMATES: "vasthusilpy_estimates",
-  CUSTOMERS: "vasthusilpy_customers",
-  RATE_ITEMS: "vasthusilpy_rate_items",
   BUILDING_PLANS: "vasthusilpy_building_plan_projects_master_v1",
   CONSTRUCTION_PROJECTS: "vasthusilpy_construction_projects",
   CONSTRUCTION_AGREEMENTS: "vasthusilpy_construction_agreements",
@@ -26,9 +22,6 @@ export const SYNC_KEYS = {
   CAD_VAULT_FILES: "vasthusilpy_cad_vault_files",
   IMPORTANT_SITES: "vasthusilpy_important_sites_v1",
   SITE_FOLDERS: "vasthusilpy_site_folders_v1",
-  SITE_INSPECTIONS: "vasthusilpy_site_inspections_v1",
-  INSPECTION_TEMPLATES: "vasthusilpy_site_inspection_templates_v1",
-  ONLINE_APPLICATIONS: "vasthusilpy_online_applications_v1",
   SUBSCRIPTIONS: "vasthusilpy_subscription_requests",
   LAST_CLOUD_SYNC: "vasthusilpy_last_cloud_autosync_time",
   CLOUD_SYNC_STATUS: "vasthusilpy_cloud_sync_status"
@@ -54,15 +47,6 @@ export function dispatchAllSyncEvents(targetKey?: string) {
   window.dispatchEvent(new Event("vasthusilpy_storage_update"));
   window.dispatchEvent(new CustomEvent("vasthusilpy_realtime_cloud_sync", { detail: { targetKey, timestamp: Date.now() } }));
 
-  if (!targetKey || targetKey === SYNC_KEYS.INVOICES) {
-    window.dispatchEvent(new Event("vasthusilpy_invoices_updated"));
-  }
-  if (!targetKey || targetKey === SYNC_KEYS.CUSTOMERS) {
-    window.dispatchEvent(new Event("vasthusilpy_customers_updated"));
-  }
-  if (!targetKey || targetKey === SYNC_KEYS.RATE_ITEMS) {
-    window.dispatchEvent(new Event("vasthusilpy_rate_items_updated"));
-  }
   if (!targetKey || targetKey === SYNC_KEYS.SUBSCRIPTIONS) {
     window.dispatchEvent(new Event("vasthusilpy_subscription_update"));
   }
@@ -86,15 +70,6 @@ export function dispatchAllSyncEvents(targetKey?: string) {
   }
   if (!targetKey || targetKey === SYNC_KEYS.SITE_FOLDERS) {
     window.dispatchEvent(new Event("vasthusilpy_site_folders_updated"));
-  }
-  if (!targetKey || targetKey === SYNC_KEYS.SITE_INSPECTIONS) {
-    window.dispatchEvent(new Event("vasthusilpy_site_inspections_updated"));
-  }
-  if (!targetKey || targetKey === SYNC_KEYS.INSPECTION_TEMPLATES) {
-    window.dispatchEvent(new Event("vasthusilpy_inspection_templates_updated"));
-  }
-  if (!targetKey || targetKey === SYNC_KEYS.ONLINE_APPLICATIONS) {
-    window.dispatchEvent(new Event("vasthusilpy_online_applications_updated"));
   }
 }
 
@@ -252,11 +227,7 @@ export function initializeCloudRealtimeSync(): () => void {
 
   // Collections mapping to local keys
   const syncMap: { collection: string; storageKey: string; idKey?: string }[] = [
-    { collection: "projects", storageKey: SYNC_KEYS.PROJECTS },
-    { collection: "invoices", storageKey: SYNC_KEYS.INVOICES },
     { collection: "estimates", storageKey: SYNC_KEYS.ESTIMATES },
-    { collection: "customers", storageKey: SYNC_KEYS.CUSTOMERS },
-    { collection: "rate_items", storageKey: SYNC_KEYS.RATE_ITEMS },
     { collection: "building_plans", storageKey: SYNC_KEYS.BUILDING_PLANS },
     { collection: "construction_projects", storageKey: SYNC_KEYS.CONSTRUCTION_PROJECTS },
     { collection: "construction_agreements", storageKey: SYNC_KEYS.CONSTRUCTION_AGREEMENTS },
@@ -265,9 +236,6 @@ export function initializeCloudRealtimeSync(): () => void {
     { collection: "cad_vault_files", storageKey: SYNC_KEYS.CAD_VAULT_FILES },
     { collection: "important_sites", storageKey: SYNC_KEYS.IMPORTANT_SITES },
     { collection: "site_folders", storageKey: SYNC_KEYS.SITE_FOLDERS },
-    { collection: "site_inspections", storageKey: SYNC_KEYS.SITE_INSPECTIONS },
-    { collection: "inspection_templates", storageKey: SYNC_KEYS.INSPECTION_TEMPLATES },
-    { collection: "online_applications", storageKey: SYNC_KEYS.ONLINE_APPLICATIONS },
     { collection: "subscription_requests", storageKey: SYNC_KEYS.SUBSCRIPTIONS }
   ];
 
@@ -399,24 +367,8 @@ export async function pullFullCloudDatabaseState(): Promise<boolean> {
       if (data && data.success && data.store) {
         const store = data.store;
 
-        if (Array.isArray(store.projects) && store.projects.length > 0) {
-          writeLocalList(SYNC_KEYS.PROJECTS, store.projects);
-          hasHydrated = true;
-        }
-        if (Array.isArray(store.invoices) && store.invoices.length > 0) {
-          writeLocalList(SYNC_KEYS.INVOICES, store.invoices);
-          hasHydrated = true;
-        }
         if (Array.isArray(store.estimates) && store.estimates.length > 0) {
           writeLocalList(SYNC_KEYS.ESTIMATES, store.estimates);
-          hasHydrated = true;
-        }
-        if (Array.isArray(store.customers) && store.customers.length > 0) {
-          writeLocalList(SYNC_KEYS.CUSTOMERS, store.customers);
-          hasHydrated = true;
-        }
-        if (Array.isArray(store.rateItems) && store.rateItems.length > 0) {
-          writeLocalList(SYNC_KEYS.RATE_ITEMS, store.rateItems);
           hasHydrated = true;
         }
         if (Array.isArray(store.buildingPlans) && store.buildingPlans.length > 0) {
@@ -445,10 +397,6 @@ export async function pullFullCloudDatabaseState(): Promise<boolean> {
         }
         if (Array.isArray(store.importantSites) && store.importantSites.length > 0) {
           writeLocalList(SYNC_KEYS.IMPORTANT_SITES, store.importantSites);
-          hasHydrated = true;
-        }
-        if (Array.isArray(store.onlineApplications) && store.onlineApplications.length > 0) {
-          writeLocalList(SYNC_KEYS.ONLINE_APPLICATIONS, store.onlineApplications);
           hasHydrated = true;
         }
 
@@ -485,13 +433,8 @@ export async function pullFullCloudDatabaseState(): Promise<boolean> {
     };
 
     await Promise.all([
-      fetchFirestoreCollection("projects", SYNC_KEYS.PROJECTS),
-      fetchFirestoreCollection("invoices", SYNC_KEYS.INVOICES),
       fetchFirestoreCollection("estimates", SYNC_KEYS.ESTIMATES),
-      fetchFirestoreCollection("customers", SYNC_KEYS.CUSTOMERS),
-      fetchFirestoreCollection("rate_items", SYNC_KEYS.RATE_ITEMS),
-      fetchFirestoreCollection("important_sites", SYNC_KEYS.IMPORTANT_SITES),
-      fetchFirestoreCollection("online_applications", SYNC_KEYS.ONLINE_APPLICATIONS)
+      fetchFirestoreCollection("important_sites", SYNC_KEYS.IMPORTANT_SITES)
     ]);
 
     if (hasHydrated) {

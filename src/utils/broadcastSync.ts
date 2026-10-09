@@ -4,7 +4,7 @@ export function getBroadcastChannel(): BroadcastChannel | null {
   if (typeof BroadcastChannel === "undefined") return null;
   if (!sharedBroadcastChannel) {
     try {
-      sharedBroadcastChannel = new BroadcastChannel("vasthusilpy_crm_sync_channel");
+      sharedBroadcastChannel = new BroadcastChannel("vasthusilpy_sync_channel");
     } catch (e) {
       console.warn("BroadcastChannel initialization failed:", e);
       return null;

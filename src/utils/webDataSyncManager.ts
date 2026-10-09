@@ -10,11 +10,7 @@ export interface WebDataSyncStatus {
   lastSyncedAt: string | null;
   error: string | null;
   syncedCounts: {
-    projects: number;
-    invoices: number;
     estimates: number;
-    customers: number;
-    rateItems: number;
     userProfiles: number;
     subscriptionRequests: number;
   };
@@ -67,15 +63,10 @@ function readLocalJson<T>(key: string, fallback: T): T {
  * Gathers all web application data from local storage
  */
 export function collectLocalWebData() {
-  const projects = filterOutDeletedRecords(readLocalJson("vasthusilpy_crm_projects", []));
-  const invoices = filterOutDeletedRecords(readLocalJson("vasthusilpy_invoices", []));
   const estimates = filterOutDeletedRecords(readLocalJson("vasthusilpy_estimates", []));
-  const customers = filterOutDeletedRecords(readLocalJson("vasthusilpy_customers", []));
-  const rateItems = filterOutDeletedRecords(readLocalJson("vasthusilpy_rate_items", []));
   const quotations = filterOutDeletedRecords(readLocalJson("vasthusilpy_quotations_v1", readLocalJson("vasthusilpy_quotations", [])));
   const constructionProjects = filterOutDeletedRecords(readLocalJson("vasthusilpy_construction_projects_v1", []));
   const constructionAgreements = filterOutDeletedRecords(readLocalJson("vasthusilpy_construction_agreements_v1", readLocalJson("vasthusilpy_construction_agreements", [])));
-  const siteInspections = filterOutDeletedRecords(readLocalJson("vasthusilpy_site_inspections_v1", readLocalJson("vasthusilpy_inspections", [])));
   const buildingPlans = filterOutDeletedRecords(readLocalJson("vasthusilpy_building_plan_projects_master_v1", readLocalJson("VAS_BUILDING_PLAN_PROJECTS_LIST", [])));
   const cadFiles = filterOutDeletedRecords(readLocalJson("vasthusilpy_cad_vault_files", []));
   const cadFolders = filterOutDeletedRecords(readLocalJson("vasthusilpy_cad_vault_folders", []));
@@ -109,15 +100,10 @@ export function collectLocalWebData() {
   }
 
   return {
-    projects,
-    invoices,
     estimates,
-    customers,
-    rateItems,
     quotations,
     constructionProjects,
     constructionAgreements,
-    siteInspections,
     buildingPlans,
     cadFiles,
     cadFolders,
@@ -184,24 +170,6 @@ export async function performFullWebDataSync(): Promise<{
           }
         }
       }
-
-      // Sync top active CRM projects to Firestore
-      if (Array.isArray(localData.projects)) {
-        for (const proj of localData.projects.slice(0, 15)) {
-          if (proj?.id) {
-            await setDoc(doc(db, "projects", proj.id), proj, { merge: true }).catch(() => {});
-          }
-        }
-      }
-
-      // Sync top invoices to Firestore
-      if (Array.isArray(localData.invoices)) {
-        for (const inv of localData.invoices.slice(0, 15)) {
-          if (inv?.id) {
-            await setDoc(doc(db, "invoices", inv.id), inv, { merge: true }).catch(() => {});
-          }
-        }
-      }
     } catch (firestoreErr) {
       console.warn("[WebDataSync] Firestore cloud sync notice:", firestoreErr);
     }
@@ -210,22 +178,8 @@ export async function performFullWebDataSync(): Promise<{
   // 3. If server provided merged data, update localStorage to keep device in perfect parity
   if (serverMerged) {
     try {
-      if (Array.isArray(serverMerged.projects) && serverMerged.projects.length > 0) {
-        localStorage.setItem("vasthusilpy_crm_projects", JSON.stringify(serverMerged.projects));
-        localStorage.setItem("vasthusilpy_projects", JSON.stringify(serverMerged.projects));
-      }
-      if (Array.isArray(serverMerged.invoices) && serverMerged.invoices.length > 0) {
-        localStorage.setItem("vasthusilpy_invoices", JSON.stringify(serverMerged.invoices));
-        localStorage.setItem("vasthusilpy_crm_invoices", JSON.stringify(serverMerged.invoices));
-      }
       if (Array.isArray(serverMerged.estimates) && serverMerged.estimates.length > 0) {
         localStorage.setItem("vasthusilpy_estimates", JSON.stringify(serverMerged.estimates));
-      }
-      if (Array.isArray(serverMerged.customers) && serverMerged.customers.length > 0) {
-        localStorage.setItem("vasthusilpy_customers", JSON.stringify(serverMerged.customers));
-      }
-      if (Array.isArray(serverMerged.rateItems) && serverMerged.rateItems.length > 0) {
-        localStorage.setItem("vasthusilpy_rate_items", JSON.stringify(serverMerged.rateItems));
       }
       if (Array.isArray(serverMerged.quotations) && serverMerged.quotations.length > 0) {
         localStorage.setItem("vasthusilpy_quotations_v1", JSON.stringify(serverMerged.quotations));
@@ -237,10 +191,6 @@ export async function performFullWebDataSync(): Promise<{
       if (Array.isArray(serverMerged.constructionAgreements) && serverMerged.constructionAgreements.length > 0) {
         localStorage.setItem("vasthusilpy_construction_agreements_v1", JSON.stringify(serverMerged.constructionAgreements));
         localStorage.setItem("vasthusilpy_construction_agreements", JSON.stringify(serverMerged.constructionAgreements));
-      }
-      if (Array.isArray(serverMerged.siteInspections) && serverMerged.siteInspections.length > 0) {
-        localStorage.setItem("vasthusilpy_site_inspections_v1", JSON.stringify(serverMerged.siteInspections));
-        localStorage.setItem("vasthusilpy_inspections", JSON.stringify(serverMerged.siteInspections));
       }
       if (Array.isArray(serverMerged.buildingPlans) && serverMerged.buildingPlans.length > 0) {
         localStorage.setItem("vasthusilpy_building_plan_projects_master_v1", JSON.stringify(serverMerged.buildingPlans));
@@ -272,11 +222,7 @@ export async function performFullWebDataSync(): Promise<{
   });
 
   const counts = {
-    projects: serverMerged?.projects?.length || localData.projects.length,
-    invoices: serverMerged?.invoices?.length || localData.invoices.length,
     estimates: serverMerged?.estimates?.length || localData.estimates.length,
-    customers: serverMerged?.customers?.length || localData.customers.length,
-    rateItems: serverMerged?.rateItems?.length || localData.rateItems.length,
     subscriptionRequests: serverMerged?.subscriptionRequests?.length || localData.subscriptionRequests.length
   };
 
@@ -394,7 +340,7 @@ export async function syncUserProfileDirect(profile?: {
  * Master Pull & Hydration function:
  * Fetches authoritative server web data and hydrates local browser storage.
  * Ensures that logging in on ANY device/browser with either Mobile Number OR Email ID
- * loads the exact same projects, CAD drawings, invoices, and estimates.
+ * loads the exact same projects, CAD drawings, and estimates.
  */
 export async function pullAndHydrateWebDataFromServer(accountIdentifier?: string | null): Promise<{
   success: boolean;
@@ -463,19 +409,7 @@ export async function pullAndHydrateWebDataFromServer(accountIdentifier?: string
       return merged;
     };
 
-    const projects = mergeById("vasthusilpy_crm_projects", d.projects);
-    try {
-      localStorage.setItem("vasthusilpy_projects", JSON.stringify(projects));
-    } catch {}
-
-    const invoices = mergeById("vasthusilpy_invoices", d.invoices);
-    try {
-      localStorage.setItem("vasthusilpy_crm_invoices", JSON.stringify(invoices));
-    } catch {}
-
     const estimates = mergeById("vasthusilpy_estimates", d.estimates);
-    const customers = mergeById("vasthusilpy_customers", d.customers);
-    const rateItems = mergeById("vasthusilpy_rate_items", d.rateItems);
 
     if (Array.isArray(d.quotations) && d.quotations.length > 0) {
       const quotations = mergeById("vasthusilpy_quotations_v1", d.quotations);
@@ -492,13 +426,6 @@ export async function pullAndHydrateWebDataFromServer(accountIdentifier?: string
       const agreements = mergeById("vasthusilpy_construction_agreements_v1", d.constructionAgreements);
       try {
         localStorage.setItem("vasthusilpy_construction_agreements", JSON.stringify(agreements));
-      } catch {}
-    }
-
-    if (Array.isArray(d.siteInspections) && d.siteInspections.length > 0) {
-      const inspections = mergeById("vasthusilpy_site_inspections_v1", d.siteInspections);
-      try {
-        localStorage.setItem("vasthusilpy_inspections", JSON.stringify(inspections));
       } catch {}
     }
 
@@ -588,11 +515,7 @@ export async function pullAndHydrateWebDataFromServer(accountIdentifier?: string
       success: true,
       syncedAt,
       counts: {
-        projects: projects.length,
-        invoices: invoices.length,
         estimates: estimates.length,
-        customers: customers.length,
-        rateItems: rateItems.length,
         subscriptionRequests: subs.length
       },
       account: resolvedAccount

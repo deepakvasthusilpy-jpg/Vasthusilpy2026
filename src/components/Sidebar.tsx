@@ -208,77 +208,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         { id: "engineer_seals" as TabType, label: "Engineer Seals & Signatures", sub: "OFFICIAL CERTIFICATION", icon: ShieldCheck }
       ]
     },
-    {
-      id: "office_dashboard" as MainSectionType,
-      title: "CRM",
-      subtitle: "PROJECT PIPELINE & CRM",
-      shortLabel: "CRM",
-      icon: FolderKanban,
-      defaultTab: "office_crm_projects" as TabType,
-      color: "from-emerald-500 to-teal-600",
-      activeBorder: "border-emerald-500",
-      activeText: "text-emerald-400",
-      subTabs: [
-        { id: "office_crm_projects" as TabType, label: "Projects Pipeline", sub: "CRM PIPELINE", icon: Briefcase, badge: "CRM" },
-        { id: "office_online_applications" as TabType, label: "Online Applications", sub: "PORTAL & LOGINS", icon: FileText, badge: "PORTAL" },
-        { id: "office_application_types" as TabType, label: "Applications Type", sub: "TYPES & DEPARTMENTS", icon: Layers, badge: "TYPES" },
-        { id: "office_tasks" as TabType, label: "Tasks & Sub-Tasks", sub: "TASK MANAGEMENT", icon: ListTodo, badge: "TASKS" },
-        { id: "office_activities" as TabType, label: "Activity History", sub: "AUDIT TRAIL", icon: History }
-      ]
-    },
-    {
-      id: "site_inspection" as MainSectionType,
-      title: "Site Inspection",
-      subtitle: "MOBILE FIELD DATA & GPS",
-      shortLabel: "Inspection",
-      icon: MapPin,
-      defaultTab: "site_inspection_form" as TabType,
-      color: "from-emerald-500 via-teal-500 to-cyan-500",
-      activeBorder: "border-emerald-400",
-      activeText: "text-emerald-300",
-      badge: "MOBILE",
-      subTabs: [
-        { id: "site_inspection_form" as TabType, label: "Field Inspection Form", sub: "MOBILE TOUCH & GPS", icon: Smartphone, badge: "FIELD" },
-        { id: "site_inspection_dashboard" as TabType, label: "Admin Inspections", sub: "REVIEWS & PDF EXPORT", icon: LayoutGrid, badge: "ADMIN" },
-        { id: "site_inspection_builder" as TabType, label: "Dynamic Questions", sub: "CHECKLIST TEMPLATES", icon: Layers },
-        { id: "site_inspection_guide" as TabType, label: "Backend Architecture", sub: "WHATSAPP & NODEMAILER", icon: Server }
-      ]
-    },
-    {
-      id: "important_sites" as MainSectionType,
-      title: "Important Sites",
-      subtitle: "PORTALS, LINKS & FOLDERS",
-      shortLabel: "Sites",
-      icon: Globe,
-      defaultTab: "important_sites" as TabType,
-      color: "from-emerald-400 via-teal-500 to-cyan-500",
-      activeBorder: "border-emerald-400",
-      activeText: "text-emerald-300",
-      badge: "LINKS",
-      subTabs: [
-        { id: "important_sites" as TabType, label: "All Important Sites", sub: "VAULT & FOLDERS", icon: Globe, badge: "ALL" },
-        { id: "sites_folders" as TabType, label: "VEO & Folders", sub: "FOLDER DIRECTORY", icon: FolderKanban, badge: "VEO" }
-      ]
-    },
-    {
-      id: "invoices_payments" as MainSectionType,
-      title: "Invoices & Payments",
-      subtitle: "BILLING, CLIENT & PERSONAL",
-      shortLabel: "Billing",
-      icon: Receipt,
-      defaultTab: "invoices_list" as TabType,
-      color: "from-teal-400 to-emerald-500",
-      activeBorder: "border-teal-400",
-      activeText: "text-teal-300",
-      badge: "PAY",
-      subTabs: [
-        { id: "invoices_list" as TabType, label: "Invoices & Billing", sub: "CLIENT INVOICES", icon: Receipt },
-        { id: "products_services" as TabType, label: "Products & Services", sub: "RATES CATALOG", icon: Box, badge: "RATES" },
-        { id: "customers" as TabType, label: "Customers & Clients", sub: "CLIENT DIRECTORY", icon: Users },
-        { id: "reports_analysis" as TabType, label: "Reports & Analytics", sub: "REVENUE INSIGHTS", icon: BarChart3 },
-        { id: "personal_bills" as TabType, label: "Personal Bills & Payments", sub: "UTILITIES, RD & POOV MALA", icon: Wallet, badge: "BILLS" }
-      ]
-    },
+
     {
       id: "vasthu" as MainSectionType,
       title: "Vasthu Shastra",

@@ -14,10 +14,6 @@ export interface DailySnapshotRecord {
     constructionAgreements: number;
     quotations: number;
     estimates: number;
-    crmProjects: number;
-    customers: number;
-    invoices: number;
-    personalBills: number;
     totalRecords: number;
   };
   data: VasthusilpyBackupPackage;
@@ -85,14 +81,6 @@ export function createDailySnapshot(force: boolean = false): DailySnapshotRecord
     constructionAgreements: pkg.constructionWork?.agreements?.length || 0,
     quotations: pkg.quotation?.quotations?.length || 0,
     estimates: (pkg.estimator?.estimates?.length ?? pkg.estimates?.length) || 0,
-    crmProjects: (pkg.crm?.projects?.length ?? pkg.crmProjects?.length) || 0,
-    customers: (pkg.crm?.customers?.length ?? pkg.customers?.length) || 0,
-    invoices: (pkg.invoicePayments?.invoices?.length ?? pkg.invoices?.length) || 0,
-    personalBills:
-      (pkg.personalBills?.poovMalaRows?.length || 0) +
-      (pkg.personalBills?.ksebBills?.length || 0) +
-      (pkg.personalBills?.vendorBills?.length || 0) +
-      (pkg.personalBills?.staffSalary?.length || 0),
     totalRecords: 0
   };
 
@@ -100,11 +88,7 @@ export function createDailySnapshot(force: boolean = false): DailySnapshotRecord
     stats.constructionProjects +
     stats.constructionAgreements +
     stats.quotations +
-    stats.estimates +
-    stats.crmProjects +
-    stats.customers +
-    stats.invoices +
-    stats.personalBills;
+    stats.estimates;
 
   const jsonStr = JSON.stringify(pkg);
   const sizeKb = Math.round((jsonStr.length / 1024) * 10) / 10;
@@ -234,27 +218,6 @@ export function detectPotentialDataLoss(): DataLossAuditResult {
   const currentEstimates = (pkg.estimator?.estimates?.length ?? pkg.estimates?.length) || 0;
   if (currentEstimates === 0 && (latestSnapshot.stats.estimates || 0) > 0) {
     emptyTabs.push("Estimator");
-  }
-
-  // Check 5: CRM
-  const currentCrmProjects = (pkg.crm?.projects?.length ?? pkg.crmProjects?.length) || 0;
-  if (currentCrmProjects === 0 && (latestSnapshot.stats.crmProjects || 0) > 0) {
-    emptyTabs.push("CRM Projects");
-  }
-
-  // Check 6: Invoices
-  const currentInvoices = (pkg.invoicePayments?.invoices?.length ?? pkg.invoices?.length) || 0;
-  if (currentInvoices === 0 && (latestSnapshot.stats.invoices || 0) > 0) {
-    emptyTabs.push("Invoice Payments");
-  }
-
-  // Check 7: Personal Bills
-  const currentPersonalBills =
-    (pkg.personalBills?.poovMalaRows?.length || 0) +
-    (pkg.personalBills?.ksebBills?.length || 0) +
-    (pkg.personalBills?.vendorBills?.length || 0);
-  if (currentPersonalBills === 0 && (latestSnapshot.stats.personalBills || 0) > 0) {
-    emptyTabs.push("Personal Bills & Payments");
   }
 
   if (emptyTabs.length > 0) {

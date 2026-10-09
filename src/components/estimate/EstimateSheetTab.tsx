@@ -81,8 +81,6 @@ interface EstimateSheetTabProps {
   onOpenStageCertificates?: () => void;
   onDeleteProject?: (id: string) => void;
   onGoToDashboard?: () => void;
-  onConvertToProject?: (proj: EstimateProject) => void;
-  onConvertToInvoice?: (proj: EstimateProject) => void;
   onOpenItemsOfWorkMaster?: () => void;
 }
 
@@ -96,8 +94,6 @@ export const EstimateSheetTab: React.FC<EstimateSheetTabProps> = ({
   onOpenStageCertificates,
   onDeleteProject,
   onGoToDashboard,
-  onConvertToProject,
-  onConvertToInvoice,
   onOpenItemsOfWorkMaster
 }) => {
   const { user, emailUser } = useAuth();
@@ -1417,28 +1413,6 @@ export const EstimateSheetTab: React.FC<EstimateSheetTabProps> = ({
             >
               <Award className="w-4 h-4 text-amber-400" />
               <span>Stage / Completion Cert</span>
-            </button>
-          )}
-
-          {onConvertToProject && (
-            <button
-              onClick={() => onConvertToProject(normalizedProject)}
-              className="bg-emerald-950/90 hover:bg-emerald-900 text-emerald-300 border border-emerald-700/80 px-3 py-1.5 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
-              title="Convert this estimate into a CRM Project record"
-            >
-              <FolderKanban className="w-4 h-4 text-emerald-400" />
-              <span>Convert to Project</span>
-            </button>
-          )}
-
-          {onConvertToInvoice && (
-            <button
-              onClick={() => onConvertToInvoice(normalizedProject)}
-              className="bg-cyan-950/90 hover:bg-cyan-900 text-cyan-300 border border-cyan-700/80 px-3 py-1.5 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
-              title="Convert this estimate into an Office Invoice"
-            >
-              <Receipt className="w-4 h-4 text-cyan-400" />
-              <span>Convert to Invoice</span>
             </button>
           )}
 

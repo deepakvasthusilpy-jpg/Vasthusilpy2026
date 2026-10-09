@@ -55,7 +55,7 @@ export interface AppToolItem {
   name: string;
   nameMl: string;
   englishName: string;
-  category: "vasthu" | "building_rules" | "survey" | "civil" | "estimate" | "office" | "invoices" | "construction" | "ai_agent";
+  category: "vasthu" | "building_rules" | "survey" | "civil" | "estimate" | "construction" | "ai_agent";
   categoryName: string;
   section: MainSectionType;
   tab: TabType;
@@ -142,26 +142,6 @@ export const TOOL_CATEGORIES: ToolCategory[] = [
     badgeBg: "bg-amber-500/20 text-amber-300 border-amber-500/40",
     icon: FileSpreadsheet,
     description: "Detailed Kerala PWD rate estimates (BOQ), stage & completion certificates & engineer seals."
-  },
-  {
-    id: "office",
-    name: "Office CRM & Tasks",
-    nameMl: "ഓഫീസ് CRM & ടാസ്കുകൾ",
-    color: "from-teal-500 to-emerald-600",
-    accent: "text-teal-400 border-teal-500/40 bg-teal-950/60",
-    badgeBg: "bg-teal-500/20 text-teal-300 border-teal-500/40",
-    icon: FolderKanban,
-    description: "Project pipeline tracking, milestone management, engineer task Kanban & comprehensive audit trail."
-  },
-  {
-    id: "invoices",
-    name: "Invoices & Billing",
-    nameMl: "ഇൻവോയ്‌സ് & പേയ്‌മെന്റുകൾ",
-    color: "from-indigo-500 to-violet-600",
-    accent: "text-indigo-400 border-indigo-500/40 bg-indigo-950/60",
-    badgeBg: "bg-indigo-500/20 text-indigo-300 border-indigo-500/40",
-    icon: Receipt,
-    description: "GST-compliant professional client billing, dynamic UPI QR payments, rate catalogs & client portals."
   },
   {
     id: "construction",
@@ -730,157 +710,8 @@ export const ALL_TOOLS_DATA: AppToolItem[] = [
   },
 
   // ==========================================
-  // 6. OFFICE DASHBOARD & CRM (3 TOOLS)
+  // 8. CONSTRUCTION WORKS (8 TOOLS)
   // ==========================================
-  {
-    id: "office_crm_pipeline",
-    name: "പ്രോജക്ട്സ് CRM & പൈപ്പ്ലൈൻ",
-    nameMl: "പ്രോജക്ട്സ് പൈപ്പ്ലൈൻ",
-    englishName: "Projects Pipeline & Client CRM",
-    category: "office",
-    categoryName: "ഓഫീസ് CRM & ടാസ്കുകൾ",
-    section: "office_dashboard",
-    tab: "office_crm_projects",
-    icon: Briefcase,
-    standard: "Architecture & Engineering Workflow",
-    description: "Track leads from initial inquiry to Vastu checking, plan drafting, permit sanction, and site execution with Kanban stages.",
-    descriptionMl: "പ്ലാനിംഗ്, വാസ്തു ചെക്കിംഗ്, പെർമിറ്റ് അനുമതി, നിർമ്മാണ മേൽനോട്ടം എന്നിവ ട്രാക്ക് ചെയ്യുന്ന പ്രോജക്ട് CRM.",
-    badges: ["CRM PIPELINE", "LEADS", "PROJECT TRACKING"],
-    color: "border-teal-800/80 hover:border-teal-400 bg-slate-900/90 text-teal-400",
-    accentColor: "text-teal-400",
-    bgGlow: "from-teal-500/20 to-emerald-500/10"
-  },
-  {
-    id: "office_tasks_manager",
-    name: "ടാസ്കുകൾ & ഉപടാസ്കുകൾ (Tasks Kanban)",
-    nameMl: "ടാസ്കുകൾ & ഉപടാസ്കുകൾ",
-    englishName: "Engineering Tasks & Sub-Tasks Manager",
-    category: "office",
-    categoryName: "ഓഫീസ് CRM & ടാസ്കുകൾ",
-    section: "office_dashboard",
-    tab: "office_tasks",
-    icon: ListTodo,
-    standard: "Project Management Workflow",
-    description: "Assign drawings, site visits, structural calculations, and permit follow-ups with priority tags and milestone dates.",
-    descriptionMl: "ഡ്രോയിംഗുകൾ, സൈറ്റ് വിസിറ്റുകൾ, ഘടനാപരമായ കണക്കുകൂട്ടലുകൾ എന്നിവ ഷെഡ്യൂൾ ചെയ്യാനും ട്രാക്ക് ചെയ്യാനുമുള്ള കാൻബൻ ബോർഡ്.",
-    badges: ["KANBAN", "TASKS", "MILESTONES"],
-    color: "border-teal-800/80 hover:border-teal-400 bg-slate-900/90 text-teal-400",
-    accentColor: "text-teal-400",
-    bgGlow: "from-teal-500/20 to-emerald-500/10"
-  },
-  {
-    id: "office_activities_log",
-    name: "ആക്ടിവിറ്റി ഹിസ്റ്ററി & ഓഡിറ്റ് ലോഗ്",
-    nameMl: "ആക്ടിവിറ്റി ഹിസ്റ്ററി",
-    englishName: "Activity History & Audit Trail",
-    category: "office",
-    categoryName: "ഓഫീസ് CRM & ടാസ്കുകൾ",
-    section: "office_dashboard",
-    tab: "office_activities",
-    icon: History,
-    standard: "Office Operations Compliance",
-    description: "Comprehensive timeline of project milestones, client communications, invoice generation, and status modifications.",
-    descriptionMl: "പ്രോജക്ട് അപ്‌ഡേറ്റുകൾ, കസ്റ്റമർ ആശയവിനിമയം, ഇൻവോയ്സ് മാറ്റങ്ങൾ എന്നിവയുടെ സമഗ്ര ടൈംലൈൻ ഹിസ്റ്ററി.",
-    badges: ["AUDIT TRAIL", "TIMELINE", "HISTORY"],
-    color: "border-teal-800/80 hover:border-teal-400 bg-slate-900/90 text-teal-400",
-    accentColor: "text-teal-400",
-    bgGlow: "from-teal-500/20 to-emerald-500/10"
-  },
-
-  // ==========================================
-  // 7. INVOICES & BILLING SUITE (5 TOOLS)
-  // ==========================================
-  {
-    id: "invoices_billing_list",
-    name: "ഇൻവോയ്‌സ് & പേയ്‌മെന്റുകൾ",
-    nameMl: "ഇൻവോയ്‌സ് & പേയ്‌മെന്റുകൾ",
-    englishName: "Invoices, Billing & Payment Receipts",
-    category: "invoices",
-    categoryName: "ഇൻവോയ്‌സ് & പേയ്‌മെന്റുകൾ",
-    section: "invoices_payments",
-    tab: "invoices_list",
-    icon: Receipt,
-    standard: "GST & Kerala Professional Billing",
-    description: "Create, edit, and print professional engineering consultation tax invoices with UPI QR codes, bank details, and payment receipts.",
-    descriptionMl: "പ്രൊഫഷണൽ എൻജിനീയറിങ് കൺസൾട്ടേഷൻ ഇൻവോയ്‌സുകൾ, UPI QR കോഡ് പേയ്‌മെന്റ്, പ്രിന്റബിൾ രസീതുകൾ.",
-    badges: ["GST INVOICES", "UPI QR CODE", "PRINT PDF"],
-    color: "border-indigo-800/80 hover:border-indigo-400 bg-slate-900/90 text-indigo-400",
-    accentColor: "text-indigo-400",
-    bgGlow: "from-indigo-500/20 to-violet-500/10",
-    isPrintable: true
-  },
-  {
-    id: "invoices_products_catalog",
-    name: "പ്രൊഡക്ട്സ് & സർവീസസ് കാറ്റലോഗ്",
-    nameMl: "പ്രൊഡക്ട്സ് & സർവീസസ്",
-    englishName: "Products & Services Catalog",
-    category: "invoices",
-    categoryName: "ഇൻവോയ്‌സ് & പേയ്‌മെന്റുകൾ",
-    section: "invoices_payments",
-    tab: "products_services",
-    icon: Box,
-    standard: "Standard Rate Cards",
-    description: "Standardized service catalog for 2D/3D planning, Vastu consultation, KPBR permit drawings, and detailed estimates with editable pricing.",
-    descriptionMl: "2D/3D പ്ലാനിംഗ്, വാസ്തു കൺസൾട്ടേഷൻ, KPBR പെർമിറ്റ് ഡ്രോയിംഗുകൾ എന്നിവയുടെ ഫിക്സഡ് റേറ്റ് കാർഡ്.",
-    badges: ["RATE CATALOG", "PRICING", "SERVICES"],
-    color: "border-indigo-800/80 hover:border-indigo-400 bg-slate-900/90 text-indigo-400",
-    accentColor: "text-indigo-400",
-    bgGlow: "from-indigo-500/20 to-violet-500/10"
-  },
-  {
-    id: "invoices_customers_dir",
-    name: "കസ്റ്റമേഴ്സ് / ക്ലയന്റ്സ് ഡയറക്ടറി",
-    nameMl: "കസ്റ്റമേഴ്സ് / ക്ലയന്റുകൾ",
-    englishName: "Customers & Clients Directory",
-    category: "invoices",
-    categoryName: "ഇൻവോയ്‌സ് & പേയ്‌മെന്റുകൾ",
-    section: "invoices_payments",
-    tab: "customers",
-    icon: Users,
-    standard: "Client Relationship Management",
-    description: "Client directory with contact numbers, site locations, GSTIN details, and full billing & payment history.",
-    descriptionMl: "ക്ലയന്റുകളുടെ ഫോൺ നമ്പർ, വിലാസം, GSTIN, അവരുടെ പ്രോജക്ട്-ബില്ലിംഗ് ഹിസ്റ്ററി എന്നിവ സൂക്ഷിക്കുന്ന ഡയറക്ടറി.",
-    badges: ["CLIENTS", "DIRECTORY", "CONTACTS"],
-    color: "border-indigo-800/80 hover:border-indigo-400 bg-slate-900/90 text-indigo-400",
-    accentColor: "text-indigo-400",
-    bgGlow: "from-indigo-500/20 to-violet-500/10"
-  },
-  {
-    id: "invoices_reports_analytics",
-    name: "റിപ്പോർട്ടുകൾ & ഫിനാൻഷ്യൽ അനലിറ്റിക്‌സ്",
-    nameMl: "റിപ്പോർട്ടുകൾ & അനലിറ്റിക്‌സ്",
-    englishName: "Financial Reports & Revenue Analytics",
-    category: "invoices",
-    categoryName: "ഇൻവോയ്‌സ് & പേയ്‌മെന്റുകൾ",
-    section: "invoices_payments",
-    tab: "reports_analysis",
-    icon: BarChart3,
-    standard: "Accounting & Business Analytics",
-    description: "Revenue breakdown, monthly billing charts, outstanding balance summaries, and service profitability reports.",
-    descriptionMl: "പ്രതിമാസ വരുമാന ഗ്രാഫുകൾ, കുടിശ്ശിക പേയ്‌മെന്റുകൾ, സേവന തിരിച്ചുള്ള ലാഭ റിപ്പോർട്ടുകൾ.",
-    badges: ["ANALYTICS", "REVENUE", "CHARTS"],
-    color: "border-indigo-800/80 hover:border-indigo-400 bg-slate-900/90 text-indigo-400",
-    accentColor: "text-indigo-400",
-    bgGlow: "from-indigo-500/20 to-violet-500/10"
-  },
-  {
-    id: "invoices_client_view_portal",
-    name: "ക്ലൈൻ്റ് വ്യൂ & ഷെയർ പോർട്ടൽ",
-    nameMl: "ക്ലൈൻ്റ് വ്യൂ & ലിങ്ക്സ്",
-    englishName: "Client View & Shareable Payment Portal",
-    category: "invoices",
-    categoryName: "ഇൻവോയ്‌സ് & പേയ്‌മെന്റുകൾ",
-    section: "invoices_payments",
-    tab: "client_view",
-    icon: Eye,
-    standard: "Secure Client Portal",
-    description: "Generate direct shareable links for clients to inspect project estimates, download invoices, and initiate online UPI payments.",
-    descriptionMl: "ക്ലയന്റുകൾക്ക് ഇൻവോയ്‌സുകൾ കാണാനും UPI വഴി നേരിട്ട് പേയ്‌മെന്റ് ചെയ്യാനും ഷെയർ ചെയ്യാവുന്ന ഓൺലൈൻ പോർട്ടൽ ലിങ്കുകൾ.",
-    badges: ["CLIENT PORTAL", "SHAREABLE", "ONLINE PAY"],
-    color: "border-indigo-800/80 hover:border-indigo-400 bg-slate-900/90 text-indigo-400",
-    accentColor: "text-indigo-400",
-    bgGlow: "from-indigo-500/20 to-violet-500/10"
-  },
   {
     id: "construction_dashboard_tool",
     name: "കൺസ്ട്രക്ഷൻ മാനേജ്‌മെന്റ് ഡാഷ്‌ബോർഡ്",
@@ -951,7 +782,7 @@ export const ALL_TOOLS_DATA: AppToolItem[] = [
     standard: "Vasthusilpy Project Registry 2026",
     description: "Active building project tracker with live stage progress, contract financials, and client communication logs.",
     descriptionMl: "നിർമ്മാണ പദ്ധതികളുടെ തത്സമയ സ്റ്റേജ് പുരോഗതിയും ക്ലയന്റ് വിവരങ്ങളും സൂക്ഷിക്കുന്ന ഡയറക്ടറി.",
-    badges: ["PROJECTS", "CRM", "STAGES"],
+    badges: ["PROJECTS", "STAGES"],
     color: "border-indigo-800/80 hover:border-indigo-400 bg-slate-900/90 text-indigo-400",
     accentColor: "text-indigo-400",
     bgGlow: "from-indigo-500/20 to-purple-500/10"
@@ -988,7 +819,7 @@ export const ALL_TOOLS_DATA: AppToolItem[] = [
     standard: "25-Stage Kerala Milestone Protocol",
     description: "Milestone payment tracker with automated stage receipts, remaining balance calculations, and overdue reminders.",
     descriptionMl: "25 നിർമ്മാണ ഘട്ടങ്ങളുടെ പെയ്‌മെന്റ് ട്രാക്കിംഗ്, ഇൻവോയ്‌സ് ജനറേഷൻ, കുടിശ്ശിക പരിശോധന.",
-    badges: ["25 STAGES", "PAYMENTS", "INVOICES"],
+    badges: ["25 STAGES", "PAYMENTS"],
     color: "border-teal-800/80 hover:border-teal-400 bg-slate-900/90 text-teal-400",
     accentColor: "text-teal-400",
     bgGlow: "from-teal-500/20 to-emerald-500/10"

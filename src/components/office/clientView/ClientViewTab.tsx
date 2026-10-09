@@ -30,16 +30,12 @@ import {
   Layers,
   HardHat,
   ChevronRight,
-  Receipt,
-  CreditCard,
-  Wallet,
-  IndianRupee,
   Phone,
   Mail,
   AlertCircle,
   Lock
 } from "lucide-react";
-import { ClientShareLink, Invoice, PaymentRecord } from "../../../types";
+import { ClientShareLink } from "../../../types";
 import {
   EstimateProject,
   loadSavedEstimates,
@@ -60,28 +56,14 @@ import {
   getTimeRemainingFormatted,
   buildClientShareUrl
 } from "../../../data/clientShareData";
-import { INITIAL_INVOICES } from "../../../data/crmData";
-import {
-  loadInvoices,
-  saveInvoices,
-  getDeletedInvoiceIds,
-  getDeletedProjectIds,
-  isDemoOrPurgedInvoice
-} from "../../../utils/storageManager";
 import { NewClientLinkModal } from "./NewClientLinkModal";
 import { ClientLinkQrModal } from "./ClientLinkQrModal";
-import { ClientInvoiceQrModal } from "./ClientInvoiceQrModal";
-import { InvoiceDetailModal } from "../invoices/InvoiceDetailModal";
-import { RecordPaymentModal } from "../invoices/RecordPaymentModal";
-import { InvoiceQrCode } from "../invoices/InvoiceQrCode";
-import { ClientPaymentHistoryView } from "./ClientPaymentHistoryView";
 import { useLanguage } from "../../../context/LanguageContext";
 import { db } from "../../../lib/firebase";
 import { collection, onSnapshot } from "firebase/firestore";
 
 interface ClientViewTabProps {
   estimateProjects?: EstimateProject[];
-  defaultPrimarySubTab?: "ESTIMATE" | "INVOICE";
 }
 
 export const ClientViewTab: React.FC<ClientViewTabProps> = ({
@@ -90,14 +72,8 @@ export const ClientViewTab: React.FC<ClientViewTabProps> = ({
 }) => {
   const { t } = useLanguage();
 
-  // Top-level Sub Tab State (ESTIMATE vs INVOICE)
-  const [primarySubTab, setPrimarySubTab] = useState<"ESTIMATE" | "INVOICE">(defaultPrimarySubTab);
-
-  useEffect(() => {
-    if (defaultPrimarySubTab) {
-      setPrimarySubTab(defaultPrimarySubTab);
-    }
-  }, [defaultPrimarySubTab]);
+  // Top-level Sub Tab State (ESTIMATE only now)
+  const [primarySubTab, setPrimarySubTab] = useState<"ESTIMATE">("ESTIMATE");
 
   // ==========================================
   // ESTIMATE SUB-TAB STATE
@@ -125,45 +101,19 @@ export const ClientViewTab: React.FC<ClientViewTabProps> = ({
   const [verifySubTab, setVerifySubTab] = useState<"estimate" | "stage" | "completion">("stage");
   const [verifyCopied, setVerifyCopied] = useState<boolean>(false);
 
-  // ==========================================
-  // INVOICE SUB-TAB STATE
-  // ==========================================
-  const [invoices, setInvoices] = useState<Invoice[]>(() => {
-    return loadInvoices();
-  });
-
-  const [invoiceSearchTerm, setInvoiceSearchTerm] = useState<string>("");
-  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState<
-    "ALL" | "UNPAID" | "PARTIALLY PAID" | "PAID"
-  >("ALL");
-  const [qrModalInvoice, setQrModalInvoice] = useState<Invoice | null>(null);
-  const [selectedInvoiceModal, setSelectedInvoiceModal] = useState<Invoice | null>(null);
-  const [recordingPaymentInvoice, setRecordingPaymentInvoice] = useState<Invoice | null>(null);
-  const [editingPayment, setEditingPayment] = useState<PaymentRecord | null>(null);
-  const [invoiceSubSection, setInvoiceSubSection] = useState<
-    "DIRECTORY" | "PAYMENT_HISTORY" | "VERIFICATION"
-  >("PAYMENT_HISTORY");
-  const [selectedVerifyInvoiceId, setSelectedVerifyInvoiceId] = useState<string>(
-    invoices[0]?.id || ""
-  );
-  const [copiedInvoiceId, setCopiedInvoiceId] = useState<string | null>(null);
-
   // Sync state when storage changes or Firebase updates
   useEffect(() => {
     const handleStorageChange = () => {
       setShareLinks(loadSavedClientShares());
       setEstimateProjects(loadSavedEstimates());
-      setInvoices(loadInvoices());
     };
 
     window.addEventListener("vasthusilpy_client_shares_updated", handleStorageChange);
     window.addEventListener("vasthusilpy_storage_update", handleStorageChange);
-    window.addEventListener("vasthusilpy_invoices_updated", handleStorageChange);
 
-    // Real-time sync for client shares & invoices
+    // Real-time sync for client shares
     let isMounted = true;
     let unsubShares = () => {};
-    let unsubInvoices = () => {};
 
     if (db) {
       try {
@@ -189,33 +139,6 @@ export const ClientViewTab: React.FC<ClientViewTabProps> = ({
             // Offline fallback
           }
         );
-
-        unsubInvoices = onSnapshot(
-          collection(db, "invoices"),
-          (snapshot) => {
-            if (!isMounted) return;
-            const deletedInvoiceIds = getDeletedInvoiceIds();
-            const deletedProjectIds = getDeletedProjectIds();
-            if (!snapshot.empty) {
-              const remoteInvoices: Invoice[] = [];
-              snapshot.forEach((d) => {
-                const item = d.data() as Invoice;
-                if (item && item.id && !deletedInvoiceIds.includes(item.id) && !isDemoOrPurgedInvoice(item)) {
-                  if (item.projectId && deletedProjectIds.includes(item.projectId)) {
-                    remoteInvoices.push({ ...item, projectId: undefined });
-                  } else {
-                    remoteInvoices.push(item);
-                  }
-                }
-              });
-              setInvoices(remoteInvoices);
-              saveInvoices(remoteInvoices, false);
-            }
-          },
-          () => {
-            // Offline fallback
-          }
-        );
       } catch (e) {
         // Safe offline fallback
       }
@@ -225,9 +148,7 @@ export const ClientViewTab: React.FC<ClientViewTabProps> = ({
       isMounted = false;
       window.removeEventListener("vasthusilpy_client_shares_updated", handleStorageChange);
       window.removeEventListener("vasthusilpy_storage_update", handleStorageChange);
-      window.removeEventListener("vasthusilpy_invoices_updated", handleStorageChange);
       unsubShares();
-      unsubInvoices();
     };
   }, []);
 
@@ -507,57 +428,9 @@ export const ClientViewTab: React.FC<ClientViewTabProps> = ({
   return (
     <div className="space-y-8">
       {/* ========================================================================= */}
-      {/* PRIMARY SUB-TAB NAVIGATION (ESTIMATE vs INVOICE) */}
-      {/* ========================================================================= */}
-      <div className="flex flex-wrap items-center gap-3 bg-slate-900/90 border border-slate-800 p-2 rounded-3xl shadow-lg">
-        <button
-          onClick={() => setPrimarySubTab("ESTIMATE")}
-          className={`px-6 py-3.5 rounded-2xl text-xs font-mono font-black flex items-center gap-3 transition-all cursor-pointer ${
-            primarySubTab === "ESTIMATE"
-              ? "bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/25 scale-[1.01]"
-              : "bg-slate-950 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-800"
-          }`}
-        >
-          <FileSpreadsheet className="w-4 h-4" />
-          <span className="text-sm">ESTIMATE (എസ്റ്റിമേറ്റ് & പ്രോഗ്രസ്)</span>
-          <span
-            className={`text-[10px] px-2.5 py-0.5 rounded-full font-mono font-bold ${
-              primarySubTab === "ESTIMATE"
-                ? "bg-slate-950 text-cyan-300 border border-cyan-700"
-                : "bg-slate-800 text-slate-400"
-            }`}
-          >
-            {activeLinks} Active Links
-          </span>
-        </button>
-
-        <button
-          onClick={() => setPrimarySubTab("INVOICE")}
-          className={`px-6 py-3.5 rounded-2xl text-xs font-mono font-black flex items-center gap-3 transition-all cursor-pointer ${
-            primarySubTab === "INVOICE"
-              ? "bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/25 scale-[1.01]"
-              : "bg-slate-950 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-800"
-          }`}
-        >
-          <Receipt className="w-4 h-4" />
-          <span className="text-sm">INVOICE (ഇൻവോയ്സ് & പേയ്‌മെന്റുകൾ)</span>
-          <span
-            className={`text-[10px] px-2.5 py-0.5 rounded-full font-mono font-bold ${
-              primarySubTab === "INVOICE"
-                ? "bg-slate-950 text-emerald-300 border border-emerald-700"
-                : "bg-slate-800 text-slate-400"
-            }`}
-          >
-            {invoices.length} Invoices
-          </span>
-        </button>
-      </div>
-
-      {/* ========================================================================= */}
       {/* 1. ESTIMATE SUB-TAB CONTENT */}
       {/* ========================================================================= */}
-      {primarySubTab === "ESTIMATE" && (
-        <div className="space-y-8 animate-in fade-in duration-200">
+      <div className="space-y-8 animate-in fade-in duration-200">
           {/* Top Banner & Action */}
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl relative overflow-hidden">
             <div className="absolute top-0 right-0 w-80 h-80 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
@@ -1089,557 +962,6 @@ export const ClientViewTab: React.FC<ClientViewTabProps> = ({
       )}
 
       {/* ========================================================================= */}
-      {/* 2. INVOICE SUB-TAB CONTENT */}
-      {/* ========================================================================= */}
-      {primarySubTab === "INVOICE" && (
-        <div className="space-y-8 animate-in fade-in duration-200">
-          {/* Top Banner & Invoice KPIs */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
-
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                    <Receipt className="w-4 h-4" />
-                  </div>
-                  <span className="text-xs font-mono font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-800">
-                    CLIENT INVOICES & ZERO-LOGIN PAYMENTS PORTAL
-                  </span>
-                </div>
-
-                <h2 className="text-xl md:text-2xl font-black text-white font-sans tracking-tight">
-                  Client Invoice & Payment Verification (Invoices View)
-                </h2>
-                <p className="text-xs md:text-sm text-slate-400 max-w-2xl leading-relaxed">
-                  Invoices, bills, and payment receipts can be shared with clients via link or QR code without requiring login. Accept instant payments via UPI QR.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3 shrink-0">
-                <div className="px-4 py-2.5 bg-emerald-950 border border-emerald-800/80 rounded-2xl flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-emerald-400" />
-                  <span className="text-xs font-mono font-bold text-emerald-300">
-                    100% Zero Login Access
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Financial KPI Summary Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-slate-800/80 text-xs font-mono">
-              <div className="bg-slate-950/80 p-4 rounded-2xl border border-slate-800/80 space-y-1">
-                <span className="text-slate-500 block">Total Invoiced Amount</span>
-                <div className="flex items-center justify-between">
-                  <span className="text-lg sm:text-xl font-bold text-white font-mono">
-                    ₹{totalInvoicedAmount.toLocaleString("en-IN")}
-                  </span>
-                  <span className="text-[10px] text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full">
-                    {invoices.length} INVS
-                  </span>
-                </div>
-              </div>
-
-              <div className="bg-slate-950/80 p-4 rounded-2xl border border-slate-800/80 space-y-1">
-                <span className="text-slate-500 block">Total Collected (Paid)</span>
-                <div className="flex items-center justify-between">
-                  <span className="text-lg sm:text-xl font-bold text-emerald-400 font-mono">
-                    ₹{totalCollectedAmount.toLocaleString("en-IN")}
-                  </span>
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                </div>
-              </div>
-
-              <div className="bg-slate-950/80 p-4 rounded-2xl border border-slate-800/80 space-y-1">
-                <span className="text-slate-500 block">Outstanding Balance Due</span>
-                <div className="flex items-center justify-between">
-                  <span className={`text-lg sm:text-xl font-bold font-mono ${totalPendingBalance > 0 ? "text-rose-400" : "text-emerald-400"}`}>
-                    ₹{totalPendingBalance.toLocaleString("en-IN")}
-                  </span>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
-                    unpaidInvoicesCount > 0
-                      ? "bg-rose-950 text-rose-300 border-rose-800"
-                      : "bg-emerald-950 text-emerald-300 border-emerald-800"
-                  }`}>
-                    {unpaidInvoicesCount} Pending
-                  </span>
-                </div>
-              </div>
-
-              <div className="bg-slate-950/80 p-4 rounded-2xl border border-slate-800/80 space-y-1">
-                <span className="text-slate-500 block">Direct UPI QR Gateway</span>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-cyan-400 truncate">7012383137@okbizaxis</span>
-                  <QrCode className="w-4 h-4 text-cyan-400 shrink-0" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* ========================================================================= */}
-          {/* INVOICE SUB-SECTIONS NAVIGATION BAR */}
-          {/* ========================================================================= */}
-          <div className="flex flex-wrap items-center gap-2 border-b border-slate-800 pb-3">
-            <button
-              onClick={() => setInvoiceSubSection("PAYMENT_HISTORY")}
-              className={`px-4 py-2.5 rounded-2xl text-xs font-mono font-bold flex items-center gap-2 transition-all cursor-pointer ${
-                invoiceSubSection === "PAYMENT_HISTORY"
-                  ? "bg-emerald-500 text-slate-950 font-black shadow-lg shadow-emerald-500/20"
-                  : "bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800"
-              }`}
-            >
-              <CreditCard className="w-4 h-4" />
-              <span>1. Payment History & Partial Payments</span>
-              <span className="text-[10px] bg-slate-950 text-emerald-300 border border-emerald-800 px-2 py-0.5 rounded-full font-bold">
-                {invoices.reduce((acc, c) => acc + (c.payments?.length || 0), 0)} Logged
-              </span>
-            </button>
-
-            <button
-              onClick={() => setInvoiceSubSection("DIRECTORY")}
-              className={`px-4 py-2.5 rounded-2xl text-xs font-mono font-bold flex items-center gap-2 transition-all cursor-pointer ${
-                invoiceSubSection === "DIRECTORY"
-                  ? "bg-emerald-500 text-slate-950 font-black shadow-lg shadow-emerald-500/20"
-                  : "bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800"
-              }`}
-            >
-              <Receipt className="w-4 h-4" />
-              <span>2. Shareable Invoices List</span>
-              <span className="text-[10px] bg-slate-950 text-emerald-300 border border-emerald-800 px-2 py-0.5 rounded-full font-bold">
-                {invoices.length} Invoices
-              </span>
-            </button>
-
-            <button
-              onClick={() => setInvoiceSubSection("VERIFICATION")}
-              className={`px-4 py-2.5 rounded-2xl text-xs font-mono font-bold flex items-center gap-2 transition-all cursor-pointer ${
-                invoiceSubSection === "VERIFICATION"
-                  ? "bg-emerald-500 text-slate-950 font-black shadow-lg shadow-emerald-500/20"
-                  : "bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800"
-              }`}
-            >
-              <ShieldCheck className="w-4 h-4" />
-              <span>3. Invoice Verification & Preview Hub</span>
-            </button>
-          </div>
-
-          {/* ========================================================================= */}
-          {/* SUB-SECTION 1: PAYMENT HISTORY & PARTIAL PAYMENTS VIEW */}
-          {/* ========================================================================= */}
-          {invoiceSubSection === "PAYMENT_HISTORY" && (
-            <ClientPaymentHistoryView
-              invoices={invoices}
-              onRecordPayment={handleRecordPayment}
-              onUpdateInvoiceStatus={handleUpdateInvoiceStatus}
-              onDeletePayment={handleDeletePayment}
-            />
-          )}
-
-          {/* ========================================================================= */}
-          {/* SUB-SECTION 2 & 3: DIRECTORY & VERIFICATION HUBS */}
-          {/* ========================================================================= */}
-          {invoiceSubSection === "VERIFICATION" && activeVerifyInvoice && (
-            <div className="bg-slate-900 border-2 border-emerald-500/30 rounded-3xl p-6 md:p-8 space-y-6 shadow-2xl relative overflow-hidden">
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-800 pb-5">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                      <Receipt className="w-4 h-4" />
-                    </div>
-                    <span className="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider">
-                      INVOICE VERIFICATION & CLIENT VIEW HUB
-                    </span>
-                  </div>
-                  <h3 className="text-lg md:text-xl font-black text-white font-sans">
-                    Invoice, Billing & Payment Receipt Verification
-                  </h3>
-                  <p className="text-xs text-slate-400">
-                    Any invoice can be directly shared with clients without requiring a login, and payment can be made by scanning the UPI QR code.
-                  </p>
-                </div>
-
-                {/* Invoice Selector Dropdown */}
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="bg-slate-950 border border-slate-700 rounded-2xl p-1.5 flex items-center gap-2">
-                    <span className="text-[11px] font-mono text-slate-400 pl-2">Select Invoice:</span>
-                    <select
-                      value={selectedVerifyInvoiceId}
-                      onChange={(e) => setSelectedVerifyInvoiceId(e.target.value)}
-                      className="bg-slate-900 text-emerald-300 font-mono font-bold text-xs rounded-xl px-3 py-1.5 border border-slate-700 focus:outline-none focus:border-emerald-400 cursor-pointer"
-                    >
-                      {invoices.map((inv) => (
-                        <option key={inv.id} value={inv.id}>
-                          #{inv.invoiceNumber} - {inv.applicantName} (₹{inv.grandTotal.toLocaleString("en-IN")})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <a
-                    href={invoiceVerificationUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl text-xs font-mono font-black shadow-md shadow-emerald-500/20 flex items-center gap-1.5 cursor-pointer transition-all"
-                    title="Open full zero-login client invoice portal"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    <span>Open Client View</span>
-                  </a>
-                </div>
-              </div>
-
-              {/* Action Toolbar for Selected Invoice */}
-              <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-950 p-4 rounded-2xl border border-slate-800">
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-mono text-slate-400">Invoice:</span>
-                  <strong className="text-xs font-mono text-emerald-400 font-bold">
-                    #{activeVerifyInvoice.invoiceNumber}
-                  </strong>
-                  <span className="text-slate-600">•</span>
-                  <span className="text-xs font-sans text-white font-bold">
-                    {activeVerifyInvoice.applicantName}
-                  </span>
-                  <span className="text-slate-600">•</span>
-                  <span
-                    className={`text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full border ${
-                      activeVerifyInvoice.paymentStatus === "PAID"
-                        ? "bg-emerald-950 text-emerald-300 border-emerald-800"
-                        : activeVerifyInvoice.paymentStatus === "PARTIALLY PAID"
-                        ? "bg-amber-950 text-amber-300 border-amber-800"
-                        : "bg-rose-950 text-rose-300 border-rose-800"
-                    }`}
-                  >
-                    ● {activeVerifyInvoice.paymentStatus}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleCopyInvoiceLink(activeVerifyInvoice)}
-                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-                  >
-                    {copiedInvoiceId === activeVerifyInvoice.id ? (
-                      <Check className="w-3.5 h-3.5 text-emerald-400" />
-                    ) : (
-                      <Copy className="w-3.5 h-3.5 text-emerald-400" />
-                    )}
-                    <span>
-                      {copiedInvoiceId === activeVerifyInvoice.id ? "Link Copied" : "Copy Shareable Link"}
-                    </span>
-                  </button>
-
-                  <button
-                    onClick={() => setQrModalInvoice(activeVerifyInvoice)}
-                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-slate-700 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-                  >
-                    <QrCode className="w-3.5 h-3.5" />
-                    <span>Sharable QR Code</span>
-                  </button>
-
-                  <button
-                    onClick={() => handleShareInvoiceWhatsApp(activeVerifyInvoice)}
-                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-md"
-                  >
-                    <MessageCircle className="w-3.5 h-3.5" />
-                    <span>WhatsApp Share</span>
-                  </button>
-
-                  <button
-                    onClick={() => setRecordingPaymentInvoice(activeVerifyInvoice)}
-                    className="px-3 py-1.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-                  >
-                    <CreditCard className="w-3.5 h-3.5" />
-                    <span>Record Payment</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Invoice Preview Card Container */}
-              <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs font-mono bg-slate-900 p-5 rounded-2xl border border-slate-800">
-                  <div>
-                    <span className="text-slate-500">Client / Billed To:</span>
-                    <div className="font-bold text-white font-sans text-sm mt-0.5">
-                      {activeVerifyInvoice.applicantName}
-                    </div>
-                    <div className="text-slate-400 text-[11px]">Mob: {activeVerifyInvoice.applicantMobile}</div>
-                  </div>
-
-                  <div>
-                    <span className="text-slate-500">Project / Description:</span>
-                    <div className="font-bold text-cyan-300 font-sans text-xs mt-0.5 truncate">
-                      {activeVerifyInvoice.projectTitle || "Architecture & Technical Consultation"}
-                    </div>
-                    <div className="text-slate-400 text-[11px]">
-                      Due Date: {activeVerifyInvoice.dueDate}
-                    </div>
-                  </div>
-
-                  <div>
-                    <span className="text-slate-500">Payment Breakdown:</span>
-                    <div className="text-sm font-bold font-mono text-emerald-400 mt-0.5">
-                      ₹{activeVerifyInvoice.totalPaid.toLocaleString("en-IN")} Paid / ₹{activeVerifyInvoice.grandTotal.toLocaleString("en-IN")}
-                    </div>
-                    <div className="text-rose-400 text-[11px] font-bold">
-                      Balance Due: ₹{activeVerifyInvoice.balanceDue.toLocaleString("en-IN")}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Itemized Table */}
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs font-mono border-collapse">
-                    <thead>
-                      <tr className="bg-slate-900 text-slate-300 uppercase text-[11px] border-b border-slate-800">
-                        <th className="p-3">Sl</th>
-                        <th className="p-3">Service / Product Description</th>
-                        <th className="p-3 text-center">Qty</th>
-                        <th className="p-3 text-center">Unit</th>
-                        <th className="p-3 text-right">Rate (₹)</th>
-                        <th className="p-3 text-right">Amount (₹)</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800/60 text-slate-300">
-                      {activeVerifyInvoice.items.map((item, idx) => (
-                        <tr key={item.id || idx} className="hover:bg-slate-900/60">
-                          <td className="p-3 text-slate-500">{idx + 1}</td>
-                          <td className="p-3 font-sans text-white font-medium">{item.description}</td>
-                          <td className="p-3 text-center text-cyan-300 font-bold">{item.quantity}</td>
-                          <td className="p-3 text-center text-slate-400">{item.unit}</td>
-                          <td className="p-3 text-right">₹{item.rate.toLocaleString("en-IN")}</td>
-                          <td className="p-3 text-right font-bold text-emerald-400">
-                            ₹{item.amount.toLocaleString("en-IN")}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Instant UPI QR & Payment Status Strip */}
-                <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex flex-wrap items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-xs font-mono font-bold text-emerald-400">
-                      <ShieldCheck className="w-4 h-4" />
-                      <span>OFFICIAL UPI QR PAYMENT LINKED</span>
-                    </div>
-                    <p className="text-xs text-slate-400">
-                      Clients can open this invoice link and pay instantly via GPay, PhonePe, or Paytm.
-                    </p>
-                    <div className="text-xs font-mono text-cyan-300">
-                      UPI ID: {activeVerifyInvoice.upiId || "7012383137@okbizaxis"}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => setQrModalInvoice(activeVerifyInvoice)}
-                      className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-mono font-bold flex items-center gap-2 cursor-pointer transition-colors"
-                    >
-                      <QrCode className="w-4 h-4 text-emerald-400" />
-                      <span>View Sharable QR Code</span>
-                    </button>
-
-                    <button
-                      onClick={() => setSelectedInvoiceModal(activeVerifyInvoice)}
-                      className="px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 rounded-xl text-xs font-mono font-black flex items-center gap-2 cursor-pointer transition-colors"
-                    >
-                      <Eye className="w-4 h-4" />
-                      <span>Full Invoice Document</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ========================================================================= */}
-          {/* INVOICE SECTION 2: INVOICES DIRECTORY & ZERO-LOGIN SHARING */}
-          {/* ========================================================================= */}
-          {invoiceSubSection === "DIRECTORY" && (
-            <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h3 className="text-base font-bold text-white font-sans flex items-center gap-2">
-                  <span>Shareable Invoices List (Invoices & Payments Directory)</span>
-                  <span className="text-xs font-mono text-emerald-400 font-bold bg-emerald-950 px-2 py-0.5 rounded-full border border-emerald-800">
-                    {filteredInvoices.length}
-                  </span>
-                </h3>
-                <p className="text-xs text-slate-400">
-                  Copy the client link or QR code of any invoice to share with anyone (no login required).
-                </p>
-              </div>
-
-              {/* Search and Filters */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <div className="relative">
-                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                  <input
-                    type="text"
-                    placeholder="Search invoice or client..."
-                    value={invoiceSearchTerm}
-                    onChange={(e) => setInvoiceSearchTerm(e.target.value)}
-                    className="bg-slate-900 border border-slate-800 rounded-xl pl-8 pr-3 py-2 text-xs font-mono text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 w-56"
-                  />
-                </div>
-
-                <select
-                  value={invoiceStatusFilter}
-                  onChange={(e) => setInvoiceStatusFilter(e.target.value as any)}
-                  className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-slate-300 focus:outline-none focus:border-emerald-500 cursor-pointer"
-                >
-                  <option value="ALL">All Payments</option>
-                  <option value="UNPAID">Unpaid Only</option>
-                  <option value="PARTIALLY PAID">Partially Paid</option>
-                  <option value="PAID">Paid in Full</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Invoices Grid Cards */}
-            {filteredInvoices.length === 0 ? (
-              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-12 text-center space-y-4">
-                <div className="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-slate-500 mx-auto">
-                  <Receipt className="w-6 h-6" />
-                </div>
-                <div className="space-y-1">
-                  <h4 className="text-sm font-bold text-slate-300">No Invoices Found</h4>
-                  <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                    No invoices match the selected filters.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {filteredInvoices.map((inv) => {
-                  const isCopied = copiedInvoiceId === inv.id;
-
-                  return (
-                    <div
-                      key={inv.id}
-                      className="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-3xl p-5 space-y-4 transition-all shadow-lg relative group"
-                    >
-                      {/* Top Row: Client & Status Badge */}
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-sm text-white font-sans">
-                              {inv.applicantName}
-                            </span>
-                            <span
-                              className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold border ${
-                                inv.paymentStatus === "PAID"
-                                  ? "bg-emerald-950 text-emerald-300 border-emerald-800"
-                                  : inv.paymentStatus === "PARTIALLY PAID"
-                                  ? "bg-amber-950 text-amber-300 border-amber-800"
-                                  : "bg-rose-950 text-rose-300 border-rose-800"
-                              }`}
-                            >
-                              ● {inv.paymentStatus}
-                            </span>
-                          </div>
-                          <p className="text-xs text-emerald-300 font-mono">
-                            #{inv.invoiceNumber} • {inv.projectTitle || "Architecture Plan & Survey"}
-                          </p>
-                        </div>
-
-                        {/* QR Code Modal Trigger Button */}
-                        <button
-                          onClick={() => setQrModalInvoice(inv)}
-                          className="p-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-xl text-emerald-400 hover:text-white transition-colors cursor-pointer"
-                          title="Generate Sharable QR Code for this Invoice"
-                        >
-                          <QrCode className="w-4 h-4" />
-                        </button>
-                      </div>
-
-                      {/* Info Chips */}
-                      <div className="grid grid-cols-2 gap-2 text-[11px] font-mono bg-slate-950/70 p-3 rounded-2xl border border-slate-800/60">
-                        <div>
-                          <span className="text-slate-500 block">TOTAL AMOUNT</span>
-                          <span className="text-white font-bold">
-                            ₹{inv.grandTotal.toLocaleString("en-IN")}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-slate-500 block">BALANCE DUE</span>
-                          <span className={inv.balanceDue > 0 ? "text-rose-400 font-bold" : "text-emerald-400 font-bold"}>
-                            ₹{inv.balanceDue.toLocaleString("en-IN")}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-slate-500 block">INVOICE DATE</span>
-                          <span className="text-slate-300">{inv.invoiceDate}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-500 block">ACCESS</span>
-                          <span className="text-emerald-400 font-bold">Zero-Login</span>
-                        </div>
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-800/60">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <button
-                            onClick={() => handleCopyInvoiceLink(inv)}
-                            className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-mono flex items-center gap-1 cursor-pointer transition-colors"
-                            title="Copy zero-login client link"
-                          >
-                            {isCopied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-emerald-400" />}
-                            <span className="text-[11px]">{isCopied ? "Copied" : "Copy Link"}</span>
-                          </button>
-
-                          <button
-                            onClick={() => handleShareInvoiceWhatsApp(inv)}
-                            className="p-2 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-800 text-emerald-300 rounded-xl text-xs font-mono flex items-center gap-1 cursor-pointer transition-colors"
-                            title="Share invoice on WhatsApp"
-                          >
-                            <MessageCircle className="w-3.5 h-3.5" />
-                            <span className="text-[11px]">WhatsApp</span>
-                          </button>
-
-                          <a
-                            href={`/?invoice_share=${inv.id || inv.invoiceNumber}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-mono flex items-center gap-1 cursor-pointer transition-colors"
-                            title="Open zero-login client portal"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5 text-cyan-400" />
-                            <span className="text-[11px]">Client View</span>
-                          </a>
-                        </div>
-
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => setRecordingPaymentInvoice(inv)}
-                            className="px-2.5 py-1.5 bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-slate-950 rounded-xl text-[11px] font-mono font-bold transition-all cursor-pointer"
-                            title="Record offline/online payment"
-                          >
-                            Pay
-                          </button>
-
-                          <button
-                            onClick={() => setSelectedInvoiceModal(inv)}
-                            className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
-                            title="View full invoice details modal"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-          )}
-        </div>
-      )}
-
-      {/* ========================================================================= */}
       {/* MODALS */}
       {/* ========================================================================= */}
       {/* 1. New Estimate Link Modal */}
@@ -1659,46 +981,6 @@ export const ClientViewTab: React.FC<ClientViewTabProps> = ({
         onClose={() => setQrModalLink(null)}
         shareLink={qrModalLink}
       />
-
-      {/* 3. Invoice Sharable QR Code Modal */}
-      <ClientInvoiceQrModal
-        isOpen={Boolean(qrModalInvoice)}
-        onClose={() => setQrModalInvoice(null)}
-        invoice={qrModalInvoice}
-      />
-
-      {/* 4. Invoice Detail Modal */}
-      {selectedInvoiceModal && (
-        <InvoiceDetailModal
-          isOpen={Boolean(selectedInvoiceModal)}
-          onClose={() => setSelectedInvoiceModal(null)}
-          invoice={selectedInvoiceModal}
-          onOpenRecordPayment={(inv, paymentToEdit) => {
-            setRecordingPaymentInvoice(inv || selectedInvoiceModal);
-            setEditingPayment(paymentToEdit || null);
-          }}
-          onDeletePayment={handleDeletePayment}
-          onUpdateInvoice={(upd) => setSelectedInvoiceModal(upd)}
-          onOpenPaymentModal={(inv) => {
-            setRecordingPaymentInvoice(inv);
-            setEditingPayment(null);
-          }}
-        />
-      )}
-
-      {/* 5. Record Payment Modal */}
-      {recordingPaymentInvoice && (
-        <RecordPaymentModal
-          isOpen={Boolean(recordingPaymentInvoice)}
-          onClose={() => {
-            setRecordingPaymentInvoice(null);
-            setEditingPayment(null);
-          }}
-          invoice={recordingPaymentInvoice}
-          paymentToEdit={editingPayment}
-          onRecordPayment={handleRecordPayment}
-        />
-      )}
     </div>
   );
 };

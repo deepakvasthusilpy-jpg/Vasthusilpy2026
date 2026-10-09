@@ -1,16 +1,7 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { PRIMARY_ADMIN_EMAILS } from "../../lib/firebase";
 import { VasthusilpyLogo } from "../common/VasthusilpyLogo";
-import {
-  getTotpRemainingSeconds,
-  generateTotpQrCode,
-  getOrCreateTotpSecret,
-  formatSecretFormatted,
-  getClientTotpCountdown,
-  ClientTotpCountdown,
-  CLIENT_TOTP_INTERVAL_DAYS
-} from "../../utils/totp";
 import {
   UPI_ID,
   UPI_PAYEE_NAME,
@@ -50,7 +41,6 @@ import {
 
 export const LoginPage: React.FC = () => {
   const {
-    loginWithGoogleAuthenticator,
     loginWithSubscription,
     signOutUser,
     submitSubscriptionRequest,
@@ -58,13 +48,8 @@ export const LoginPage: React.FC = () => {
     subscriptionRequests,
     loading,
     authError,
-    clearAuthError,
-    adminTotpDaysRemaining,
-    isAdminTotpDue
+    clearAuthError
   } = useAuth();
-
-  // Active Login Mode: "subscription" | "authenticator"
-  const [loginMode, setLoginMode] = useState<"subscription" | "authenticator">("subscription");
 
   // Subscription Sub-Mode: "login" | "register"
   const [subMode, setSubMode] = useState<"login" | "register">("login");
@@ -73,15 +58,6 @@ export const LoginPage: React.FC = () => {
   const [rememberMe, setRememberMe] = useState<boolean>(() => {
     return localStorage.getItem("vasthusilpy_remember_me") === "true";
   });
-
-  // Authenticator state
-  const [selectedEmail, setSelectedEmail] = useState<string>("deepak.vasthusilpy@gmail.com");
-  const [customEmail, setCustomEmail] = useState<string>("");
-  const [isCustomEmail, setIsCustomEmail] = useState<boolean>(false);
-  const [totpDigits, setTotpDigits] = useState<string[]>(["", "", "", "", "", ""]);
-  const [verifyingTotp, setVerifyingTotp] = useState<boolean>(false);
-  const [localError, setLocalError] = useState<string | null>(null);
-  const [localSuccess, setLocalSuccess] = useState<string | null>(null);
 
   // Subscription Login Form State (Supports Email or Mobile Number)
   const [subLoginId, setSubLoginId] = useState<string>(() => {
@@ -136,9 +112,6 @@ export const LoginPage: React.FC = () => {
   const [showNewPwd, setShowNewPwd] = useState<boolean>(false);
   const [submittingPwdChange, setSubmittingPwdChange] = useState<boolean>(false);
 
-  // Remaining time in 30s cycle for TOTP
-  const [remainingSecs, setRemainingSecs] = useState<number>(30);
-
   // Live Digital Clock state
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
   const [is24Hour, setIs24Hour] = useState<boolean>(false);
@@ -165,37 +138,6 @@ export const LoginPage: React.FC = () => {
     day: "numeric"
   });
 
-  // Input refs for 6 OTP boxes
-  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-
-  // Update 30s countdown indicator
-  useEffect(() => {
-    const updateCountdown = () => {
-      setRemainingSecs(getTotpRemainingSeconds());
-    };
-    updateCountdown();
-    const interval = setInterval(updateCountdown, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Effective Email for TOTP
-  const effectiveEmail = isCustomEmail ? customEmail.trim().toLowerCase() : selectedEmail;
-
-  // 7-Day Client / Subscriber TOTP Countdown & Rule State
-  const [clientCountdown, setClientCountdown] = useState<ClientTotpCountdown>(() => {
-    return getClientTotpCountdown(subLoginId);
-  });
-
-  // Keep 7-day countdown clock ticking every second
-  useEffect(() => {
-    const updateClientClock = () => {
-      setClientCountdown(getClientTotpCountdown(subLoginId));
-    };
-    updateClientClock();
-    const interval = setInterval(updateClientClock, 1000);
-    return () => clearInterval(interval);
-  }, [subLoginId]);
-
   // Selected payment amount
   const effectiveAmount = isCustomAmount
     ? parseInt(customAmountInput, 10) || 0
@@ -210,90 +152,6 @@ export const LoginPage: React.FC = () => {
     effectiveAmount,
     `Vasthusilpy Pass - ${regPhone || regEmail || "Subscription"}`
   );
-
-  // Handle single digit input for TOTP
-  const handleDigitChange = (index: number, val: string) => {
-    const cleanVal = val.replace(/\D/g, "");
-    if (!cleanVal) {
-      const newDigits = [...totpDigits];
-      newDigits[index] = "";
-      setTotpDigits(newDigits);
-      return;
-    }
-
-    const lastChar = cleanVal.slice(-1);
-    const newDigits = [...totpDigits];
-    newDigits[index] = lastChar;
-    setTotpDigits(newDigits);
-
-    // Auto-focus next input
-    if (index < 5 && lastChar) {
-      inputRefs.current[index + 1]?.focus();
-    }
-
-    // If 6th digit entered, auto submit
-    if (index === 5 && lastChar) {
-      const fullCode = [...newDigits.slice(0, 5), lastChar].join("");
-      if (fullCode.length === 6) {
-        triggerAuthenticatorLogin(fullCode);
-      }
-    }
-  };
-
-  // Handle backspace
-  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Backspace" && !totpDigits[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-    }
-  };
-
-  // Handle paste full 6-digit code
-  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
-    e.preventDefault();
-    const pastedData = e.clipboardData.getData("text").trim().replace(/\D/g, "");
-    if (pastedData.length >= 6) {
-      const chars = pastedData.slice(0, 6).split("");
-      setTotpDigits(chars);
-      inputRefs.current[5]?.focus();
-      triggerAuthenticatorLogin(pastedData.slice(0, 6));
-    } else if (pastedData.length > 0) {
-      const newDigits = [...totpDigits];
-      for (let i = 0; i < pastedData.length && i < 6; i++) {
-        newDigits[i] = pastedData[i];
-      }
-      setTotpDigits(newDigits);
-      const nextIdx = Math.min(pastedData.length, 5);
-      inputRefs.current[nextIdx]?.focus();
-    }
-  };
-
-  // Trigger Google Authenticator verification
-  const triggerAuthenticatorLogin = async (codeToVerify?: string) => {
-    const finalCode = codeToVerify || totpDigits.join("");
-    if (finalCode.length !== 6) {
-      setLocalError("ദയവായി 6 അക്ക Authenticator കോഡ് നൽകുക (Please enter 6 digits).");
-      return;
-    }
-
-    if (!effectiveEmail || !effectiveEmail.includes("@")) {
-      setLocalError("ദയവായി ശരിയായ ഇമെയിൽ നൽകുക.");
-      return;
-    }
-
-    setVerifyingTotp(true);
-    setLocalError(null);
-    clearAuthError();
-
-    try {
-      await loginWithGoogleAuthenticator(effectiveEmail, finalCode);
-    } catch (err: any) {
-      setLocalError(err.message || "Google Authenticator verification failed.");
-      setTotpDigits(["", "", "", "", "", ""]);
-      inputRefs.current[0]?.focus();
-    } finally {
-      setVerifyingTotp(false);
-    }
-  };
 
   // Handle Subscription Login (Email OR Mobile Number)
   const handleSubscriptionLogin = async (e: React.FormEvent) => {
@@ -321,32 +179,6 @@ export const LoginPage: React.FC = () => {
     try {
       await loginWithSubscription(cleanId, cleanPass);
     } catch (err: any) {
-      if (
-        err?.code === "CLIENT_WEEKLY_TOTP_REQUIRED" ||
-        err?.code === "SUBSCRIBER_DAILY_TOTP_REQUIRED" ||
-        err?.message?.includes("CLIENT_WEEKLY_TOTP_REQUIRED")
-      ) {
-        const subEmail = err.subscriberEmail || (cleanId.includes("@") ? cleanId : `${cleanId}@vasthusilpy.local`);
-        setSelectedEmail(subEmail);
-        setCustomEmail(subEmail);
-        setIsCustomEmail(true);
-        setLoginMode("authenticator");
-        setLocalSuccess(
-          "പാസ്‌വേഡ് സ്ഥിരീകരിച്ചു! 7-ദിവസത്തെ സുരക്ഷാ ഇടവേള ആയതിനാൽ Google Authenticator-ലെ 6 അക്ക കോഡ് നൽകുക (Mandatory 7-Day 2FA Client Login)."
-        );
-        return;
-      }
-      if (err?.code === "ADMIN_TOTP_REQUIRED" || err?.message?.includes("ADMIN_TOTP_REQUIRED")) {
-        setLoginMode("authenticator");
-        if (err.adminEmail) {
-          setSelectedEmail(err.adminEmail);
-          setIsCustomEmail(false);
-        }
-        setLocalError(
-          "അഡ്മിൻ സുരക്ഷാ പരിശോധന: 30 ദിവസത്തെ സുരക്ഷാ ഇടവേള കഴിഞ്ഞതിനാൽ Google Authenticator TOTP കോഡ് നൽകി ലോഗിൻ ചെയ്യുക (30-day recurring Admin TOTP required)."
-        );
-        return;
-      }
       setLocalError(err.message || "Login failed. Please check your credentials.");
     } finally {
       setLoggingInSub(false);
@@ -603,50 +435,17 @@ export const LoginPage: React.FC = () => {
       <main className="relative z-20 w-full max-w-[440px] my-auto py-4">
         <div className="relative rounded-[32px] p-7 sm:p-9 bg-white/[0.08] backdrop-blur-2xl border border-white/25 shadow-[0_16px_40px_rgba(0,0,0,0.45)] text-white overflow-hidden before:absolute before:inset-0 before:rounded-[32px] before:bg-gradient-to-b before:from-white/15 before:via-transparent before:to-transparent before:pointer-events-none">
           
-          {/* Subtle Top Mode Toggle (Subscriber Login vs Admin Login) */}
-          <div className="flex items-center justify-between mb-5 border-b border-white/10 pb-3">
-            <button
-              type="button"
-              onClick={() => {
-                setLoginMode("subscription");
-                setSubMode("login");
-                setLocalError(null);
-                setLocalSuccess(null);
-              }}
-              className={`text-xs font-mono font-semibold transition-all cursor-pointer pb-0.5 ${
-                loginMode === "subscription"
-                  ? "text-white border-b-2 border-white"
-                  : "text-white/60 hover:text-white"
-              }`}
-            >
-              Subscriber Login
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setLoginMode("authenticator");
-                setLocalError(null);
-                setLocalSuccess(null);
-              }}
-              className={`text-xs font-mono font-semibold transition-all cursor-pointer pb-0.5 flex items-center gap-1 ${
-                loginMode === "authenticator"
-                  ? "text-white border-b-2 border-white"
-                  : "text-white/60 hover:text-white"
-              }`}
-            >
-              <KeyRound className="w-3 h-3" />
-              <span>Admin Login (9747995961)</span>
-            </button>
+          {/* Subtle Top Mode Toggle (Subscriber Login) */}
+          <div className="flex items-center justify-center mb-5 border-b border-white/10 pb-3">
+            <h2 className="text-xs font-mono font-bold text-white uppercase tracking-widest">
+              Unified Secure Login
+            </h2>
           </div>
 
           {/* Heading - Exact matching "login" in lowercase display style */}
           <div className="text-center mb-6">
             <h1 className="text-3xl font-extrabold tracking-tight text-white lowercase drop-shadow-md">
-              {loginMode === "authenticator"
-                ? "authenticator"
-                : subMode === "register"
-                ? "register"
-                : "login"}
+              {subMode === "register" ? "register" : "login"}
             </h1>
           </div>
 
@@ -709,54 +508,12 @@ export const LoginPage: React.FC = () => {
             </div>
           )}
 
-          {/* ============================================================ */}
-          {/* 1. SUBSCRIPTION / USER LOGIN (Primary View matching mockup) */}
-          {/* ============================================================ */}
-          {loginMode === "subscription" && subMode === "login" && (
+          {/* Login Mode Switch Logic Removed - Only Subscriber Mode (Password) Active */}
+          {subMode === "login" && (
             <form onSubmit={handleSubscriptionLogin} className="space-y-4">
 
-              {/* 7-DAY MANDATORY CLIENT TOTP COUNTDOWN CLOCK */}
-              <div className="p-3 rounded-2xl bg-gradient-to-r from-purple-950/70 via-pink-950/50 to-slate-950/80 border border-pink-500/30 text-xs font-mono shadow-inner space-y-2">
-                <div className="flex items-center justify-between text-[11px]">
-                  <div className="flex items-center gap-1.5 text-pink-300 font-bold">
-                    <ShieldCheck className="w-4 h-4 text-pink-400 shrink-0" />
-                    <span>7-Day Client TOTP Rule</span>
-                  </div>
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      clientCountdown.isDue
-                        ? "bg-rose-500/30 text-rose-200 border border-rose-400/40 animate-pulse"
-                        : "bg-emerald-500/30 text-emerald-200 border border-emerald-400/40"
-                    }`}
-                  >
-                    {clientCountdown.isDue ? "Verification Due" : "Active 2FA"}
-                  </span>
-                </div>
+              {/* 7-Day Client TOTP Countdown Removed as per user request */}
 
-                <div className="flex items-center justify-between bg-black/40 px-3 py-2 rounded-xl border border-white/10">
-                  <div className="text-[10px] text-white/70">
-                    {clientCountdown.isDue ? "7-Day Re-Verification:" : "Next TOTP Re-verification in:"}
-                  </div>
-                  <div className="text-xs font-bold text-white tracking-wider flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-pink-400" />
-                    <span className="text-pink-200 font-mono">
-                      {clientCountdown.isDue ? "Due on Login" : clientCountdown.formatted}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Progress bar of 7-day interval */}
-                <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-1000 ${
-                      clientCountdown.isDue
-                        ? "bg-rose-500 w-full"
-                        : "bg-gradient-to-r from-emerald-400 via-purple-400 to-pink-400"
-                    }`}
-                    style={{ width: clientCountdown.isDue ? "100%" : `${clientCountdown.percentRemaining}%` }}
-                  />
-                </div>
-              </div>
               
               {/* Email / Mobile Field (Clean Glass Underline Style) */}
               <div className="space-y-1">
@@ -866,7 +623,7 @@ export const LoginPage: React.FC = () => {
           {/* ============================================================ */}
           {/* 2. REGISTRATION & SUBSCRIPTION ACTIVATION VIEW               */}
           {/* ============================================================ */}
-          {loginMode === "subscription" && subMode === "register" && (
+          {subMode === "register" && (
             <form onSubmit={handleSubscriptionRequestSubmit} className="space-y-4">
               
               <div className="space-y-3">
@@ -1043,145 +800,6 @@ export const LoginPage: React.FC = () => {
                 </button>
               </div>
             </form>
-          )}
-
-          {/* ============================================================ */}
-          {/* 3. GOOGLE AUTHENTICATOR (TOTP) LOGIN VIEW                    */}
-          {/* ============================================================ */}
-          {loginMode === "authenticator" && (
-            <div className="space-y-4">
-              
-              {/* Daily Security Verification or Admin Recurring Badge */}
-              <div className="p-2.5 rounded-xl bg-purple-900/40 border border-purple-400/30 text-[11px] text-pink-200 flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <ShieldCheck className="w-4 h-4 text-pink-300 shrink-0" />
-                  <span>
-                    {isCustomEmail
-                      ? "Daily Security Verification (Once per Day)"
-                      : "30-Day Recurring Admin Security"}
-                  </span>
-                </div>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                  isAdminTotpDue || isCustomEmail
-                    ? "bg-rose-500/30 text-rose-200 border border-rose-400/40"
-                    : "bg-emerald-500/30 text-emerald-200 border border-emerald-400/40"
-                }`}>
-                  {isCustomEmail ? "Daily Check" : isAdminTotpDue ? "Verification Due" : `${adminTotpDaysRemaining}d remaining`}
-                </span>
-              </div>
-
-              {/* Account Selection / Display */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-[11px] text-white/70 font-mono">
-                  <span>{isCustomEmail ? "Verifying Account:" : "Select Admin Account:"}</span>
-                  {isCustomEmail && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsCustomEmail(false);
-                        setSelectedEmail(PRIMARY_ADMIN_EMAILS[0]);
-                      }}
-                      className="text-[10px] text-pink-300 hover:text-white underline cursor-pointer"
-                    >
-                      Admin Accounts
-                    </button>
-                  )}
-                </div>
-
-                {isCustomEmail ? (
-                  <div className="p-2.5 rounded-xl border bg-white/20 border-white text-white flex items-center justify-between text-xs font-mono">
-                    <span className="truncate font-bold">{effectiveEmail}</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/30 border border-emerald-400/40 text-emerald-200 font-sans">
-                      Password OK ✓
-                    </span>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 gap-1.5">
-                    {PRIMARY_ADMIN_EMAILS.map((email) => {
-                      const isSelected = !isCustomEmail && selectedEmail === email;
-                      return (
-                        <button
-                          key={email}
-                          type="button"
-                          onClick={() => {
-                            setIsCustomEmail(false);
-                            setSelectedEmail(email);
-                          }}
-                          className={`p-2.5 rounded-xl border text-left flex items-center justify-between text-xs font-mono transition-all cursor-pointer ${
-                            isSelected
-                              ? "bg-white/25 border-white text-white font-bold shadow-md"
-                              : "bg-white/5 border-white/15 text-white/70 hover:bg-white/10 hover:text-white"
-                          }`}
-                        >
-                          <span className="truncate">{email}</span>
-                          {isSelected && <Check className="w-3.5 h-3.5 text-white shrink-0" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* 6 Digit TOTP Inputs */}
-              <div className="p-3.5 rounded-2xl bg-black/30 border border-white/15 space-y-3">
-                <div className="flex items-center justify-between text-[11px] font-mono text-white/80">
-                  <span>Enter 6-digit TOTP</span>
-                  <span className="flex items-center gap-1 text-pink-300">
-                    <RefreshCw className="w-3 h-3 animate-spin" />
-                    <span>{remainingSecs}s</span>
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-center gap-1.5 py-1">
-                  {totpDigits.map((digit, idx) => (
-                    <input
-                      key={idx}
-                      ref={(el) => {
-                        inputRefs.current[idx] = el;
-                      }}
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      maxLength={1}
-                      value={digit}
-                      onChange={(e) => handleDigitChange(idx, e.target.value)}
-                      onKeyDown={(e) => handleKeyDown(idx, e)}
-                      onPaste={handlePaste}
-                      placeholder="•"
-                      disabled={verifyingTotp || loading}
-                      className={`w-9 h-11 sm:w-11 sm:h-12 text-center font-mono font-black text-xl rounded-xl border transition-all ${
-                        digit
-                          ? "bg-white/30 border-white text-white shadow-md"
-                          : "bg-white/5 border-white/20 text-white/50 focus:border-white focus:text-white"
-                      }`}
-                    />
-                  ))}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => triggerAuthenticatorLogin()}
-                  disabled={verifyingTotp || loading || totpDigits.join("").length !== 6}
-                  className="w-full py-2.5 rounded-full bg-white hover:bg-white/90 text-slate-950 font-bold text-xs uppercase tracking-wider shadow-lg transition-all cursor-pointer disabled:opacity-50"
-                >
-                  {verifyingTotp ? "verifying..." : "verify & login"}
-                </button>
-              </div>
-
-              {/* Back to Login Button (Clean Admin Login, No QR/Secret displayed) */}
-              <div className="flex items-center justify-end pt-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLoginMode("subscription");
-                    setSubMode("login");
-                  }}
-                  className="text-xs text-white/80 hover:text-white font-mono underline cursor-pointer"
-                >
-                  ← Back to Login
-                </button>
-              </div>
-            </div>
           )}
 
         </div>

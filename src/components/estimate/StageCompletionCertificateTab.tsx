@@ -952,7 +952,7 @@ export const StageCompletionCertificateTab: React.FC<StageCompletionCertificateT
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-slate-400 block font-bold">Site Inspection Date</label>
+                <label className="text-slate-400 block font-bold">Inspection Date</label>
                 <input
                   type="date"
                   value={stageCert.inspectionDate}

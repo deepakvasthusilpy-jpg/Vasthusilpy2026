@@ -57,7 +57,7 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                Cutting-edge cyber aesthetic for all drafting, estimates, site inspections & CRM
+                Cutting-edge cyber aesthetic for all drafting and estimates
               </p>
             </div>
           </div>

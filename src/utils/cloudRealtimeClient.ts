@@ -17,26 +17,6 @@ export interface CollectionConfig {
 }
 
 const COLLECTION_STORAGE_MAP: Record<string, CollectionConfig> = {
-  // CRM & Work Orders
-  crm_projects: {
-    storageKeys: ["vasthusilpy_crm_projects", "vasthusilpy_projects"],
-    events: ["vasthusilpy_storage_update", "vasthusilpy_projects_updated", "vasthusilpy_crm_updated"]
-  },
-  projects: {
-    storageKeys: ["vasthusilpy_crm_projects", "vasthusilpy_projects"],
-    events: ["vasthusilpy_storage_update", "vasthusilpy_projects_updated", "vasthusilpy_crm_updated"]
-  },
-
-  // Invoices & Payments
-  crm_invoices: {
-    storageKeys: ["vasthusilpy_crm_invoices", "vasthusilpy_invoices"],
-    events: ["vasthusilpy_storage_update", "vasthusilpy_invoices_updated"]
-  },
-  invoices: {
-    storageKeys: ["vasthusilpy_invoices", "vasthusilpy_crm_invoices"],
-    events: ["vasthusilpy_storage_update", "vasthusilpy_invoices_updated"]
-  },
-
   // Estimates & Cost Calculations
   estimates: {
     storageKeys: ["vasthusilpy_estimates"],
@@ -53,12 +33,6 @@ const COLLECTION_STORAGE_MAP: Record<string, CollectionConfig> = {
     events: ["vasthusilpy_storage_update", "vasthusilpy_rate_items_updated"]
   },
 
-  // Customers & Client Directory
-  customers: {
-    storageKeys: ["vasthusilpy_customers"],
-    events: ["vasthusilpy_storage_update", "vasthusilpy_customers_updated"]
-  },
-
   // Construction Works Management
   construction_projects: {
     storageKeys: ["vasthusilpy_construction_projects_v1"],
@@ -71,20 +45,6 @@ const COLLECTION_STORAGE_MAP: Record<string, CollectionConfig> = {
   construction_settings: {
     storageKeys: ["vasthusilpy_construction_settings_v1"],
     events: ["vasthusilpy_construction_settings_updated", "vasthusilpy_storage_update"]
-  },
-
-  // Site Inspections & Field Reports
-  site_inspections: {
-    storageKeys: ["vasthusilpy_site_inspections_v1", "vasthusilpy_inspections"],
-    events: ["vasthusilpy_site_inspections_updated", "vasthusilpy_storage_update"]
-  },
-  site_inspection_templates: {
-    storageKeys: ["vasthusilpy_site_inspection_templates_v2"],
-    events: ["vasthusilpy_inspection_templates_updated", "vasthusilpy_storage_update"]
-  },
-  inspection_templates: {
-    storageKeys: ["vasthusilpy_site_inspection_templates_v2"],
-    events: ["vasthusilpy_inspection_templates_updated", "vasthusilpy_storage_update"]
   },
 
   // Building Plans & Drafting Projects
@@ -147,21 +107,6 @@ const COLLECTION_STORAGE_MAP: Record<string, CollectionConfig> = {
   important_folders: {
     storageKeys: ["vasthusilpy_site_folders_v1", "vasthusilpy_important_folders_v1"],
     events: ["vasthusilpy_site_folders_updated", "vasthusilpy_storage_update"]
-  },
-
-  // Personal Bills & Payments
-  personal_bills: {
-    storageKeys: [
-      "vasthusilpy_poov_mala_rows_v2",
-      "vasthusilpy_kseb_bills_v1",
-      "vasthusilpy_health_insurance_v1",
-      "vasthusilpy_rd_accounts_v1",
-      "vasthusilpy_panchayath_bills_v1",
-      "vasthusilpy_personal_vendors_v1",
-      "vasthusilpy_personal_vendor_bills_v1",
-      "vasthusilpy_staff_salary_records_v1"
-    ],
-    events: ["personal_bills_updated", "vasthusilpy_storage_update"]
   }
 };
 

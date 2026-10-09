@@ -599,7 +599,7 @@ export const DEFAULT_GENERAL_CLAUSES: GeneralConditionClause[] = [
   {
     id: "clause_06",
     clauseNo: 6,
-    title: "Quality of Materials & Site Inspection",
+    title: "Quality of Materials",
     titleMl: "സാധനങ്ങളുടെ ഗുണനിലവാരവും പരിശോധനയും",
     content: "The Contractor shall use only first-quality materials conforming to the agreed specifications. The Client or their authorized supervising architect/engineer has full authority to inspect materials and workmanship at all stages.",
     contentMl: "കരാറിൽ പറഞ്ഞിരിക്കുന്ന ഒന്നാംതരം സാധനങ്ങൾ മാത്രമേ നിർമ്മാണത്തിന് ഉപയോഗിക്കാവൂ. ഒന്നാം കക്ഷിക്കോ അവർ ചുമതലപ്പെടുത്തുന്ന എൻജിനീയർക്കോ ഏതു സമയത്തും നിർമ്മാണം പരിശോധിക്കാവുന്നതാണ്.",

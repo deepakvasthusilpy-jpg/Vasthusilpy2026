@@ -45,11 +45,9 @@ import { EngineerSealsTab } from "./components/estimate/EngineerSealsTab";
 import { AIEstimateBoqTab } from "./components/aiAgent/AIEstimateBoqTab";
 import { ReadOnlyEstimateVerificationPortal } from "./components/estimate/ReadOnlyEstimateVerificationPortal";
 import { PublicAgreementVerificationPortal } from "./components/construction/PublicAgreementVerificationPortal";
-import { ClientProgressPortal } from "./components/office/clientView/ClientProgressPortal";
-import { ClientInvoicePortal } from "./components/office/clientView/ClientInvoicePortal";
-import { PublicProjectSharePortal } from "./components/office/crm/PublicProjectSharePortal";
 import { PublicPlanVerificationPortal } from "./components/planTemplate/PublicPlanVerificationPortal";
 import { HomePage } from "./components/home/HomePage";
+import { SubscriptionExpiredScreen } from "./components/subscription/SubscriptionExpiredScreen";
 import {
   INITIAL_ESTIMATES_LIST,
   EstimateProject,
@@ -60,30 +58,18 @@ import {
   createNewBlankEstimateProject
 } from "./data/estimateData";
 import { safeDeleteEstimate, getDeletedEstimateIds, safeSetDoc, shouldPurgeClient, shouldRenameClient, addDeletedEstimateId } from "./utils/storageManager";
-import { convertEstimateToCrmProject, convertEstimateToInvoice } from "./utils/estimateConverter";
 import { initializeAutoSyncService } from "./utils/webDataSyncManager";
 import { initCloudRealtimeSync } from "./utils/cloudRealtimeClient";
 import { checkAndRunDailyAutoSnapshot } from "./utils/dailySnapshotManager";
 import { db } from "./lib/firebase";
 import { collection, onSnapshot, setDoc, doc, deleteDoc } from "firebase/firestore";
 
-// Office Dashboard Components
-import { QuotationModule } from "./components/quotation/QuotationModule";
-import { OfficeDashboard } from "./components/office/OfficeDashboard";
-import { OnlineApplicationsTab } from "./components/office/crm/OnlineApplicationsTab";
-import { InvoicePaymentsTab } from "./components/invoices/InvoicePaymentsTab";
-import { OfficeDashboardTabType, InvoicesTabType, ConstructionTabType } from "./types";
-import { SubscriptionExpiredScreen } from "./components/subscription/SubscriptionExpiredScreen";
-
 // Construction Works Master Component
 import { ConstructionDashboard } from "./components/construction/ConstructionDashboard";
 
-// Personal Bills and Payments Master Component
-import { PersonalBillsDashboard } from "./components/personalBills/PersonalBillsDashboard";
-import { PersonalBillsTabType } from "./types";
-import { ImportantSitesView } from "./components/office/sites/ImportantSitesView";
-import { SiteInspectionView } from "./components/inspection/SiteInspectionView";
-import { PublicSiteInspectionPortal } from "./components/inspection/PublicSiteInspectionPortal";
+// Office Dashboard Components
+import { QuotationModule } from "./components/quotation/QuotationModule";
+import { ConstructionTabType } from "./types";
 
 import {
   Compass,
@@ -123,28 +109,13 @@ export default function App() {
       const hashParams = new URLSearchParams(window.location.hash.replace(/^#\/?/, "?"));
       const sec = (urlParams.get("section") || hashParams.get("section")) as MainSectionType;
       const tab = (urlParams.get("tab") || hashParams.get("tab")) as TabType;
-      if (sec && sec !== ("panchangam" as MainSectionType) && sec !== ("application_forms" as MainSectionType)) {
-        if (sec === ("online_applications" as MainSectionType)) {
-          return {
-            section: "office_dashboard" as MainSectionType,
-            tab: "office_online_applications" as TabType
-          };
-        }
-        const safeTab = tab === ("online_applications_forms" as TabType) || (typeof tab === "string" && tab.startsWith("application_forms_"))
-          ? undefined
-          : tab;
+      if (sec) {
         return {
           section: sec,
           tab:
-            safeTab ||
-            (sec === "ai_agent"
-              ? ("ai_agent_chat" as TabType)
-              : sec === "vasthu"
+            tab ||
+            (sec === "vasthu"
               ? ("calculator" as TabType)
-              : sec === "office_dashboard"
-              ? ("office_combined_dashboard" as TabType)
-              : sec === "invoices_payments"
-              ? ("invoices_list" as TabType)
               : sec === "estimate"
               ? ("estimate_dashboard" as TabType)
               : sec === "building_rules"
@@ -157,12 +128,6 @@ export default function App() {
               ? ("construction_dashboard" as TabType)
               : sec === "quotation"
               ? ("quotation_dashboard" as TabType)
-              : sec === "online_applications"
-              ? ("online_applications_directory" as TabType)
-              : sec === "personal_bills"
-              ? ("poov_mala_bill" as TabType)
-              : sec === "site_inspection"
-              ? ("site_inspection_form" as TabType)
               : ("home_overview" as TabType))
         };
       }
@@ -340,19 +305,6 @@ export default function App() {
   };
 
 
-  const handleConvertToProject = (proj: EstimateProject) => {
-    convertEstimateToCrmProject(proj);
-    setActiveSection("office_dashboard");
-    setActiveTab("office_crm_projects");
-  };
-
-  const handleConvertToInvoice = (proj: EstimateProject) => {
-    convertEstimateToInvoice(proj);
-    setActiveSection("invoices_payments");
-    setActiveTab("invoices_list");
-  };
-
-  // Sidebar states
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
 
@@ -365,12 +317,11 @@ export default function App() {
     setActiveTab("rules_ai_chat");
   };
 
-  // Public Verification, Client Progress & Invoice Link Handling (100% Zero Login, No Authentication Required)
+  // Public Verification & Client Progress Link Handling (100% Zero Login, No Authentication Required)
   const urlParams = new URLSearchParams(window.location.search);
   const hashParams = new URLSearchParams(window.location.hash.replace(/^#\/?/, ""));
   
   const rawIdParam = urlParams.get("id") || hashParams.get("id");
-  const isCrmId = !!rawIdParam && (rawIdParam.startsWith("crm_") || rawIdParam.startsWith("PROJ") || rawIdParam.startsWith("proj_"));
   const isCadId = !!rawIdParam && (rawIdParam.startsWith("CAD-") || rawIdParam.startsWith("cad-") || rawIdParam.startsWith("vst-"));
   const isEstId = !!rawIdParam && (rawIdParam.startsWith("EST-") || rawIdParam.startsWith("est_"));
 
@@ -385,38 +336,12 @@ export default function App() {
     hashParams.get("token") ||
     hashParams.get("portal");
 
-  const isCrmToken = !!clientViewToken && (clientViewToken.startsWith("crm_") || clientViewToken.startsWith("PROJ") || clientViewToken.startsWith("proj_"));
   const isCadToken = !!clientViewToken && (clientViewToken.startsWith("CAD-") || clientViewToken.startsWith("vst-") || clientViewToken.startsWith("cad-"));
-
-  // Public Project Pipeline Share Portal (Zero Login, QR & Shareable Document Link)
-  const crmProjectShareId =
-    urlParams.get("project") ||
-    urlParams.get("crm_project") ||
-    urlParams.get("project_id") ||
-    urlParams.get("project_share") ||
-    urlParams.get("share_project") ||
-    urlParams.get("proj") ||
-    (isCrmId ? rawIdParam : null) ||
-    (isCrmToken ? clientViewToken : null) ||
-    hashParams.get("project") ||
-    hashParams.get("crm_project") ||
-    hashParams.get("project_id") ||
-    hashParams.get("project_share");
-
-  const invoiceShareId =
-    urlParams.get("invoice_share") ||
-    urlParams.get("invoice_view") ||
-    urlParams.get("invoiceId") ||
-    urlParams.get("inv") ||
-    urlParams.get("receipt") ||
-    hashParams.get("invoice_share") ||
-    hashParams.get("invoiceId") ||
-    hashParams.get("inv");
 
   const verifyId =
     urlParams.get("verify") ||
     urlParams.get("estimateId") ||
-    (isEstId || (!isCrmId && !isCadId && rawIdParam && !urlParams.get("project")) ? rawIdParam : null) ||
+    (isEstId || (!isCadId && rawIdParam) ? rawIdParam : null) ||
     hashParams.get("verify") ||
     hashParams.get("estimateId");
   const verifyHash = urlParams.get("hash") || hashParams.get("hash") || undefined;
@@ -456,18 +381,6 @@ export default function App() {
     );
   }
 
-  // 0. Public Project Pipeline Record & Attachments Portal (Zero Login, Shareable Client Document View)
-  if (crmProjectShareId) {
-    return (
-      <PublicProjectSharePortal
-        projectId={crmProjectShareId}
-        onGoToApp={() => {
-          window.location.href = window.location.origin;
-        }}
-      />
-    );
-  }
-
   // 1. Public Construction Agreement Verification Portal (Zero Login, QR Verification)
   if (verifyAgreementToken) {
     return (
@@ -480,26 +393,6 @@ export default function App() {
     );
   }
 
-  // 2. Client View Invoice & Payment Portal (Zero Login, Direct Client Access)
-  if (invoiceShareId) {
-    return (
-      <ClientInvoicePortal
-        invoiceId={invoiceShareId}
-        invoiceNumber={invoiceShareId}
-      />
-    );
-  }
-
-  // 3. Client View Progress Portal (Zero Login, Time-Limited, Read-Only Client Access)
-  if (clientViewToken) {
-    return (
-      <ClientProgressPortal
-        token={clientViewToken}
-        estimateProjects={estimateProjects}
-      />
-    );
-  }
-
   // 4. Estimate & Stage Certificate Verification Portal (Zero Login Public Authenticity Verification)
   if (verifyId) {
     return (
@@ -508,18 +401,6 @@ export default function App() {
         verifyHash={verifyHash}
         initialTab={verifyTab}
         estimateProjects={estimateProjects}
-      />
-    );
-  }
-
-  // 5. CRM Project Status & Work Pipeline Share Portal (Zero Login Client QR Code Tracking)
-  if (crmProjectShareId) {
-    return (
-      <PublicProjectSharePortal
-        projectId={crmProjectShareId}
-        onGoToApp={() => {
-          window.location.href = window.location.origin;
-        }}
       />
     );
   }
@@ -595,10 +476,7 @@ export default function App() {
         {/* Main Content Area */}
         <main
           className={`flex-1 w-full mx-auto px-4 py-6 md:py-8 space-y-6 transition-all duration-300 ${
-            activeTab === "estimate_sheet" ||
-            activeSection === "invoices_payments" ||
-            activeSection === "office_dashboard" ||
-            (activeSection as string) === "online_applications"
+            activeTab === "estimate_sheet"
               ? "max-w-[1920px] 2xl:px-8"
               : "max-w-7xl"
           }`}
@@ -868,8 +746,6 @@ export default function App() {
                   }}
                   onDeleteProject={handleDeleteEstimateProject}
                   onDuplicateProject={handleDuplicateEstimateProject}
-                  onConvertToProject={handleConvertToProject}
-                  onConvertToInvoice={handleConvertToInvoice}
                   onSaveClonedProject={(clonedProj, openInEditor = true) => {
                     setEstimateProjects((prev) => {
                       const next = [clonedProj, ...prev.filter((p) => p.id !== clonedProj.id)];
@@ -900,8 +776,6 @@ export default function App() {
                   onOpenStageCertificates={() => {
                     setActiveTab("stage_completion_certificate");
                   }}
-                  onConvertToProject={handleConvertToProject}
-                  onConvertToInvoice={handleConvertToInvoice}
                   onOpenItemsOfWorkMaster={() => setActiveTab("items_of_work")}
                 />
               )}
@@ -918,8 +792,7 @@ export default function App() {
                   }}
                   onUpdateProject={handleUpdateEstimateProject}
                   onOpenClientView={() => {
-                    setActiveSection("invoices_payments");
-                    setActiveTab("client_view");
+                    // Client View logic updated
                   }}
                 />
               )}
@@ -932,32 +805,7 @@ export default function App() {
             </>
           )}
 
-          {/* OFFICE DASHBOARD (CRM) SECTION */}
-          {(activeSection === "office_dashboard" || (activeSection as string) === "online_applications") && (
-            <OfficeDashboard
-              activeTab={
-                (activeSection as string) === "online_applications"
-                  ? ("office_online_applications" as OfficeDashboardTabType)
-                  : (activeTab as OfficeDashboardTabType)
-              }
-              setActiveTab={(tab) => {
-                setActiveSection("office_dashboard");
-                setActiveTab(tab);
-              }}
-              estimateProjects={estimateProjects}
-            />
-          )}
-
-          {/* INVOICES & PAYMENTS WORKSTATION */}
-          {activeSection === "invoices_payments" && (
-            <InvoicePaymentsTab
-              activeTab={activeTab as InvoicesTabType}
-              setActiveTab={(tab) => setActiveTab(tab)}
-              estimateProjects={estimateProjects}
-            />
-          )}
-
-          {/* PERSONAL BILLS AND PAYMENTS SECTION */}
+          {/* CONSTRUCTION WORKS SECTION */}
           {activeSection === "construction_works" && (
             <ConstructionDashboard
               initialTab={activeTab as ConstructionTabType}
@@ -981,28 +829,6 @@ export default function App() {
           {/* QUOTATIONS SECTION */}
           {activeSection === "quotation" && (
             <QuotationModule activeTab={activeTab} setActiveTab={setActiveTab} />
-          )}
-
-          {/* IMPORTANT SITES SECTION */}
-          {activeSection === "important_sites" && (
-            <ImportantSitesView />
-          )}
-
-          {/* SITE INSPECTION SECTION */}
-          {activeSection === "site_inspection" && (
-            <SiteInspectionView
-              activeTab={activeTab}
-              setActiveTab={(tab) => setActiveTab(tab as any)}
-            />
-          )}
-
-          {/* PERSONAL BILLS AND PAYMENTS SECTION (ROUTED UNDER INVOICE & PAYMENTS) */}
-          {activeSection === "personal_bills" && (
-            <InvoicePaymentsTab
-              activeTab={activeTab as InvoicesTabType}
-              setActiveTab={(tab) => setActiveTab(tab)}
-              estimateProjects={estimateProjects}
-            />
           )}
         </main>
 

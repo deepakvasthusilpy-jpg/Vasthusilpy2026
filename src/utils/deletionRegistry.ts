@@ -16,18 +16,6 @@ export const PERMANENT_DEMO_TOMBSTONES = [
   "EST-2026-003",
   // Demo valuations
   "VAL-2026-003",
-  // Demo invoices
-  "inv_1",
-  "inv_2",
-  "inv_demo_1",
-  "inv_demo_2",
-  "inv_demo_3",
-  // Demo crm projects
-  "crm_proj_1",
-  "crm_proj_2",
-  "crm_proj_3",
-  "crm_proj_4",
-  "crm_proj_5",
   // Demo construction projects & agreements
   "PRJ-2026-001",
   "PRJ-2026-002",

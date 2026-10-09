@@ -193,112 +193,6 @@ export const ALL_APP_MODULES: TabPermissionDefinition[] = [
     ]
   },
   {
-    sectionId: "office_dashboard",
-    sectionTitle: "CRM",
-    sectionTitleMl: "CRM",
-    tabs: [
-      {
-        id: "office_crm_projects" as TabType,
-        label: "Projects Pipeline",
-        labelMl: "പ്രോജക്ട്സ് പൈപ്പ്ലൈൻ",
-        description: "Live projects tracking, stages, and client assignment"
-      },
-      {
-        id: "office_tasks" as TabType,
-        label: "Tasks & Sub-Tasks",
-        labelMl: "ടാസ്കുകൾ & ഉപടാസ്കുകൾ",
-        description: "Task delegations, milestones and progress checklists"
-      },
-      {
-        id: "office_activities" as TabType,
-        label: "Activity History",
-        labelMl: "ആക്ടിവിറ്റി ഹിസ്റ്ററി",
-        description: "Audit trail, logs and operations history"
-      }
-    ]
-  },
-  {
-    sectionId: "invoices_payments",
-    sectionTitle: "Invoices & Payments Workstation",
-    sectionTitleMl: "ഇൻവോയ്‌സ് & പേയ്‌മെന്റുകൾ",
-    tabs: [
-      {
-        id: "invoices_list" as TabType,
-        label: "Invoices & Billing",
-        labelMl: "ഇൻവോയ്‌സ് ലിസ്റ്റ് & ബില്ലിംഗ്",
-        description: "GST/Standard invoice generator, receipts & payment logs"
-      },
-      {
-        id: "products_services" as TabType,
-        label: "Products & Services Catalog",
-        labelMl: "പ്രൊഡക്ട്സ് & സർവീസസ് കാറ്റലോഗ്",
-        description: "Master rate lists, units, and SAC codes"
-      },
-      {
-        id: "customers" as TabType,
-        label: "Customers Directory",
-        labelMl: "കസ്റ്റമേഴ്സ് / ക്ലയന്റ് വിവരങ്ങൾ",
-        description: "Clients, billing addresses, and contact ledger"
-      },
-      {
-        id: "reports_analysis" as TabType,
-        label: "Reports & Financial Analysis",
-        labelMl: "റിപ്പോർട്ടുകൾ & അനലിറ്റിക്‌സ്",
-        description: "Cash flows, receivables, and revenue charts"
-      },
-      {
-        id: "client_view" as TabType,
-        label: "Client View Portal & Links",
-        labelMl: "ക്ലൈൻ്റ് വ്യൂ പോർട്ടൽ",
-        description: "Secure sharing links for client live progress & invoice review"
-      }
-    ]
-  },
-  {
-    sectionId: "site_inspection",
-    sectionTitle: "Site Inspection (Mobile Field App)",
-    sectionTitleMl: "സൈറ്റ് പരിശോധന (മൊബൈൽ ആപ്പ്)",
-    tabs: [
-      {
-        id: "site_inspection_form" as TabType,
-        label: "Field Inspection Form",
-        labelMl: "ഫീൽഡ് ഇൻസ്പെക്ഷൻ ഫോം",
-        description: "Mobile-friendly field inspection data entry with GPS and camera upload"
-      },
-      {
-        id: "site_inspection_dashboard" as TabType,
-        label: "Admin Inspections Dashboard",
-        labelMl: "അഡ്മിൻ പരിശോധന ഡാഷ്‌ബോർഡ്",
-        description: "Review submissions, download A4 PDFs and send WhatsApp summaries"
-      },
-      {
-        id: "site_inspection_builder" as TabType,
-        label: "Dynamic Question Builder",
-        labelMl: "ചോദ്യങ്ങൾ & ചെക്ക്‌ലിസ്റ്റ്",
-        description: "Configure dynamic Yes/No & descriptive observation questions"
-      }
-    ]
-  },
-  {
-    sectionId: "important_sites",
-    sectionTitle: "Important Sites & Vault",
-    sectionTitleMl: "ഇംപോർട്ടന്റ് സൈറ്റുകൾ & ലിങ്കുകൾ",
-    tabs: [
-      {
-        id: "important_sites" as TabType,
-        label: "All Important Sites",
-        labelMl: "എല്ലാ സൈറ്റുകളും ലിങ്കുകളും",
-        description: "Organize portals, external websites, VEO forms and links by folder"
-      },
-      {
-        id: "sites_folders" as TabType,
-        label: "VEO & Folders Directory",
-        labelMl: "ഫോൾഡർ ഡയറക്ടറി",
-        description: "Manage VEO, General and custom folders"
-      }
-    ]
-  },
-  {
     sectionId: "vasthu",
     sectionTitle: "Vasthu Shastra Calculation Suite",
     sectionTitleMl: "വാസ്തു ശാസ്ത്രം",
@@ -482,49 +376,6 @@ export const ALL_APP_MODULES: TabPermissionDefinition[] = [
         description: "Automated BOQ generation and rate optimization assistant"
       }
     ]
-  },
-  {
-    sectionId: "personal_bills",
-    sectionTitle: "Personal Bills & Payments",
-    sectionTitleMl: "വ്യക്തിഗത ബില്ലുകളും പേയ്‌മെന്റുകളും",
-    tabs: [
-      {
-        id: "poov_mala_bill" as TabType,
-        label: "Poov Mala & Floral Bills",
-        labelMl: "പൂവ് മാല ബിൽ",
-        description: "Spreadsheet calculation, reference photos, rate per unit and balance tracker"
-      },
-      {
-        id: "kseb_bills" as TabType,
-        label: "KSEB Electricity Bills",
-        labelMl: "KSEB വൈദ്യുതി ബില്ലുകൾ",
-        description: "Consumer numbers, bi-monthly bills, dues, and KSEB quick-pay"
-      },
-      {
-        id: "health_insurance" as TabType,
-        label: "Health Insurance & Mediclaim",
-        labelMl: "ആരോഗ്യ ഇൻഷുറൻസ്",
-        description: "Policy renewals, sums insured, premium schedules and TPA support"
-      },
-      {
-        id: "rd_accounts" as TabType,
-        label: "Recurring Deposits (RD)",
-        labelMl: "ആവർത്തന നിക്ഷേപം (RD)",
-        description: "60-month passbook matrix, interest rates, and maturity ledger"
-      },
-      {
-        id: "panchayath_bills" as TabType,
-        label: "Panchayath Fees & Licences",
-        labelMl: "പഞ്ചായത്ത് ഫീസ് & ലൈസൻസുകൾ",
-        description: "D&O trade licences, building property taxes and K-SMART records"
-      },
-      {
-        id: "personal_vendors" as TabType,
-        label: "Vendors & Bills Ledger",
-        labelMl: "വെണ്ടർമാരും ബില്ലുകളും",
-        description: "Vendor directory, custom bill creation, GPay UPI QR codes and ledger"
-      }
-    ]
   }
 ];
 
@@ -550,7 +401,6 @@ export const PRESET_ESTIMATE_CIVIL_PERMISSIONS: Record<string, AccessLevel> = AL
     tabId === "concrete_block" ||
     tabId === "cement_concrete" ||
     tabId === "material_quantity_bbs" ||
-    tabId.startsWith("invoices_") ||
     tabId === "home_overview" ||
     tabId === "all_tools"
   ) {

@@ -155,8 +155,6 @@ export function registerWebDataRoutes(app: Express) {
         constructionProjects = [],
         constructionAgreements = [],
         constructionSettings = null,
-        siteInspections = [],
-        inspectionTemplates = [],
         buildingPlans = [],
         authorizedEmails = [],
         importantSites = [],
@@ -282,19 +280,6 @@ export function registerWebDataRoutes(app: Express) {
       const mergedAgreements = Array.from(caMap.values());
       writeJsonFile("construction_agreements.json", mergedAgreements);
 
-      // 9. Site Inspections Merge
-      const existingInspections = readJsonFile<any[]>("site_inspections.json", []);
-      const siMap = new Map<string, any>();
-      existingInspections.forEach((si) => si?.id && !deletedIds.has(si.id) && siMap.set(si.id, si));
-      (Array.isArray(siteInspections) ? siteInspections : []).forEach((si) => {
-        if (si?.id && !deletedIds.has(si.id)) {
-          const prev = siMap.get(si.id);
-          siMap.set(si.id, prev ? { ...prev, ...si } : si);
-        }
-      });
-      const mergedInspections = Array.from(siMap.values());
-      writeJsonFile("site_inspections.json", mergedInspections);
-
       // 10. Building Plans Merge
       const existingPlans = readJsonFile<any[]>("building_plans.json", []);
       const bpMap = new Map<string, any>();
@@ -395,7 +380,6 @@ export function registerWebDataRoutes(app: Express) {
         quotations: mergedQuotations,
         constructionProjects: mergedConstructionProjects,
         constructionAgreements: mergedAgreements,
-        siteInspections: mergedInspections,
         buildingPlans: mergedPlans,
         cadFiles: mergedCadFiles,
         userProfiles: mergedProfiles,
@@ -457,7 +441,6 @@ export function registerWebDataRoutes(app: Express) {
       const quotations = readJsonFile<any[]>("quotations.json", []).filter((q) => q?.id && !deletedIds.has(q.id));
       const constructionProjects = readJsonFile<any[]>("construction_projects.json", []).filter((cp) => cp?.id && !deletedIds.has(cp.id));
       const constructionAgreements = readJsonFile<any[]>("construction_agreements.json", []).filter((ca) => ca?.id && !deletedIds.has(ca.id));
-      const siteInspections = readJsonFile<any[]>("site_inspections.json", []).filter((si) => si?.id && !deletedIds.has(si.id));
       const buildingPlans = readJsonFile<any[]>("building_plans.json", []).filter((bp) => bp?.id && !deletedIds.has(bp.id));
       const cadFolders = readJsonFile<any[]>("cad_folders.json", []).filter((f) => f?.id && !deletedIds.has(f.id));
       const cadFiles = readJsonFile<any[]>("cad_files.json", []).filter((f) => f?.id && !deletedIds.has(f.id));
@@ -478,7 +461,6 @@ export function registerWebDataRoutes(app: Express) {
           quotations,
           constructionProjects,
           constructionAgreements,
-          siteInspections,
           buildingPlans,
           cadFolders,
           cadFiles,
